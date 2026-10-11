@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lesson 3: Production-Ready Images · Docker Fundamentals</title>
+<meta name="description" content="Lesson 3 of Docker Fundamentals, a free hands-on course: Production-Ready Images.">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --bg:#F2F4F7;
+  --surface:#FFFFFF;
+  --ink:#141D27;
+  --muted:#556375;
+  --line:#D4DBE4;
+  --accent:#1B5BA3;
+  --accent-soft:#E2EBF6;
+  --amber:#8F5B00;
+  --amber-soft:#FAEFD8;
+  --code-bg:#E8EDF3;
+  --ok:#23734A;
+  --ok-soft:#DFF1E6;
+  --bad:#B3261E;
+  --bad-soft:#FBE3E1;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+    --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+    --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+  --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+  --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16.5px/1.65 var(--sans);padding-inline:20px;padding-block:0 72px}
+.shell{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:40px}
+@media (min-width:1000px){.shell{grid-template-columns:210px minmax(0,1fr)}}
+button{font-family:var(--sans)}
+
+/* table of contents */
+.toc{padding-top:40px}
+.toc nav{display:flex;flex-direction:column;gap:2px}
+@media (min-width:1000px){.toc nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px)}}
+.toc .label{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.toc a{display:grid;grid-template-columns:22px 1fr;color:var(--muted);text-decoration:none;font-size:14px;line-height:1.35;padding:5px 0}
+.toc a span{font:500 12px/1.6 var(--mono);color:var(--muted)}
+.toc a:hover,.toc a.on{color:var(--ink)}
+.toc a.on span{color:var(--accent)}
+@media (max-width:999px){
+  .toc{padding-top:24px}
+  .toc nav{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));column-gap:16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:12px}
+  .toc .label{grid-column:1/-1}
+}
+
+main{max-width:720px;min-width:0}
+header{padding-top:48px;padding-bottom:8px}
+.eyebrow{font:500 12.5px/1 var(--mono);color:var(--accent);letter-spacing:.02em;margin:0 0 18px}
+h1{font-family:var(--display);font-stretch:78%;font-weight:760;font-size:clamp(34px,6vw,50px);line-height:1.02;letter-spacing:-.01em;margin:0 0 18px;text-wrap:balance}
+.lede{font-size:19px;line-height:1.55;margin:0 0 22px;max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13.5px;color:var(--muted);margin:0 0 8px}
+.meta b{color:var(--ink);font-weight:600}
+
+section{padding-top:44px;scroll-margin-top:16px}
+h2{font-family:var(--display);font-stretch:82%;font-weight:720;font-size:27px;line-height:1.15;margin:0 0 14px;text-wrap:balance;display:flex;gap:14px;align-items:baseline}
+h2 .n{font:500 14px/1 var(--mono);color:var(--accent);flex:none}
+h3{font:600 17px/1.3 var(--sans);margin:28px 0 8px}
+p{margin:0 0 14px;max-width:66ch}
+ul,ol{margin:0 0 16px;padding-left:22px;max-width:64ch}
+li{margin-bottom:6px}
+strong{font-weight:600}
+a{color:var(--accent)}
+code{font:400 .88em var(--mono);background:var(--code-bg);padding:.1em .35em;border-radius:3px}
+pre{margin:0;font:400 13.5px/1.6 var(--mono);white-space:pre;overflow-x:auto;padding:14px 16px;background:var(--code-bg);border-radius:4px;color:var(--ink)}
+pre code{background:none;padding:0;font-size:inherit}
+pre .c{color:var(--muted)}
+pre .hit{color:var(--ok)}
+pre .miss{color:var(--amber)}
+
+.goals{list-style:none;padding:0;display:grid;gap:8px;margin-top:6px}
+.goals li{display:grid;grid-template-columns:18px 1fr;gap:10px;margin:0}
+.goals li::before{content:"";width:10px;height:10px;border:1.5px solid var(--accent);margin-top:8px}
+
+/* callouts */
+.aside{background:var(--amber-soft);padding:14px 18px 4px;margin:18px 0 20px;border-radius:2px}
+.aside.key{background:var(--accent-soft)}
+.chip{display:inline-block;font:600 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px 4px;margin-bottom:8px;border:1px solid var(--amber);color:var(--amber)}
+.aside.key .chip{border-color:var(--accent);color:var(--accent)}
+.aside p{max-width:none}
+
+/* diagrams */
+figure{margin:22px 0 24px}
+.diagram{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px}
+.diagram svg{display:block;width:100%;min-width:600px;height:auto}
+figcaption{font-size:13.5px;color:var(--muted);margin-top:8px;max-width:66ch}
+.d-box{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.d-frame{fill:none;stroke:var(--muted);stroke-width:1.2}
+.d-app{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.2}
+.d-kernel{fill:var(--amber-soft);stroke:var(--amber);stroke-width:1.2}
+.d-hw{fill:var(--code-bg);stroke:var(--line);stroke-width:1.2}
+.d-write{fill:var(--surface);stroke:var(--accent);stroke-width:1.4;stroke-dasharray:5 4}
+.d-okbox{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.2}
+.d-badbox{fill:var(--bad-soft);stroke:var(--bad);stroke-width:1.2}
+.d-band1{fill:var(--amber-soft)}
+.d-band2{fill:var(--accent-soft)}
+.d-t{fill:var(--ink);font:500 13px var(--sans)}
+.d-tb{fill:var(--ink);font:600 13px var(--sans)}
+.d-m{fill:var(--muted);font:400 12.5px var(--sans)}
+.d-h{fill:var(--muted);font:600 11px var(--sans);letter-spacing:.09em}
+.d-ha{fill:var(--amber);font:600 11px var(--sans);letter-spacing:.09em}
+.d-hb{fill:var(--accent);font:600 11px var(--sans);letter-spacing:.09em}
+.d-code{fill:var(--ink);font:400 12px var(--mono)}
+.d-lab{fill:var(--muted);font:500 12px var(--mono)}
+.d-ok{fill:var(--ok);font:600 12.5px var(--sans)}
+.d-bad{fill:var(--bad);font:600 12.5px var(--sans)}
+.d-line{stroke:var(--muted);stroke-width:1.2;fill:none}
+.d-okline{stroke:var(--ok);stroke-width:1.4;fill:none}
+.d-badline{stroke:var(--bad);stroke-width:1.4;fill:none;stroke-dasharray:4 4}
+.d-head{fill:var(--muted)}
+.d-head-ok{fill:var(--ok)}
+.d-head-bad{fill:var(--bad)}
+
+/* annotated Containerfile */
+.anno{background:var(--surface);border:1px solid var(--line);border-radius:4px;margin:18px 0 22px;overflow:hidden}
+.anno .head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);font:500 12px/1 var(--mono);color:var(--muted);background:var(--bg)}
+.anno .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-bottom:1px solid var(--line)}
+.anno .row:last-child{border-bottom:0}
+.anno .row > code{display:block;background:var(--code-bg);border-radius:0;padding:12px 16px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.anno .row > p{margin:0;padding:11px 16px 12px;font-size:14.5px;line-height:1.55}
+.tag{display:inline-block;font:600 10px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px 3px;border-radius:2px;margin-right:6px;vertical-align:1px}
+.tag.layer{background:var(--accent-soft);color:var(--accent)}
+.tag.config{background:var(--amber-soft);color:var(--amber)}
+@media (max-width:640px){.anno .row{grid-template-columns:1fr}}
+
+/* tables */
+.table{overflow-x:auto;margin:16px 0 20px;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+th{font:600 11.5px/1.3 var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+td:first-child{font-weight:600;white-space:nowrap}
+.cmds td:first-child{font:500 13px var(--mono);white-space:normal;min-width:15em}
+.decide td:first-child{white-space:normal;min-width:12em}
+.decide td:nth-child(2){white-space:nowrap}
+.out{margin:10px 0 14px}
+.out .olabel{font:600 10.5px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.out pre{background:var(--surface);border:1px solid var(--line)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* cache comparison */
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 10px}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:4px;display:flex;flex-direction:column}
+.col h4{margin:0;padding:12px 16px 10px;font:600 14.5px/1.3 var(--sans);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.col h4 small{font:500 12px var(--sans);color:var(--muted)}
+.steps{list-style:none;margin:0;padding:6px 0;max-width:none}
+.steps li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:7px 16px;margin:0;font:400 13px/1.4 var(--mono)}
+.st{flex:none;font:600 10.5px/1 var(--sans);letter-spacing:.07em;text-transform:uppercase;padding:4px 7px 3px;border-radius:2px}
+.st.hit{background:var(--ok-soft);color:var(--ok)}
+.st.miss{background:var(--amber-soft);color:var(--amber)}
+.st.slow{background:var(--bad-soft);color:var(--bad)}
+.col .foot{margin-top:auto;padding:10px 16px 12px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:10px}
+.col .foot b{font:700 24px/1 var(--display);font-stretch:85%;font-variant-numeric:tabular-nums}
+.col .foot span{font-size:13px;color:var(--muted)}
+
+/* experiment result pair */
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 20px}
+.res{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+.res .lbl{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px}
+.res.good .lbl{color:var(--ok)}
+.res.poor .lbl{color:var(--bad)}
+.res code.big{display:block;font-size:13px;padding:8px 10px;margin:0 0 10px;white-space:pre-wrap;word-break:break-word}
+.res dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+.res dt{color:var(--muted)}
+.res dd{margin:0;font-variant-numeric:tabular-nums}
+
+/* quiz */
+.quiz{display:grid;gap:10px;margin-top:10px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:4px}
+details.q summary{cursor:pointer;list-style:none;padding:14px 16px;display:grid;grid-template-columns:28px 1fr auto;gap:8px;font-weight:500}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary .qn{font:500 13px/1.7 var(--mono);color:var(--accent)}
+details.q summary .rv{font:500 12px/1.9 var(--sans);color:var(--muted)}
+details.q[open] summary .rv{visibility:hidden}
+details.q summary:focus-visible,details.sol summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.q .ans{padding:0 16px 14px 52px}
+details.q .ans p:last-child{margin-bottom:0}
+
+/* lab */
+.step{margin:26px 0 0;display:grid;grid-template-columns:34px minmax(0,1fr);gap:0 12px}
+.step .sn{font:600 13px/1 var(--mono);color:var(--accent);border:1.5px solid var(--accent);border-radius:50%;width:30px;height:30px;display:grid;place-items:center;margin-top:-4px}
+.step h3{margin-top:0}
+.cmd{position:relative;margin:10px 0 12px}
+.cmd pre{padding-right:72px}
+.copy{position:absolute;top:8px;right:8px;font:500 12px/1 var(--sans);color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:6px 9px;cursor:pointer}
+.copy:hover{color:var(--ink)}
+.copy:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.task{list-style:none;padding:0;margin:8px 0 14px;display:grid;gap:6px}
+.task li{display:grid;grid-template-columns:18px 1fr;gap:8px;margin:0}
+.task li::before{content:"";width:9px;height:9px;border:1.5px solid var(--muted);border-radius:2px;margin-top:8px}
+details.sol{border:1px dashed var(--line);border-radius:4px;margin:10px 0 14px;background:var(--surface)}
+details.sol summary{cursor:pointer;padding:10px 14px;font:500 14px var(--sans);color:var(--accent)}
+details.sol[open] summary{border-bottom:1px dashed var(--line)}
+details.sol .inner{padding:12px 14px 4px}
+
+.next{margin-top:48px;padding-top:22px;border-top:1px solid var(--line)}
+.next .eyebrow{margin-bottom:10px}
+.next p{color:var(--muted)}
+
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+.gaps td:nth-child(2){min-width:16em}
+.models td{min-width:11em}
+.models td:first-child{min-width:0}
+
+/* course navigation: a link home, then links to every lesson */
+.course{max-width:1100px;margin:0 auto;padding-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.course .home{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-decoration:none;margin-right:6px;padding:6px 0}
+.course .home:hover{color:var(--ink)}
+.course .lesson,.course .here{display:inline-flex;align-items:baseline;gap:7px;padding:6px 10px 6px 8px;font:500 13px/1.2 var(--sans);color:var(--muted);text-decoration:none;background:var(--surface);border:1px solid var(--line);border-radius:3px}
+.course b{font:500 12px/1 var(--mono);color:var(--accent)}
+.course .lesson:hover{color:var(--ink);border-color:var(--muted)}
+.course a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.course .here{color:var(--ink);background:var(--accent-soft);border-color:var(--accent)}
+.meta a{color:inherit}
+@media (max-width:640px){.course .home{flex-basis:100%}}
+</style>
+</head>
+<body>
+<nav class="course" aria-label="All lessons in this course">
+  <a class="home" href="../">Docker Fundamentals</a>
+  <a class="lesson" href="../lesson-01/" title="Lesson 1: What a Container Is"><b>1</b>Containers</a>
+  <a class="lesson" href="../lesson-02/" title="Lesson 2: Building Container Images"><b>2</b>Building images</a>
+  <span class="here" aria-current="page" title="Production-Ready Images"><b>3</b>Production images</span>
+  <a class="lesson" href="../lesson-04/" title="Lesson 4: Volumes, Networks and Compose"><b>4</b>Volumes and Compose</a>
+  <a class="lesson" href="../lesson-05/" title="Lesson 5: Serving a Real Model"><b>5</b>A real model</a>
+  <a class="lesson" href="../lesson-06/" title="Lesson 6: Shipping to AWS and Cloudflare"><b>6</b>AWS and Cloudflare</a>
+  <a class="lesson" href="../lesson-07/" title="Lesson 7: Kubernetes, the Big Picture"><b>7</b>Kubernetes</a>
+</nav>
+
+<div class="shell">
+  <aside class="toc" aria-label="Lesson sections">
+    <nav>
+      <div class="label">Lesson 3</div>
+      <a href="#gaps"><span>1</span>What's missing</a>
+      <a href="#root"><span>2</span>Don't run as root</a>
+      <a href="#secrets"><span>3</span>Settings and secrets</a>
+      <a href="#health"><span>4</span>Health checks</a>
+      <a href="#logs"><span>5</span>Logs that show up</a>
+      <a href="#pin"><span>6</span>Pin the base image</a>
+      <a href="#final"><span>7</span>The finished Containerfile</a>
+      <a href="#models"><span>8</span>Where the model goes</a>
+      <a href="#lab"><span>9</span>Lab: harden hello-ai</a>
+      <a href="#check"><span>10</span>Check yourself</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header>
+      <p class="eyebrow">Docker Fundamentals · Lesson 3 · Production-ready images</p>
+      <h1>Making an image production-ready</h1>
+      <p class="lede">Your hello-ai image works. This lesson turns it into one you could hand to a platform team: it runs without root, keeps secrets out, tells the platform when it's healthy, and builds the same way next month.</p>
+      <div class="meta"><span><b>Reading</b> about 35 min</span><span><b>Lab</b> about 35 min</span><span><b>Starts from</b> your Lesson 2 Containerfile</span><span><b>Outputs</b> from <a href="../#tested">the test Mac</a>, autumn 2026</span></div>
+      <section style="padding-top:26px" aria-label="Goals">
+        <h3 style="margin-top:0">By the end you should be able to</h3>
+        <ul class="goals" style="margin-bottom:0">
+          <li><span>run your app as a normal user and explain what that protects against</span></li>
+          <li><span>get settings and secrets into a container without putting them in the image</span></li>
+          <li><span>add a health check that Podman can see, and know Podman's format catch</span></li>
+          <li><span>make sure your app's log output actually reaches <code>podman logs</code></span></li>
+          <li><span>pin the base image so rebuilds are repeatable</span></li>
+          <li><span>choose where a real model's weights should live</span></li>
+        </ul>
+      </section>
+    </header>
+
+    <section id="gaps">
+      <h2><span class="n">01</span>What's missing from the Lesson 2 image</h2>
+      <p style="margin-bottom:0">Here is the Containerfile you wrote in Lesson 2. It's correct: good instruction order, exec-form <code>CMD</code>, and a <code>.containerignore</code> that keeps <code>.env</code> out.</p>
+      <div class="cmd"><pre><code>FROM docker.io/library/python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]</code></pre></div>
+      <p>It's fine for learning, but it has gaps that matter once real users, real secrets and real servers are involved. Each section of this lesson fixes one:</p>
+      <div class="table">
+        <table class="gaps">
+          <thead><tr><th>Gap</th><th>What can go wrong</th><th>Fix</th></tr></thead>
+          <tbody>
+            <tr><td>Runs as root</td><td>A bug in your app or a library gives an attacker root inside the container</td><td><a href="#root">§2</a> <code>USER</code></td></tr>
+            <tr><td>No plan for secrets</td><td>API keys end up in the image, readable by anyone who can pull it</td><td><a href="#secrets">§3</a> run-time settings</td></tr>
+            <tr><td>No health signal</td><td>The container shows "Up" while the app inside is broken</td><td><a href="#health">§4</a> health check</td></tr>
+            <tr><td>Buffered output</td><td>Your <code>print()</code> messages don't appear in <code>podman logs</code></td><td><a href="#logs">§5</a> <code>PYTHONUNBUFFERED</code></td></tr>
+            <tr><td>Floating base image</td><td>Rebuilding next month silently gives you a different base</td><td><a href="#pin">§6</a> pin by digest</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Everything below was run on the test Mac. The outputs are real, and so are the sizes and timings. Yours will differ a little.</p>
+    </section>
+
+    <section id="root">
+      <h2><span class="n">02</span>Don't run as root</h2>
+      <h3>Step 1: see who your app runs as</h3>
+      <div class="cmd"><pre><code>podman run --rm hello-ai:0.3 id</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>uid=0(root) gid=0(root) groups=0(root)</code></pre></div>
+      <p>No <code>USER</code> instruction means every container runs as <strong>root</strong>, the all-powerful user. Your app can modify its own code, install software and read every file in the container.</p>
+
+      <h3>Step 2: understand why that's a risk</h3>
+      <p>Containers are about limiting damage when something goes wrong. Suppose an attacker finds a way to run commands through your app, for example through a vulnerable library, or a model file that runs code when it's loaded (more on that in section 8). They get exactly the power of the user your app runs as:</p>
+      <ul>
+        <li><strong>As root</strong>, they can change your code to steal every request, install tools, and use root as a starting point to attack the container runtime itself.</li>
+        <li><strong>As a normal user</strong>, they can't change the code, can't install anything, and have much less to work with.</li>
+      </ul>
+      <p style="margin-bottom:0">It can also matter on your own Mac. Lesson 1 said Podman is rootless by default, where root in a container maps to an ordinary user outside. A Podman machine can also be set to <strong>rootful mode</strong>, and then root in a container is real root in the VM. The test Mac's machine is set up that way:</p>
+      <div class="cmd"><pre><code>podman machine inspect --format '{{.Rootful}}'
+podman run -d --name who hello-ai:0.3
+podman top who user,huser     <span class="c"># user inside the container, user on the host (the VM)</span>
+podman rm -f who</code></pre></div>
+      <div class="out"><p class="olabel">Output on the test Mac</p><pre><code>true
+USER        HUSER
+root        root</code></pre></div>
+      <p>On a default, rootless machine the first line is <code>false</code>, and the <code>HUSER</code> column shows an ordinary user of the VM instead of <code>root</code>. That output is not shown here, because the test Mac runs in rootful mode.</p>
+      <p>You can't know where your image will end up: Docker on Linux servers is also rootful by default, and many Kubernetes clusters are set to refuse containers that run as root. So the image itself should not need root.</p>
+
+      <h3>Step 3: add a user and switch to it</h3>
+      <p style="margin-bottom:0">Two lines. The second one goes below <code>pip install</code>; step 5 shows why:</p>
+      <div class="cmd"><pre><code>RUN useradd --create-home --uid 1000 app
+USER app</code></pre></div>
+      <ul>
+        <li><code>useradd</code> creates a normal user called <code>app</code>, with user ID 1000 and a home folder <code>/home/app</code>. A fixed number matters because file permissions and Kubernetes settings work with numbers, not names.</li>
+        <li><code>USER app</code> is a config setting: every later <code>RUN</code> step, and the running container, use this user.</li>
+        <li>The files that <code>COPY</code> puts into the image belong to root, and everyone may read them. The app can read its code but can't change it, which is what you want.</li>
+      </ul>
+
+      <h3>Step 4: check the result</h3>
+      <p style="margin-bottom:0">With those two lines added (you'll build this as <code>hello-ai:1.0</code> in the lab):</p>
+      <div class="cmd"><pre><code>podman run --rm hello-ai:1.0 id
+podman run --rm hello-ai:1.0 touch /app/main.py
+podman run --rm hello-ai:1.0 touch /tmp/scratch.txt</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>uid=1000(app) gid=1000(app) groups=1000(app)
+touch: cannot touch '/app/main.py': Permission denied   <span class="c">← code is protected</span>
+                                                         <span class="c">← /tmp still works</span></code></pre></div>
+      <p>The API still answers normally, and <code>podman top</code> now shows <code>app</code> and <code>1000</code> instead of <code>root</code>.</p>
+      <h3>Step 5: where the <code>USER</code> line goes</h3>
+      <p>The position of <code>USER app</code> matters for <code>RUN</code> lines. It does not matter for <code>COPY</code> lines. Both were tested with the hello-ai files on the test Mac.</p>
+
+      <p style="margin-bottom:0"><strong><code>COPY</code> ignores <code>USER</code>.</strong> It is natural to expect that files copied after <code>USER app</code> belong to <code>app</code>. Here <code>USER app</code> is moved above <code>COPY . .</code>:</p>
+      <div class="cmd"><pre><code>RUN pip install --no-cache-dir -r requirements.txt
+USER app
+COPY . .</code></pre></div>
+      <div class="out"><p class="olabel">ls -l /app, then touch /app/main.py, in that image</p><pre><code>-rw-r--r--. 1 root root  560 Sep 27 20:24 README.md
+-rw-r--r--. 1 root root 1059 Oct  4 18:43 main.py
+-rw-r--r--. 1 root root   33 Sep 27 20:21 requirements.txt
+touch: cannot touch '/app/main.py': Permission denied</code></pre></div>
+      <p>The third and fourth columns are the owner and the group. Both are still <code>root</code>, exactly as with the two lines in the usual order.</p>
+      <p style="margin-bottom:0">To give copied files to another user, <code>COPY</code> has its own option, <code>--chown</code> (short for "change owner"):</p>
+      <div class="cmd"><pre><code>COPY --chown=app:app . .
+USER app</code></pre></div>
+      <div class="out"><p class="olabel">The same commands, then touch /app/new.txt</p><pre><code>-rw-r--r--. 1 app app  560 Sep 27 20:24 README.md
+-rw-r--r--. 1 app app 1059 Oct  4 18:43 main.py
+-rw-r--r--. 1 app app   33 Sep 27 20:21 requirements.txt
+                                                         <span class="c">← touch /app/main.py printed nothing: allowed</span>
+touch: cannot touch '/app/new.txt': Permission denied   <span class="c">← the folder /app is still root's</span></code></pre></div>
+      <p>Now <code>app</code> owns the files and can change <code>main.py</code>. Don't use <code>--chown</code> for your code: an app that can't change its own code is the protection this section is about.</p>
+
+      <p style="margin-bottom:0"><strong><code>RUN</code> follows <code>USER</code>.</strong> Here <code>USER app</code> is moved above the <code>pip install</code> line. The build finished, with this in its output:</p>
+      <div class="out"><p class="olabel">Output of <code>podman build</code></p><pre><code>Defaulting to user installation because normal site-packages is not writeable
+  WARNING: The script uvicorn is installed in '/home/app/.local/bin' which is not on PATH.</code></pre></div>
+      <p style="margin-bottom:0">pip ran as <code>app</code>, was not allowed to write to the system's folder for Python packages, and put them in <code>/home/app/.local</code> instead. <code>PATH</code> is the list of folders where the system looks for programs, and that folder is not on it. So the container failed to start:</p>
+      <div class="out"><p class="olabel">Output of <code>podman run</code>, shortened</p><pre><code>Error: … crun: executable file `uvicorn` not found in $PATH: No such file or directory</code></pre></div>
+      <p>So keep <code>USER app</code> below every <code>RUN</code> line that needs root: installing packages, creating the user, creating folders.</p>
+      <div class="aside key">
+        <span class="chip">If your app writes files</span>
+        <p>Some apps need a writable folder, for a cache or downloaded model files. Create it and hand it to the user before switching: <code>RUN mkdir /app/cache &amp;&amp; chown app:app /app/cache</code>. For data that must survive restarts, use a volume instead (Lesson 4).</p>
+      </div>
+    </section>
+
+    <section id="secrets">
+      <h2><span class="n">03</span>Settings and secrets at run time</h2>
+      <p>The goal is <strong>one image that runs everywhere</strong>: on your laptop, in staging, in production. What differs between them (the model name, the log level, the API key) is supplied when the container starts. That way the image never contains a secret, and you test exactly the image you ship.</p>
+
+      <h3>Wrong way 1: <code>ENV</code> in the Containerfile</h3>
+      <div class="cmd"><pre><code>ENV API_KEY=sk-baked-into-the-image</code></pre></div>
+      <p style="margin-bottom:0">Anyone who pulls the image can read it with one command:</p>
+      <div class="cmd"><pre><code>podman image inspect IMAGE --format '{{range .Config.Env}}{{println .}}{{end}}'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>API_KEY=sk-baked-into-the-image</code></pre></div>
+
+      <h3>Wrong way 2: a build argument</h3>
+      <p style="margin-bottom:0"><code>ARG</code> looks safer, because the value is only passed during the build with <code>--build-arg HF_TOKEN=…</code>. But the builder records it in the image history:</p>
+      <div class="cmd"><pre><code>podman history --no-trunc --format '{{.CreatedBy}}' IMAGE</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>|1 HF_TOKEN=hf_secret_build_token /bin/sh -c echo "pretend to download a model…"</code></pre></div>
+      <p>Build arguments are fine for non-secret options, such as a version number. Never use them for tokens.</p>
+
+      <h3>Right way A: environment variables at run time</h3>
+      <p style="margin-bottom:0">Your app reads settings with <code>os.getenv("API_KEY")</code>, and you supply them with <code>-e</code> or, for several at once, from a file with <code>--env-file</code>:</p>
+      <div class="cmd"><pre><code>podman run -d -p 8000:8000 -e MODEL_NAME=sentiment-v2 hello-ai:1.0   <span class="c"># one setting</span>
+podman run -d -p 8000:8000 --env-file .env hello-ai:1.0             <span class="c"># or every line of a file</span></code></pre></div>
+      <p>This is the standard approach, and it's how most platforms deliver configuration. Its weakness: the values are stored in the container's settings, so anyone who can run Podman commands on that machine can read them.</p>
+      <div class="out"><p class="olabel"><code>podman inspect CONTAINER</code> shows</p><pre><code>API_KEY=not-a-real-key-just-for-the-lesson</code></pre></div>
+
+      <h3>Right way B: Podman secrets</h3>
+      <p style="margin-bottom:0">For real secrets, Podman can store the value separately and hand it to the container at start:</p>
+      <div class="cmd"><pre><code>printf 'sk-your-real-key' | podman secret create api_key -
+podman run -d --secret api_key hello-ai:1.0                                <span class="c"># as a file: /run/secrets/api_key</span>
+podman run -d --secret api_key,type=env,target=API_KEY hello-ai:1.0        <span class="c"># as the API_KEY variable</span></code></pre></div>
+      <ul>
+        <li>As a file, the secret appears at <code>/run/secrets/api_key</code>, readable by any user in the container. Your app reads the file instead of a variable.</li>
+        <li>As a variable, your app doesn't need to change.</li>
+        <li>Either way, <code>podman inspect</code> shows only the secret's <em>name</em>. A search of the inspect output for the value found it 0 times.</li>
+      </ul>
+      <p>Production platforms work the same way: Kubernetes Secrets and cloud secret managers (AWS Secrets Manager, Google Secret Manager) deliver values as variables or files when the container starts.</p>
+
+      <div class="table">
+        <table>
+          <thead><tr><th>Method</th><th>Inside the image?</th><th>Shown by <code>podman inspect</code>?</th><th>Use it for</th></tr></thead>
+          <tbody>
+            <tr><td><code>ENV</code> in Containerfile</td><td>Yes</td><td>Yes</td><td>Harmless defaults, like <code>LOG_LEVEL=info</code></td></tr>
+            <tr><td><code>ARG</code> / <code>--build-arg</code></td><td>Yes, in history</td><td>—</td><td>Non-secret build options</td></tr>
+            <tr><td><code>-e</code> / <code>--env-file</code></td><td>No</td><td>Yes</td><td>Settings; secrets on your laptop</td></tr>
+            <tr><td><code>podman secret</code></td><td>No</td><td>Name only</td><td>Secrets</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="health">
+      <h2><span class="n">04</span>Health checks</h2>
+      <p>"Up" in <code>podman ps</code> only means the main process exists. It doesn't mean your app works: the model may have failed to load, or the server may be stuck. A <strong>health check</strong> is a small command the platform runs regularly inside the container. Exit code 0 means healthy; anything else means unhealthy.</p>
+
+      <h3>Step 1: add a HEALTHCHECK</h3>
+      <div class="cmd"><pre><code>HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]</code></pre></div>
+      <ul>
+        <li>The command calls your <code>/health</code> endpoint from inside the container. The slim image has no <code>curl</code>, so it uses Python. <code>urlopen</code> raises an error, and Python exits with 1, if the request fails.</li>
+        <li><code>--interval=30s</code>: run every 30 seconds. <code>--timeout=3s</code>: a check that takes longer counts as a failure.</li>
+        <li><code>--start-period=10s</code>: failures in the first 10 seconds don't count, so the app has time to start. A real model can need much longer.</li>
+        <li><code>--retries=3</code>: three failures in a row mark the container unhealthy, so one slow moment doesn't.</li>
+      </ul>
+
+      <h3>Step 2: the Podman catch</h3>
+      <p style="margin-bottom:0">Build it the normal way, and Podman quietly drops the health check:</p>
+      <div class="out"><p class="olabel">Output of <code>podman build</code></p><pre><code>level=warning msg="HEALTHCHECK is not supported for OCI image format and will be ignored. Must use `docker` format"</code></pre></div>
+      <p>Podman builds images in the standard OCI format, and the OCI spec has no field for health checks; Docker's older format does. Build with <code>--format docker</code> and it's kept:</p>
+      <div class="cmd"><pre><code>podman build --format docker -t hello-ai:1.0 .</code></pre></div>
+      <p>The image still runs everywhere; Docker, Kubernetes and registries all accept this format.</p>
+
+      <h3>Step 3: watch it</h3>
+      <div class="out"><p class="olabel">podman ps, over time</p><pre><code>Up 1 second (starting)       <span class="c">← no check has run yet</span>
+Up 14 seconds (healthy)      <span class="c">← with a 10 s interval, after the first check</span></code></pre></div>
+      <p>With a 30-second interval the first check runs after about 30 seconds. To check immediately, run <code>podman healthcheck run NAME</code>: exit code 0 means healthy, and <code>podman ps</code> updates straight away. With the check pointed at a wrong port, the status turned <code>(unhealthy)</code> after three failures.</p>
+      <p>You can also add a check when starting any image, without changing it: <code>podman run --health-cmd "…" --health-interval 30s …</code>.</p>
+
+      <div class="aside key">
+        <span class="chip">Kubernetes</span>
+        <p>Kubernetes ignores <code>HEALTHCHECK</code>. It calls your app's <code>/health</code> endpoint directly, with a <strong>liveness</strong> probe ("is the process stuck? restart it") and a <strong>readiness</strong> probe ("can it take traffic yet?"). For AI services, readiness matters: return an error from <code>/health</code> until the model has loaded, and no requests are sent before then. The part that works everywhere is a good <code>/health</code> endpoint: fast, cheap, and with no calls to paid APIs.</p>
+      </div>
+    </section>
+
+    <section id="logs">
+      <h2><span class="n">05</span>Logs that show up</h2>
+      <p>Containers log to their output: whatever the main process prints appears in <code>podman logs</code>, and platforms collect it from there. Python has a surprise here.</p>
+      <p style="margin-bottom:0">This container prints "model loaded", then keeps running. Its logs, 3 seconds later:</p>
+      <div class="cmd"><pre><code>podman run -d --name buf docker.io/library/python:3.12-slim \
+  python -c "import time; print('model loaded'); time.sleep(20)"
+podman logs buf</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>                     <span class="c">← nothing</span></code></pre></div>
+      <ol>
+        <li>When Python writes to a terminal, it sends each line out immediately.</li>
+        <li>In a container, output goes to a pipe, not a terminal. Python then saves output up in a buffer, a few kilobytes at a time, to be efficient.</li>
+        <li>"model loaded" waits in that buffer. It appears when the buffer fills or the program exits, and it's lost if the process is killed.</li>
+      </ol>
+      <p style="margin-bottom:0">One environment variable turns buffering off. The same test with it set:</p>
+      <div class="cmd"><pre><code>podman run -d --name buf2 -e PYTHONUNBUFFERED=1 docker.io/library/python:3.12-slim \
+  python -c "import time; print('model loaded'); time.sleep(20)"
+podman logs buf2</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>model loaded</code></pre></div>
+      <p>Put <code>ENV PYTHONUNBUFFERED=1</code> in every Python image. You didn't notice the problem in Lesson 2 because uvicorn's own log lines go through Python's <code>logging</code> module, which writes out each line. Your own <code>print()</code> calls, and some libraries, don't.</p>
+    </section>
+
+    <section id="pin">
+      <h2><span class="n">06</span>Pin the base image</h2>
+      <p>Lesson 1: a tag like <code>python:3.12-slim</code> is a movable label. It's rebuilt regularly, so rebuilding your image next month can silently pick up a different Python patch version or different system libraries. A <strong>digest</strong> is the opposite of a tag: it is the SHA-256 fingerprint of one exact file on the registry, and it never changes. <strong>Pinning</strong> means writing a digest into <code>FROM</code>, so every build starts from the same base:</p>
+      <div class="cmd"><pre><code>FROM docker.io/library/python:3.12-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f</code></pre></div>
+      <p>The tag stays in the line so people can read it; the digest decides what's pulled.</p>
+      <p>The only hard part is knowing <em>which</em> digest to write there, because your Mac shows two for the same image. The steps below explain why there are two, and how to pick the right one.</p>
+
+      <h3>Step 1: the tag points to a list, not to an image</h3>
+      <p>You would expect <code>python:3.12-slim</code> to be one image. It is eight, one for each processor type, because a program built for one processor type doesn't run on another (the <code>exec format error</code> from Lesson 1).</p>
+      <p style="margin-bottom:0">So Docker Hub stores one more thing next to those eight images: a small text file that lists them. Its proper name is the <strong>image index</strong>. Shortened, it says:</p>
+      <div class="out"><p class="olabel">The list behind python:3.12-slim</p><pre><code>for linux/amd64   use the image  sha256:44ff437b…
+for linux/arm64   use the image  sha256:950206c3…
+for linux/386     use the image  sha256:846bc0ce…
+…five more lines, one per processor type</code></pre></div>
+      <p style="margin-bottom:0">The name <code>python:3.12-slim</code> points to this file, not to an image. When you pull:</p>
+      <ol>
+        <li>Podman downloads the small list file first.</li>
+        <li>It finds the line for its own processor type. On your Mac that is <code>linux/arm64</code>.</li>
+        <li>It downloads the image named on that line, <code>950206c3…</code>.</li>
+      </ol>
+
+      <h3>Step 2: that's why your Mac shows two digests</h3>
+      <p style="margin-bottom:0">The list is a file, so it has a fingerprint. Each image has one too. After a pull, your Mac remembers both:</p>
+      <div class="cmd"><pre><code>podman image inspect docker.io/library/python:3.12-slim --format '{{range .RepoDigests}}{{println .}}{{end}}'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>docker.io/library/python@sha256:950206c37262dd86…   <span class="c">← the image your Mac downloaded</span>
+docker.io/library/python@sha256:f77ac9e44ae96ef2…   <span class="c">← the list</span></code></pre></div>
+      <p style="margin-bottom:0">Podman doesn't label the two lines, and their order means nothing. A second command prints only the image:</p>
+      <div class="cmd"><pre><code>podman image inspect docker.io/library/python:3.12-slim --format '{{.Digest}}'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>sha256:950206c37262dd86…</code></pre></div>
+      <p>So the rule is: <strong>the list is the <code>RepoDigests</code> line that is not equal to <code>.Digest</code></strong>.</p>
+      <p>To be sure, the list file itself was downloaded from Docker Hub. It is 10,373 bytes, and its SHA-256 is <code>f77ac9e44ae96ef2…</code>, exactly the second line above. The digest really is the fingerprint of the list.</p>
+
+      <h3>Step 3: pin the list, not the image</h3>
+      <ul>
+        <li><strong>Pin the list</strong> (<code>f77ac9…</code>): every machine reads the same list and takes the image for its own processor. Builds with it for both <code>linux/arm64</code> and <code>linux/amd64</code> each got the right image.</li>
+        <li><strong>Pin the arm64 image</strong> (<code>950206…</code>): there is no list to choose from any more. Every machine gets the arm64 image, including an amd64 server, where it fails with <code>exec format error</code>.</li>
+      </ul>
+      <p>Because the list is fixed, the eight images named in it are fixed too. You still get the same base on every build, on any processor type.</p>
+
+      <h3>Step 4: the routine, in three commands</h3>
+      <p style="margin-bottom:0"><strong>1. Get today's version of the base.</strong> Your local copy may be weeks old. Pulling first means you pin the version with the latest security fixes.</p>
+      <div class="cmd"><pre><code>podman pull docker.io/library/python:3.12-slim</code></pre></div>
+      <p style="margin-bottom:0"><strong>2. Print the digest of the list.</strong> This command does the comparison from step 2 for you. <code>jq</code> is a tool that picks values out of JSON; the <a href="../#setup">setup step</a> installs it.</p>
+      <div class="cmd"><pre><code>podman image inspect docker.io/library/python:3.12-slim | jq -r '.[0] | .Digest as $d | .RepoDigests[] | select(endswith($d) | not)'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>docker.io/library/python@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f</code></pre></div>
+      <ul>
+        <li><code>.Digest as $d</code> remembers the image's digest. <code>.RepoDigests[]</code> goes through the two lines. <code>select(endswith($d) | not)</code> keeps the line that does <em>not</em> end with it.</li>
+        <li>Write the image's name with its tag, exactly as shown. Looked up by its ID instead, the same image showed the list in <code>.Digest</code>, and the comparison picked the wrong line.</li>
+        <li>If the command prints nothing, the base image exists for one processor type only. Then there is no list, and <code>.Digest</code> is all you can pin.</li>
+      </ul>
+      <p style="margin-bottom:0"><strong>3. Write it into the <code>FROM</code> line.</strong> Copy the part from <code>sha256:</code> to the end, and put it after the tag with an <code>@</code> and no space:</p>
+      <div class="cmd"><pre><code>FROM docker.io/library/python:3.12-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f</code></pre></div>
+
+      <h3>Step 5: check that you picked the list</h3>
+      <p style="margin-bottom:0"><code>podman manifest inspect</code> asks the registry what a name or digest points to, and prints it. It downloads no image. With <code>jq</code>, one line per processor type:</p>
+      <div class="cmd"><pre><code>podman manifest inspect docker.io/library/python@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f \
+  | jq -r '.manifests[] | select(.platform.os != "unknown") | "\(.platform.os)/\(.platform.architecture)  \(.digest)"'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>linux/amd64    sha256:44ff437bba87…
+linux/arm      sha256:6f6b9f27d56b…
+linux/arm      sha256:679673bc59af…
+linux/arm64    sha256:950206c37262…   <span class="c">← the image your Mac downloaded</span>
+linux/386      sha256:846bc0cee2cb…
+linux/ppc64le  sha256:32e353a26495…
+linux/riscv64  sha256:a32947180e15…
+linux/s390x    sha256:97761e2944eb…</code></pre></div>
+      <p>Several lines means it is the list. Your server's processor type should be among them: most Linux servers are <code>linux/amd64</code>, and AWS Graviton machines are <code>linux/arm64</code>. The <code>select(…)</code> part hides entries marked <code>unknown</code>; those are build records that Docker Hub stores next to each image, not images you can run.</p>
+      <p style="margin-bottom:0">Run the same command on the other digest, <code>950206…</code>, and it fails, because that one is a single image:</p>
+      <div class="out"><p class="olabel">Output</p><pre><code>Error: … Treating single images as manifest lists is not implemented</code></pre></div>
+
+      <h3>Does your machine's processor type matter?</h3>
+      <p>Not for pinning. A machine with a different processor downloads a different image, but it reads the same list, so the routine prints the same digest there.</p>
+      <div class="table">
+        <table>
+          <thead><tr><th></th><th>arm64 machine (your Mac)</th><th>amd64 machine</th></tr></thead>
+          <tbody>
+            <tr><td>The image it downloads</td><td><code>950206…</code></td><td><code>44ff437b…</code></td></tr>
+            <tr><td>The list, which you pin</td><td><code>f77ac9…</code></td><td><code>f77ac9…</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The right-hand column was checked on the test Mac by downloading the amd64 image for a moment: its two <code>RepoDigests</code> were <code>44ff437b…</code> and the same <code>f77ac9…</code>.</p>
+      <p>The processor type matters for a different question: which processor your <em>finished</em> image is built for. That is the <code>--platform</code> option in Lesson 6, and it doesn't change which digest you pin.</p>
+
+      <div class="aside key">
+        <span class="chip">Real example</span>
+        <p>The digests in this lesson are from late September, when the tag pointed to Python 3.12.14. On 6 October the same tag pointed to a new list, <code>05cda977…</code>, with Python 3.12.15. So your Mac will print different digests from the ones shown here: use yours. A Containerfile pinned to <code>f77ac9…</code> still gets 3.12.14 today, and that is the point of pinning.</p>
+      </div>
+
+      <p>The trade-off: a pinned base no longer picks up security patches by itself. To update, repeat the routine in step 4 and replace the digest in the <code>FROM</code> line. Teams often leave this to a bot such as Renovate, which opens a merge request when a new version of the base is published.</p>
+    </section>
+
+    <section id="final">
+      <h2><span class="n">07</span>The finished Containerfile</h2>
+      <p>Everything together. This exact file was built and run on the test Mac with <code>--format docker</code>.</p>
+      <div class="anno">
+        <div class="head"><span>hello-ai/Containerfile · production</span><span>173 MB</span></div>
+        <div class="row"><code>FROM docker.io/library/python:3.12-slim@sha256:f77ac9…e51f</code><p>Pinned base (§6). Write the full digest in your file.</p></div>
+        <div class="row"><code>ENV PYTHONUNBUFFERED=1</code><p>Send output straight to the logs (§5).</p></div>
+        <div class="row"><code>RUN useradd --create-home --uid 1000 app</code><p>Create the user early: this line never changes, so it stays cached when your code does.</p></div>
+        <div class="row"><code>WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt</code><p>Same cache-friendly order as Lesson 2. This step still runs as root, so the installed packages belong to root.</p></div>
+        <div class="row"><code>COPY . .</code><p>Then the code, also owned by root: the app can read it but can't change it.</p></div>
+        <div class="row"><code>USER app</code><p>From here on, nothing runs as root (§2).</p></div>
+        <div class="row"><code>EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]</code><p>Documented port, and a health check that needs <code>--format docker</code> (§4).</p></div>
+        <div class="row"><code>CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]</code><p>Unchanged: exec form, listening on all addresses.</p></div>
+      </div>
+      <p>The build still prints the warning from Lesson 2 that pip is running as root. In an image build that is harmless: pip is the only thing installing Python packages there. If you want the build output clean, add <code>--root-user-action=ignore</code> to the <code>pip install</code> line; on the test Mac the warning then disappears.</p>
+
+      <div class="table">
+        <table>
+          <thead><tr><th></th><th>Lesson 2 image</th><th>Lesson 3 image</th></tr></thead>
+          <tbody>
+            <tr><td>Runs as</td><td>root</td><td><code>app</code> (uid 1000)</td></tr>
+            <tr><td>Size</td><td class="num">173 MB</td><td class="num">173 MB</td></tr>
+            <tr><td>Secrets</td><td>No plan</td><td>Supplied at run time; none in the image</td></tr>
+            <tr><td>Health</td><td>Unknown</td><td><code>(healthy)</code> in <code>podman ps</code></td></tr>
+            <tr><td>Logs</td><td>Buffered <code>print()</code></td><td>Immediate</td></tr>
+            <tr><td>Base</td><td>Whatever the tag points to today</td><td>Pinned by digest</td></tr>
+            <tr><td><code>podman stop</code></td><td class="num">0.4 s, Exited (0)</td><td class="num">0.4 s, Exited (0)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="models">
+      <h2><span class="n">08</span>Where the model goes</h2>
+      <p>hello-ai's "model" is a few lines of Python. A real one is a file of weights, from hundreds of megabytes to many gigabytes, and you have to decide where it lives. There are three common answers:</p>
+      <div class="table">
+        <table class="models">
+          <thead><tr><th>Option</th><th>How</th><th>Good</th><th>Costly</th></tr></thead>
+          <tbody>
+            <tr><td>1. Inside the image</td><td><code>COPY</code> the files in, or download them in a <code>RUN</code> step</td><td>Self-contained: the image <em>is</em> the release. Starts fast, works offline, and exactly what you tested.</td><td>Huge images, slow pulls on every deploy, and a model update needs a rebuild</td></tr>
+            <tr><td>2. Downloaded at start</td><td>The app fetches weights from Hugging Face or cloud storage when it starts</td><td>Small image; model and code can be updated separately</td><td>Slow cold starts, needs network and credentials, and "latest" can change under you: pin the model version</td></tr>
+            <tr><td>3. Mounted storage</td><td>Weights sit on a volume or shared disk, mounted into the container</td><td>Fast starts, one copy shared by many containers</td><td>The storage must be set up and kept in sync separately (volumes are in Lesson 4)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Small models (up to a few hundred MB) are often simplest baked in. Large models usually use option 2 or 3. Whatever your team does, check which one it is. It explains why their images look the way they do.</p>
+
+      <h3>Three practical tips</h3>
+      <ul>
+        <li><strong>Only load model files you trust, and prefer <code>.safetensors</code>.</strong> Older formats (<code>.bin</code>, <code>.pt</code>, <code>.pkl</code>) use Python's pickle, which can run code while loading. This is one of the "attacker runs commands through your app" routes from section 2.</li>
+        <li><strong>With a non-root user, point caches somewhere writable.</strong> Hugging Face libraries cache downloads in the home folder by default. Set <code>HF_HOME</code> to a folder the <code>app</code> user owns, or to a mounted volume.</li>
+        <li><strong>Check which PyTorch you install.</strong> On Linux x86-64 servers, a plain <code>pip install torch</code> brings several gigabytes of NVIDIA GPU libraries. A service that runs on CPU only can use PyTorch's CPU build instead (<code>--index-url https://download.pytorch.org/whl/cpu</code>) and be far smaller.</li>
+      </ul>
+    </section>
+
+    <section id="lab">
+      <h2><span class="n">09</span>Lab: harden hello-ai</h2>
+      <p>Work in <code>~/practice/hello-ai</code>, starting from your Lesson 2 files. Try each step before opening its solution.</p>
+
+      <div class="step">
+        <span class="sn">1</span>
+        <div>
+          <h3>See the starting point</h3>
+          <div class="cmd"><pre><code>cd ~/practice/hello-ai
+podman run --rm hello-ai:0.3 id
+podman machine inspect --format '{{.Rootful}}'</code></pre></div>
+          <p>Root in the container. The last command prints <code>true</code> on a rootful machine and <code>false</code> on a default one.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">2</span>
+        <div>
+          <h3>Let the app know about its key</h3>
+          <p style="margin-bottom:0">Make two changes in <code>main.py</code>, so you can see whether a key arrived without ever printing it. Below the <code>MODEL_NAME</code> line, add:</p>
+          <div class="cmd"><pre><code>API_KEY = os.getenv("API_KEY")  # comes from outside the image at run time</code></pre></div>
+          <p style="margin-bottom:0">and change the <code>return</code> line in <code>health()</code> to:</p>
+          <div class="cmd"><pre><code>    return {"status": "ok", "model": MODEL_NAME, "api_key_configured": API_KEY is not None}</code></pre></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">3</span>
+        <div>
+          <h3>Update the Containerfile</h3>
+          <p style="margin-bottom:4px">Change it so that it:</p>
+          <ul class="task">
+            <li><span>sets <code>PYTHONUNBUFFERED=1</code></span></li>
+            <li><span>creates user <code>app</code> with uid 1000, and switches to it below the <code>pip install</code> line</span></li>
+            <li><span>has a <code>HEALTHCHECK</code> that calls <code>/health</code></span></li>
+            <li><span>keeps the exec-form <code>CMD</code></span></li>
+          </ul>
+          <details class="sol"><summary>Show solution</summary><div class="inner">
+            <div class="cmd"><pre><code>FROM docker.io/library/python:3.12-slim
+ENV PYTHONUNBUFFERED=1
+RUN useradd --create-home --uid 1000 app
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+USER app
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]</code></pre></div>
+          </div></details>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">4</span>
+        <div>
+          <h3>Pin the base image</h3>
+          <div class="cmd"><pre><code>podman image inspect docker.io/library/python:3.12-slim | jq -r '.[0] | .Digest as $d | .RepoDigests[] | select(endswith($d) | not)'</code></pre></div>
+          <p style="margin-bottom:0">This prints one line: the digest of the list of images (§6). Copy the part from <code>sha256:</code> to the end, and add it after the tag in the <code>FROM</code> line, with an <code>@</code> and no space:</p>
+          <div class="cmd"><pre><code>FROM docker.io/library/python:3.12-slim@sha256:…</code></pre></div>
+          <p>Your digest will differ from the one printed in this lesson; use yours. To pin the newest base, run <code>podman pull docker.io/library/python:3.12-slim</code> first. To compare by eye instead, use the two commands in §6, step 2.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">5</span>
+        <div>
+          <h3>Build with the docker format</h3>
+          <div class="cmd"><pre><code>podman build --format docker -t hello-ai:1.0 .
+podman images hello-ai</code></pre></div>
+          <p>Build it once without <code>--format docker</code> first if you want to see the <code>HEALTHCHECK</code> warning. pip's warning about running as root is still printed, and it is harmless here (§7).</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">6</span>
+        <div>
+          <h3>Check user, health and shutdown</h3>
+          <div class="cmd"><pre><code>podman run -d --name api -p 8000:8000 hello-ai:1.0
+sleep 2
+podman exec api id
+podman exec api touch /app/main.py
+curl localhost:8000/health
+podman healthcheck run api &amp;&amp; podman ps --filter name=api
+time podman stop api</code></pre></div>
+          <p>Expect <code>uid=1000(app)</code>, <code>Permission denied</code>, <code>(healthy)</code>, <code>"api_key_configured":false</code>, and a stop well under a second.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">7</span>
+        <div>
+          <h3>Supply the key two ways</h3>
+          <div class="cmd"><pre><code>podman rm api
+podman run -d --name api -p 8000:8000 --env-file .env hello-ai:1.0
+curl localhost:8000/health
+podman inspect api | grep API_KEY
+podman rm -f api</code></pre></div>
+          <p>The key arrives (<code>true</code>), and it's visible in <code>podman inspect</code>. Now use a secret:</p>
+          <div class="cmd"><pre><code>printf 'not-a-real-key-either' | podman secret create api_key -
+podman run -d --name api -p 8000:8000 --secret api_key,type=env,target=API_KEY hello-ai:1.0
+curl localhost:8000/health
+podman inspect api | grep -c not-a-real-key-either</code></pre></div>
+          <p>Still <code>true</code>, and the count is <code>0</code>.</p>
+
+          <p style="margin-top:24px;margin-bottom:0"><strong>A complete example with your own variable.</strong> A small script needs a key called <code>MY_API_KEY</code>, and the key is <code>12345</code>. Save this as <code>show_key.py</code> in <code>~/practice/hello-ai</code>:</p>
+          <div class="cmd"><pre><code>import os
+
+key = os.getenv("MY_API_KEY")
+if key is None:
+    print("MY_API_KEY is not set")
+else:
+    print("MY_API_KEY =", key)</code></pre></div>
+          <p style="margin-bottom:0"><code>os.getenv</code> reads an environment variable and gives back <code>None</code> when it doesn't exist. The script prints the key only because <code>12345</code> is a made-up value; never print a real key. Now put the script into an image. A separate tag keeps <code>hello-ai:1.0</code> as it is:</p>
+          <div class="cmd"><pre><code>podman build --format docker -t hello-ai:keydemo .</code></pre></div>
+          <p style="margin-bottom:0">First run the script without passing anything. The command after the image name replaces the image's <code>CMD</code> for this one run:</p>
+          <div class="cmd"><pre><code>podman run --rm hello-ai:keydemo python show_key.py</code></pre></div>
+          <div class="out"><p class="olabel">Output</p><pre><code>MY_API_KEY is not set</code></pre></div>
+          <p style="margin-bottom:0"><strong>Way 1: an environment variable.</strong> Give it directly with <code>-e</code>, or put the same line into <code>.env</code> and pass the file. <code>&gt;&gt;</code> adds the line to the end of the file:</p>
+          <div class="cmd"><pre><code>podman run --rm -e MY_API_KEY=12345 hello-ai:keydemo python show_key.py
+echo 'MY_API_KEY=12345' &gt;&gt; .env
+podman run --rm --env-file .env hello-ai:keydemo python show_key.py</code></pre></div>
+          <div class="out"><p class="olabel">Output of the two runs, on the test Mac</p><pre><code>MY_API_KEY = 12345
+MY_API_KEY = 12345</code></pre></div>
+          <p style="margin-bottom:0"><strong>Way 2: a Podman secret.</strong> The first line stores <code>12345</code> in Podman under the name <code>my_api_key</code>. In the second, <code>type=env</code> means "hand it over as an environment variable", and <code>target=MY_API_KEY</code> is the name the script will see:</p>
+          <div class="cmd"><pre><code>printf '12345' | podman secret create my_api_key -
+podman run --rm --secret my_api_key,type=env,target=MY_API_KEY hello-ai:keydemo python show_key.py</code></pre></div>
+          <div class="out"><p class="olabel">Output of the run, on the test Mac</p><pre><code>MY_API_KEY = 12345</code></pre></div>
+          <p style="margin-bottom:0">The script is the same in all three runs, and it can't tell how the key arrived. What differs is where <code>12345</code> is kept outside the container: with way 1 it is in the container's settings, where <code>podman inspect</code> shows it; with way 2 it is not. Remove the example when you're done:</p>
+          <div class="cmd"><pre><code>podman secret rm my_api_key
+podman rmi hello-ai:keydemo</code></pre></div>
+          <p>You can also delete <code>show_key.py</code> and the <code>MY_API_KEY</code> line in <code>.env</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">8</span>
+        <div>
+          <h3>Clean up</h3>
+          <div class="cmd"><pre><code>podman rm -f api
+podman secret rm api_key
+podman images --filter dangling=true
+podman image prune</code></pre></div>
+          <p><code>podman images --filter dangling=true</code> lists the unnamed <code>&lt;none&gt;</code> images left over from rebuilds, and <code>podman image prune</code> removes them after asking. You have a few from Lessons 2 and 3. Keep <code>hello-ai:1.0</code>: Lesson 4 uses it.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="check">
+      <h2><span class="n">10</span>Check yourself</h2>
+      <p>Try answering each question out loud before opening it.</p>
+      <div class="quiz">
+        <details class="q"><summary><span class="qn">Q1</span><span>Your image has no <code>USER</code> line. What does an attacker who finds a command-execution bug in your app get, and what changes with <code>USER app</code>?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Without <code>USER</code> they're root in the container: they can change your code, install tools and read everything, and on a rootful host that's root outside too. As <code>app</code>, they can't modify the code or install anything, and have much less to work with.</p></div></details>
+        <details class="q"><summary><span class="qn">Q2</span><span>A colleague passes a Hugging Face token with <code>--build-arg HF_TOKEN=…</code>, "so it's never saved in the image". Is that right?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>No. The value is recorded in the image history; <code>podman history --no-trunc</code> shows it. Tokens should be supplied at run time, or with a build secret mount, never as build arguments.</p></div></details>
+        <details class="q"><summary><span class="qn">Q3</span><span>What's the difference between <code>--env-file .env</code> and <code>--secret api_key,type=env,target=API_KEY</code>, if the app sees the same variable either way?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Where the value is stored. With <code>--env-file</code> it's saved in the container's settings, and <code>podman inspect</code> shows it. With a Podman secret, only the secret's name is in the settings; the value is stored separately.</p></div></details>
+        <details class="q"><summary><span class="qn">Q4</span><span>You added a <code>HEALTHCHECK</code>, but <code>podman ps</code> never shows <code>(healthy)</code> or <code>(starting)</code>. What's the first thing to check?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Whether the image was built with <code>--format docker</code>. In the default OCI format, Podman drops <code>HEALTHCHECK</code> with a warning in the build output.</p></div></details>
+        <details class="q"><summary><span class="qn">Q5</span><span>Your app prints "model loaded" at startup, but <code>podman logs</code> is empty, even though the API answers. What's going on?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Python is buffering its output because it's writing to a pipe, not a terminal. Set <code>PYTHONUNBUFFERED=1</code> in the image.</p></div></details>
+        <details class="q"><summary><span class="qn">Q6</span><span>You pinned <code>FROM</code> to the digest that <code>podman image inspect --format '{{.Digest}}'</code> printed on your Mac. The CI server, which is amd64, now fails. Why?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>That digest identifies only the arm64 variant, so the amd64 server was forced to use arm64 files. Pin the multi-platform index digest instead: the <code>RepoDigests</code> entry that isn't equal to <code>.Digest</code>.</p></div></details>
+        <details class="q"><summary><span class="qn">Q7</span><span>Your team's model image is 9&nbsp;GB, and every deploy spends minutes pulling it. The weights are baked in. What are the other two options, and what do they cost?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Download the weights when the container starts (small image, but slow cold starts and a network dependency; pin the model version), or mount them from shared storage (fast starts and one shared copy, but the storage has to be managed separately).</p></div></details>
+      </div>
+
+      <div class="next">
+        <p class="eyebrow">Next · Lesson 4</p>
+        <h3 style="margin-top:0">Volumes and multi-container apps</h3>
+        <p>Keeping data when containers are replaced, mounting model files, letting containers talk to each other, and running hello-ai together with a database using Compose.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('.cmd').forEach(function(box){
+    var pre = box.querySelector('pre');
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var clone = pre.cloneNode(true);
+      clone.querySelectorAll('.c').forEach(function(c){ c.remove(); });
+      var text = clone.textContent.split('\n').map(function(l){ return l.replace(/\s+$/,''); }).join('\n').trim();
+      var done = function(){ btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1400); };
+      var fallback = function(){
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Press ⌘C';
+      };
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+    });
+    box.appendChild(btn);
+  });
+
+  var links = {};
+  document.querySelectorAll('.toc a').forEach(function(a){ links[a.getAttribute('href').slice(1)] = a; });
+  if (!('IntersectionObserver' in window)) return;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting) {
+        Object.keys(links).forEach(function(k){ links[k].classList.remove('on'); });
+        if (links[e.target.id]) links[e.target.id].classList.add('on');
+      }
+    });
+  }, {rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('main section[id]').forEach(function(s){ obs.observe(s); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+.env
+.env.*
+.git
+.venv
+**/__pycache__
+**/*.pyc
+Containerfile
+.containerignore
+compose*.yaml
+models/

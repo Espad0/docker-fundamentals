@@ -1,0 +1,7 @@
+# CPU-only PyTorch comes from PyTorch's own package index (see Lesson 5).
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.0+cpu
+transformers==5.17.0
+huggingface_hub==1.33.0
+fastapi==0.141.1
+uvicorn==0.54.0

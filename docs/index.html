@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Docker Fundamentals</title>
+<meta name="description" content="A free hands-on course in seven lessons: containers for developers who build AI web apps, taught with Podman on a Mac.">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --bg:#F2F4F7;
+  --surface:#FFFFFF;
+  --ink:#141D27;
+  --muted:#556375;
+  --line:#D4DBE4;
+  --accent:#1B5BA3;
+  --accent-soft:#E2EBF6;
+  --amber:#8F5B00;
+  --amber-soft:#FAEFD8;
+  --code-bg:#E8EDF3;
+  --ok:#23734A;
+  --ok-soft:#DFF1E6;
+  --bad:#B3261E;
+  --bad-soft:#FBE3E1;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+    --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+    --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+  --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+  --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16.5px/1.65 var(--sans);padding-inline:20px;padding-block:0 72px}
+.shell{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:40px}
+@media (min-width:1000px){.shell{grid-template-columns:210px minmax(0,1fr)}}
+button{font-family:var(--sans)}
+
+/* table of contents */
+.toc{padding-top:40px}
+.toc nav{display:flex;flex-direction:column;gap:2px}
+@media (min-width:1000px){.toc nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px)}}
+.toc .label{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.toc a{display:grid;grid-template-columns:22px 1fr;color:var(--muted);text-decoration:none;font-size:14px;line-height:1.35;padding:5px 0}
+.toc a span{font:500 12px/1.6 var(--mono);color:var(--muted)}
+.toc a:hover,.toc a.on{color:var(--ink)}
+.toc a.on span{color:var(--accent)}
+@media (max-width:999px){
+  .toc{padding-top:24px}
+  .toc nav{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));column-gap:16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:12px}
+  .toc .label{grid-column:1/-1}
+}
+
+main{max-width:720px;min-width:0}
+header{padding-top:48px;padding-bottom:8px}
+.eyebrow{font:500 12.5px/1 var(--mono);color:var(--accent);letter-spacing:.02em;margin:0 0 18px}
+h1{font-family:var(--display);font-stretch:78%;font-weight:760;font-size:clamp(34px,6vw,50px);line-height:1.02;letter-spacing:-.01em;margin:0 0 18px;text-wrap:balance}
+.lede{font-size:19px;line-height:1.55;margin:0 0 22px;max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13.5px;color:var(--muted);margin:0 0 8px}
+.meta b{color:var(--ink);font-weight:600}
+
+section{padding-top:44px;scroll-margin-top:16px}
+h2{font-family:var(--display);font-stretch:82%;font-weight:720;font-size:27px;line-height:1.15;margin:0 0 14px;text-wrap:balance;display:flex;gap:14px;align-items:baseline}
+h2 .n{font:500 14px/1 var(--mono);color:var(--accent);flex:none}
+h3{font:600 17px/1.3 var(--sans);margin:28px 0 8px}
+p{margin:0 0 14px;max-width:66ch}
+ul,ol{margin:0 0 16px;padding-left:22px;max-width:64ch}
+li{margin-bottom:6px}
+strong{font-weight:600}
+a{color:var(--accent)}
+code{font:400 .88em var(--mono);background:var(--code-bg);padding:.1em .35em;border-radius:3px}
+pre{margin:0;font:400 13.5px/1.6 var(--mono);white-space:pre;overflow-x:auto;padding:14px 16px;background:var(--code-bg);border-radius:4px;color:var(--ink)}
+pre code{background:none;padding:0;font-size:inherit}
+pre .c{color:var(--muted)}
+pre .hit{color:var(--ok)}
+pre .miss{color:var(--amber)}
+
+.goals{list-style:none;padding:0;display:grid;gap:8px;margin-top:6px}
+.goals li{display:grid;grid-template-columns:18px 1fr;gap:10px;margin:0}
+.goals li::before{content:"";width:10px;height:10px;border:1.5px solid var(--accent);margin-top:8px}
+
+/* callouts */
+.aside{background:var(--amber-soft);padding:14px 18px 4px;margin:18px 0 20px;border-radius:2px}
+.aside.key{background:var(--accent-soft)}
+.chip{display:inline-block;font:600 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px 4px;margin-bottom:8px;border:1px solid var(--amber);color:var(--amber)}
+.aside.key .chip{border-color:var(--accent);color:var(--accent)}
+.aside p{max-width:none}
+
+/* diagrams */
+figure{margin:22px 0 24px}
+.diagram{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px}
+.diagram svg{display:block;width:100%;min-width:600px;height:auto}
+figcaption{font-size:13.5px;color:var(--muted);margin-top:8px;max-width:66ch}
+.d-box{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.d-frame{fill:none;stroke:var(--muted);stroke-width:1.2}
+.d-app{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.2}
+.d-kernel{fill:var(--amber-soft);stroke:var(--amber);stroke-width:1.2}
+.d-hw{fill:var(--code-bg);stroke:var(--line);stroke-width:1.2}
+.d-write{fill:var(--surface);stroke:var(--accent);stroke-width:1.4;stroke-dasharray:5 4}
+.d-okbox{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.2}
+.d-badbox{fill:var(--bad-soft);stroke:var(--bad);stroke-width:1.2}
+.d-band1{fill:var(--amber-soft)}
+.d-band2{fill:var(--accent-soft)}
+.d-t{fill:var(--ink);font:500 13px var(--sans)}
+.d-tb{fill:var(--ink);font:600 13px var(--sans)}
+.d-m{fill:var(--muted);font:400 12.5px var(--sans)}
+.d-h{fill:var(--muted);font:600 11px var(--sans);letter-spacing:.09em}
+.d-ha{fill:var(--amber);font:600 11px var(--sans);letter-spacing:.09em}
+.d-hb{fill:var(--accent);font:600 11px var(--sans);letter-spacing:.09em}
+.d-code{fill:var(--ink);font:400 12px var(--mono)}
+.d-lab{fill:var(--muted);font:500 12px var(--mono)}
+.d-ok{fill:var(--ok);font:600 12.5px var(--sans)}
+.d-bad{fill:var(--bad);font:600 12.5px var(--sans)}
+.d-line{stroke:var(--muted);stroke-width:1.2;fill:none}
+.d-okline{stroke:var(--ok);stroke-width:1.4;fill:none}
+.d-badline{stroke:var(--bad);stroke-width:1.4;fill:none;stroke-dasharray:4 4}
+.d-head{fill:var(--muted)}
+.d-head-ok{fill:var(--ok)}
+.d-head-bad{fill:var(--bad)}
+
+/* annotated Containerfile */
+.anno{background:var(--surface);border:1px solid var(--line);border-radius:4px;margin:18px 0 22px;overflow:hidden}
+.anno .head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);font:500 12px/1 var(--mono);color:var(--muted);background:var(--bg)}
+.anno .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-bottom:1px solid var(--line)}
+.anno .row:last-child{border-bottom:0}
+.anno .row > code{display:block;background:var(--code-bg);border-radius:0;padding:12px 16px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.anno .row > p{margin:0;padding:11px 16px 12px;font-size:14.5px;line-height:1.55}
+.tag{display:inline-block;font:600 10px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px 3px;border-radius:2px;margin-right:6px;vertical-align:1px}
+.tag.layer{background:var(--accent-soft);color:var(--accent)}
+.tag.config{background:var(--amber-soft);color:var(--amber)}
+@media (max-width:640px){.anno .row{grid-template-columns:1fr}}
+
+/* tables */
+.table{overflow-x:auto;margin:16px 0 20px;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+th{font:600 11.5px/1.3 var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+td:first-child{font-weight:600;white-space:nowrap}
+.cmds td:first-child{font:500 13px var(--mono);white-space:normal;min-width:15em}
+.decide td:first-child{white-space:normal;min-width:12em}
+.decide td:nth-child(2){white-space:nowrap}
+.out{margin:10px 0 14px}
+.out .olabel{font:600 10.5px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.out pre{background:var(--surface);border:1px solid var(--line)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* cache comparison */
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 10px}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:4px;display:flex;flex-direction:column}
+.col h4{margin:0;padding:12px 16px 10px;font:600 14.5px/1.3 var(--sans);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.col h4 small{font:500 12px var(--sans);color:var(--muted)}
+.steps{list-style:none;margin:0;padding:6px 0;max-width:none}
+.steps li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:7px 16px;margin:0;font:400 13px/1.4 var(--mono)}
+.st{flex:none;font:600 10.5px/1 var(--sans);letter-spacing:.07em;text-transform:uppercase;padding:4px 7px 3px;border-radius:2px}
+.st.hit{background:var(--ok-soft);color:var(--ok)}
+.st.miss{background:var(--amber-soft);color:var(--amber)}
+.st.slow{background:var(--bad-soft);color:var(--bad)}
+.col .foot{margin-top:auto;padding:10px 16px 12px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:10px}
+.col .foot b{font:700 24px/1 var(--display);font-stretch:85%;font-variant-numeric:tabular-nums}
+.col .foot span{font-size:13px;color:var(--muted)}
+
+/* experiment result pair */
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 20px}
+.res{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+.res .lbl{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px}
+.res.good .lbl{color:var(--ok)}
+.res.poor .lbl{color:var(--bad)}
+.res code.big{display:block;font-size:13px;padding:8px 10px;margin:0 0 10px;white-space:pre-wrap;word-break:break-word}
+.res dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+.res dt{color:var(--muted)}
+.res dd{margin:0;font-variant-numeric:tabular-nums}
+
+/* quiz */
+.quiz{display:grid;gap:10px;margin-top:10px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:4px}
+details.q summary{cursor:pointer;list-style:none;padding:14px 16px;display:grid;grid-template-columns:28px 1fr auto;gap:8px;font-weight:500}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary .qn{font:500 13px/1.7 var(--mono);color:var(--accent)}
+details.q summary .rv{font:500 12px/1.9 var(--sans);color:var(--muted)}
+details.q[open] summary .rv{visibility:hidden}
+details.q summary:focus-visible,details.sol summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.q .ans{padding:0 16px 14px 52px}
+details.q .ans p:last-child{margin-bottom:0}
+
+/* lab */
+.step{margin:26px 0 0;display:grid;grid-template-columns:34px minmax(0,1fr);gap:0 12px}
+.step .sn{font:600 13px/1 var(--mono);color:var(--accent);border:1.5px solid var(--accent);border-radius:50%;width:30px;height:30px;display:grid;place-items:center;margin-top:-4px}
+.step h3{margin-top:0}
+.cmd{position:relative;margin:10px 0 12px}
+.cmd pre{padding-right:72px}
+.copy{position:absolute;top:8px;right:8px;font:500 12px/1 var(--sans);color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:6px 9px;cursor:pointer}
+.copy:hover{color:var(--ink)}
+.copy:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.task{list-style:none;padding:0;margin:8px 0 14px;display:grid;gap:6px}
+.task li{display:grid;grid-template-columns:18px 1fr;gap:8px;margin:0}
+.task li::before{content:"";width:9px;height:9px;border:1.5px solid var(--muted);border-radius:2px;margin-top:8px}
+details.sol{border:1px dashed var(--line);border-radius:4px;margin:10px 0 14px;background:var(--surface)}
+details.sol summary{cursor:pointer;padding:10px 14px;font:500 14px var(--sans);color:var(--accent)}
+details.sol[open] summary{border-bottom:1px dashed var(--line)}
+details.sol .inner{padding:12px 14px 4px}
+
+.next{margin-top:48px;padding-top:22px;border-top:1px solid var(--line)}
+.next .eyebrow{margin-bottom:10px}
+.next p{color:var(--muted)}
+
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+
+/* home page */
+.shell.home{grid-template-columns:minmax(0,1fr);max-width:760px}
+.shell.home main{max-width:none}
+.lessons td:first-child{font:500 13px/1.6 var(--mono);color:var(--accent);width:2.2em}
+.lessons td a{font-weight:600;text-decoration:none}
+.lessons td a:hover{text-decoration:underline}
+.lessons td p{margin:2px 0 0;font-size:14.5px;color:var(--muted);max-width:none}
+.lessons .num{white-space:nowrap}
+.start{display:inline-block;margin-top:18px;padding:11px 18px;font:600 15px/1 var(--sans);color:var(--surface);background:var(--accent);border-radius:4px;text-decoration:none}
+.start:hover{filter:brightness(1.08)}
+.start:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+footer{max-width:760px;margin:56px auto 0;padding-top:18px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="shell home">
+  <main>
+    <header>
+      <p class="eyebrow">Free course · 7 lessons · taught with Podman on a Mac</p>
+      <h1>Docker Fundamentals</h1>
+      <p class="lede">A hands-on course in containers for developers who build AI web apps. You take one small Python service, put it in a container, make it safe to ship, give it a database and a real model, and follow it to AWS, Cloudflare and Kubernetes.</p>
+      <p>The lessons use <strong>Podman</strong>, a free tool that works like Docker. The ideas are the same, and most commands work with <code>docker</code> in place of <code>podman</code>.</p>
+      <div class="meta"><span><b>Time</b> about 8 hours with the labs</span><span><b>Cost</b> free; the optional cloud steps in Lesson 6 are not</span><span><b>Source</b> <a href="https://github.com/Espad0/docker-fundamentals">GitHub</a></span></div>
+      <a class="start" href="lesson-01/">Start with Lesson 1</a>
+    </header>
+
+    <section id="lessons">
+      <h2>The lessons</h2>
+      <p>Each lesson has a part to read and a lab to do. Where a lab asks you to write a file, the solution is on the page, behind a "Show solution" button.</p>
+      <div class="table">
+        <table class="lessons">
+          <thead><tr><th></th><th>Lesson</th><th class="num">Reading</th><th class="num">Lab</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><a href="lesson-01/">What a Container Is</a><p>What a container is: a process, an image made of layers, the Linux VM on a Mac, and what happens when a container stops.</p></td><td class="num">25 min</td><td class="num">10 min</td></tr>
+            <tr><td>2</td><td><a href="lesson-02/">Building Container Images</a><p>Your first image: the Containerfile, the build context, the layer cache, the start command and ports.</p></td><td class="num">30 min</td><td class="num">30 min</td></tr>
+            <tr><td>3</td><td><a href="lesson-03/">Production-Ready Images</a><p>The same image made safe to ship: a non-root user, settings and secrets at run time, health checks, logs, a pinned base image.</p></td><td class="num">35 min</td><td class="num">35 min</td></tr>
+            <tr><td>4</td><td><a href="lesson-04/">Volumes, Networks and Compose</a><p>Data and several containers: volumes, shared folders, networks, and a Postgres database with Compose.</p></td><td class="num">40 min</td><td class="num">40 min</td></tr>
+            <tr><td>5</td><td><a href="lesson-05/">Serving a Real Model</a><p>A real model in a container: PyTorch without GPU libraries, readiness, memory and CPU limits, streaming, and what GPUs need.</p></td><td class="num">40 min</td><td class="num">45 min</td></tr>
+            <tr><td>6</td><td><a href="lesson-06/">Shipping to AWS and Cloudflare</a><p>Shipping: registries, building for servers from a Mac, a GitLab CI pipeline, AWS ECS Express Mode and Cloudflare Containers.</p></td><td class="num">45 min</td><td class="num">30 min</td></tr>
+            <tr><td>7</td><td><a href="lesson-07/">Kubernetes, the Big Picture</a><p>Kubernetes in outline: what the main objects are, how to read a manifest, and running one locally with Podman.</p></td><td class="num">35 min</td><td class="num">25 min</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="for">
+      <h2>Who it is for</h2>
+      <ul>
+        <li>You can read Python and use a terminal.</li>
+        <li>You have not used Docker or Podman, or you have copied commands without knowing what they do.</li>
+        <li>You have a Mac with Apple silicon. Every output in the lessons comes from one.</li>
+      </ul>
+      <p>If you use Docker and not Podman: the outputs shown are Podman's, and a few steps are Podman-only, such as <code>--format docker</code> in Lesson 3 and <code>podman kube play</code> in Lesson 7.</p>
+    </section>
+
+    <section id="setup">
+      <h2>Before you start</h2>
+      <h3>1. Install the tools</h3>
+      <p style="margin-bottom:0">With <a href="https://brew.sh">Homebrew</a>:</p>
+      <div class="cmd"><pre><code>brew install podman jq docker-compose</code></pre></div>
+      <ul>
+        <li><code>podman</code> builds and runs containers.</li>
+        <li><code>jq</code> picks values out of JSON. Lesson 3 uses it.</li>
+        <li><code>docker-compose</code> is the program that <code>podman compose</code> hands its work to. Lesson 4 uses it.</li>
+      </ul>
+      <h3>2. Create Podman's Linux VM</h3>
+      <p style="margin-bottom:0">Containers need a Linux kernel, so on a Mac Podman runs them in a small virtual machine. Lesson 1 explains why. Create it once, then start it:</p>
+      <div class="cmd"><pre><code>podman machine init
+podman machine start</code></pre></div>
+      <h3>3. Get the practice apps</h3>
+      <p style="margin-bottom:0">The lessons work in <code>~/practice/hello-ai</code> and <code>~/practice/hello-model</code>. Copy the starting files there:</p>
+      <div class="cmd"><pre><code>git clone https://github.com/Espad0/docker-fundamentals.git
+mkdir -p ~/practice
+cp -R docker-fundamentals/starter/hello-ai docker-fundamentals/starter/hello-model ~/practice/</code></pre></div>
+      <p>The same repository has a <code>solutions</code> folder with the finished files of each lab.</p>
+      <div class="aside key">
+        <span class="chip">Not re-run</span>
+        <p>The install commands in steps 1 and 2 are the standard ones, but they were not run again for this course, because the test Mac already had the tools. The copy command in step 3 was tested.</p>
+      </div>
+    </section>
+
+    <section id="tested">
+      <h2>How it was made and tested</h2>
+      <p>This course was written with Claude, Anthropic's AI model, in September and October 2026. Every command that runs locally was run on one Mac before it went into a lesson.</p>
+      <p>That Mac is <strong>the test Mac</strong> in the lessons. Outputs, sizes and timings come from it, so yours will differ a little.</p>
+      <div class="table">
+        <table>
+          <thead><tr><th>The test Mac</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>Computer</td><td>A Mac with an Apple M5 processor (arm64)</td></tr>
+            <tr><td>Podman</td><td>6.0.2</td></tr>
+            <tr><td>Podman's Linux VM</td><td>5 CPUs, 3.8 GB of memory, in rootful mode. The default is rootless; Lessons 3 and 4 say where that changes an output.</td></tr>
+            <tr><td>Compose</td><td>Docker Compose 5.5.1, used through <code>podman compose</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>What was not run</h3>
+      <ul>
+        <li><strong>The AWS and Cloudflare account steps in Lesson 6.</strong> They are written from the providers' documentation, checked on 28 September 2026. Everything local in that lesson was run, including the build job and a Cloudflare dry run.</li>
+        <li><strong>The <code>kubectl</code> commands in Lesson 7.</strong> There was no cluster. The Kubernetes file itself was run locally with <code>podman kube play</code>.</li>
+        <li><strong>One Docker-only rule about volumes in Lesson 4.</strong> The test Mac has Podman only.</li>
+        <li><strong>Outputs of a rootless Podman machine.</strong> The test Mac's is rootful.</li>
+      </ul>
+      <p>Versions move. Package versions, image sizes and the base-image digests in the lessons are from autumn 2026, and the lessons show how to look up current ones.</p>
+      <p>Found a mistake? Please <a href="https://github.com/Espad0/docker-fundamentals/issues">open an issue</a>.</p>
+    </section>
+
+    <section id="licence">
+      <h2>Licence</h2>
+      <ul>
+        <li>The lesson text and diagrams are under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. You may reuse and adapt them if you give credit.</li>
+        <li>The code and configuration files, in the lessons and in the repository, are under the <a href="https://github.com/Espad0/docker-fundamentals/blob/main/LICENSE">MIT licence</a>.</li>
+      </ul>
+    </section>
+  </main>
+</div>
+<footer>Docker Fundamentals · <a href="https://github.com/Espad0/docker-fundamentals">Espad0/docker-fundamentals</a></footer>
+<script>
+(function(){
+  // copy buttons on commands
+  document.querySelectorAll('.cmd').forEach(function(box){
+    var pre = box.querySelector('pre');
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var clone = pre.cloneNode(true);
+      clone.querySelectorAll('.c').forEach(function(c){ c.remove(); });
+      var text = clone.textContent.split('\n').map(function(l){ return l.replace(/\s+$/,''); }).join('\n').trim();
+      var done = function(){ btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1400); };
+      var fallback = function(){
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Press ⌘C';
+      };
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+    });
+    box.appendChild(btn);
+  });
+
+  // highlight the current section in the table of contents
+  var links = {};
+  document.querySelectorAll('.toc a').forEach(function(a){ links[a.getAttribute('href').slice(1)] = a; });
+  if (!('IntersectionObserver' in window)) return;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting) {
+        Object.keys(links).forEach(function(k){ links[k].classList.remove('on'); });
+        if (links[e.target.id]) links[e.target.id].classList.add('on');
+      }
+    });
+  }, {rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('main section[id]').forEach(function(s){ obs.observe(s); });
+})();
+</script>
+</body>
+</html>

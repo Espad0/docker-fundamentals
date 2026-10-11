@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lesson 7: Kubernetes, the Big Picture · Docker Fundamentals</title>
+<meta name="description" content="Lesson 7 of Docker Fundamentals, a free hands-on course: Kubernetes, the Big Picture.">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --bg:#F2F4F7;
+  --surface:#FFFFFF;
+  --ink:#141D27;
+  --muted:#556375;
+  --line:#D4DBE4;
+  --accent:#1B5BA3;
+  --accent-soft:#E2EBF6;
+  --amber:#8F5B00;
+  --amber-soft:#FAEFD8;
+  --code-bg:#E8EDF3;
+  --ok:#23734A;
+  --ok-soft:#DFF1E6;
+  --bad:#B3261E;
+  --bad-soft:#FBE3E1;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+    --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+    --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+  --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+  --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16.5px/1.65 var(--sans);padding-inline:20px;padding-block:0 72px}
+.shell{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:40px}
+@media (min-width:1000px){.shell{grid-template-columns:210px minmax(0,1fr)}}
+button{font-family:var(--sans)}
+
+/* table of contents */
+.toc{padding-top:40px}
+.toc nav{display:flex;flex-direction:column;gap:2px}
+@media (min-width:1000px){.toc nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px)}}
+.toc .label{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.toc a{display:grid;grid-template-columns:22px 1fr;color:var(--muted);text-decoration:none;font-size:14px;line-height:1.35;padding:5px 0}
+.toc a span{font:500 12px/1.6 var(--mono);color:var(--muted)}
+.toc a:hover,.toc a.on{color:var(--ink)}
+.toc a.on span{color:var(--accent)}
+@media (max-width:999px){
+  .toc{padding-top:24px}
+  .toc nav{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));column-gap:16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:12px}
+  .toc .label{grid-column:1/-1}
+}
+
+main{max-width:720px;min-width:0}
+header{padding-top:48px;padding-bottom:8px}
+.eyebrow{font:500 12.5px/1 var(--mono);color:var(--accent);letter-spacing:.02em;margin:0 0 18px}
+h1{font-family:var(--display);font-stretch:78%;font-weight:760;font-size:clamp(34px,6vw,50px);line-height:1.02;letter-spacing:-.01em;margin:0 0 18px;text-wrap:balance}
+.lede{font-size:19px;line-height:1.55;margin:0 0 22px;max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13.5px;color:var(--muted);margin:0 0 8px}
+.meta b{color:var(--ink);font-weight:600}
+
+section{padding-top:44px;scroll-margin-top:16px}
+h2{font-family:var(--display);font-stretch:82%;font-weight:720;font-size:27px;line-height:1.15;margin:0 0 14px;text-wrap:balance;display:flex;gap:14px;align-items:baseline}
+h2 .n{font:500 14px/1 var(--mono);color:var(--accent);flex:none}
+h3{font:600 17px/1.3 var(--sans);margin:28px 0 8px}
+p{margin:0 0 14px;max-width:66ch}
+ul,ol{margin:0 0 16px;padding-left:22px;max-width:64ch}
+li{margin-bottom:6px}
+strong{font-weight:600}
+a{color:var(--accent)}
+code{font:400 .88em var(--mono);background:var(--code-bg);padding:.1em .35em;border-radius:3px}
+pre{margin:0;font:400 13.5px/1.6 var(--mono);white-space:pre;overflow-x:auto;padding:14px 16px;background:var(--code-bg);border-radius:4px;color:var(--ink)}
+pre code{background:none;padding:0;font-size:inherit}
+pre .c{color:var(--muted)}
+pre .hit{color:var(--ok)}
+pre .miss{color:var(--amber)}
+
+.goals{list-style:none;padding:0;display:grid;gap:8px;margin-top:6px}
+.goals li{display:grid;grid-template-columns:18px 1fr;gap:10px;margin:0}
+.goals li::before{content:"";width:10px;height:10px;border:1.5px solid var(--accent);margin-top:8px}
+
+/* callouts */
+.aside{background:var(--amber-soft);padding:14px 18px 4px;margin:18px 0 20px;border-radius:2px}
+.aside.key{background:var(--accent-soft)}
+.chip{display:inline-block;font:600 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px 4px;margin-bottom:8px;border:1px solid var(--amber);color:var(--amber)}
+.aside.key .chip{border-color:var(--accent);color:var(--accent)}
+.aside p{max-width:none}
+
+/* diagrams */
+figure{margin:22px 0 24px}
+.diagram{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px}
+.diagram svg{display:block;width:100%;min-width:600px;height:auto}
+figcaption{font-size:13.5px;color:var(--muted);margin-top:8px;max-width:66ch}
+.d-box{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.d-frame{fill:none;stroke:var(--muted);stroke-width:1.2}
+.d-app{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.2}
+.d-kernel{fill:var(--amber-soft);stroke:var(--amber);stroke-width:1.2}
+.d-hw{fill:var(--code-bg);stroke:var(--line);stroke-width:1.2}
+.d-write{fill:var(--surface);stroke:var(--accent);stroke-width:1.4;stroke-dasharray:5 4}
+.d-okbox{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.2}
+.d-badbox{fill:var(--bad-soft);stroke:var(--bad);stroke-width:1.2}
+.d-band1{fill:var(--amber-soft)}
+.d-band2{fill:var(--accent-soft)}
+.d-t{fill:var(--ink);font:500 13px var(--sans)}
+.d-tb{fill:var(--ink);font:600 13px var(--sans)}
+.d-m{fill:var(--muted);font:400 12.5px var(--sans)}
+.d-h{fill:var(--muted);font:600 11px var(--sans);letter-spacing:.09em}
+.d-ha{fill:var(--amber);font:600 11px var(--sans);letter-spacing:.09em}
+.d-hb{fill:var(--accent);font:600 11px var(--sans);letter-spacing:.09em}
+.d-code{fill:var(--ink);font:400 12px var(--mono)}
+.d-lab{fill:var(--muted);font:500 12px var(--mono)}
+.d-ok{fill:var(--ok);font:600 12.5px var(--sans)}
+.d-bad{fill:var(--bad);font:600 12.5px var(--sans)}
+.d-line{stroke:var(--muted);stroke-width:1.2;fill:none}
+.d-okline{stroke:var(--ok);stroke-width:1.4;fill:none}
+.d-badline{stroke:var(--bad);stroke-width:1.4;fill:none;stroke-dasharray:4 4}
+.d-head{fill:var(--muted)}
+.d-head-ok{fill:var(--ok)}
+.d-head-bad{fill:var(--bad)}
+
+/* annotated Containerfile */
+.anno{background:var(--surface);border:1px solid var(--line);border-radius:4px;margin:18px 0 22px;overflow:hidden}
+.anno .head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);font:500 12px/1 var(--mono);color:var(--muted);background:var(--bg)}
+.anno .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-bottom:1px solid var(--line)}
+.anno .row:last-child{border-bottom:0}
+.anno .row > code{display:block;background:var(--code-bg);border-radius:0;padding:12px 16px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.anno .row > p{margin:0;padding:11px 16px 12px;font-size:14.5px;line-height:1.55}
+.tag{display:inline-block;font:600 10px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px 3px;border-radius:2px;margin-right:6px;vertical-align:1px}
+.tag.layer{background:var(--accent-soft);color:var(--accent)}
+.tag.config{background:var(--amber-soft);color:var(--amber)}
+@media (max-width:640px){.anno .row{grid-template-columns:1fr}}
+
+/* tables */
+.table{overflow-x:auto;margin:16px 0 20px;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+th{font:600 11.5px/1.3 var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+td:first-child{font-weight:600;white-space:nowrap}
+.cmds td:first-child{font:500 13px var(--mono);white-space:normal;min-width:15em}
+.decide td:first-child{white-space:normal;min-width:12em}
+.decide td:nth-child(2){white-space:nowrap}
+.out{margin:10px 0 14px}
+.out .olabel{font:600 10.5px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.out pre{background:var(--surface);border:1px solid var(--line)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* cache comparison */
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 10px}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:4px;display:flex;flex-direction:column}
+.col h4{margin:0;padding:12px 16px 10px;font:600 14.5px/1.3 var(--sans);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.col h4 small{font:500 12px var(--sans);color:var(--muted)}
+.steps{list-style:none;margin:0;padding:6px 0;max-width:none}
+.steps li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:7px 16px;margin:0;font:400 13px/1.4 var(--mono)}
+.st{flex:none;font:600 10.5px/1 var(--sans);letter-spacing:.07em;text-transform:uppercase;padding:4px 7px 3px;border-radius:2px}
+.st.hit{background:var(--ok-soft);color:var(--ok)}
+.st.miss{background:var(--amber-soft);color:var(--amber)}
+.st.slow{background:var(--bad-soft);color:var(--bad)}
+.col .foot{margin-top:auto;padding:10px 16px 12px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:10px}
+.col .foot b{font:700 24px/1 var(--display);font-stretch:85%;font-variant-numeric:tabular-nums}
+.col .foot span{font-size:13px;color:var(--muted)}
+
+/* experiment result pair */
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 20px}
+.res{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+.res .lbl{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px}
+.res.good .lbl{color:var(--ok)}
+.res.poor .lbl{color:var(--bad)}
+.res code.big{display:block;font-size:13px;padding:8px 10px;margin:0 0 10px;white-space:pre-wrap;word-break:break-word}
+.res dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+.res dt{color:var(--muted)}
+.res dd{margin:0;font-variant-numeric:tabular-nums}
+
+/* quiz */
+.quiz{display:grid;gap:10px;margin-top:10px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:4px}
+details.q summary{cursor:pointer;list-style:none;padding:14px 16px;display:grid;grid-template-columns:28px 1fr auto;gap:8px;font-weight:500}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary .qn{font:500 13px/1.7 var(--mono);color:var(--accent)}
+details.q summary .rv{font:500 12px/1.9 var(--sans);color:var(--muted)}
+details.q[open] summary .rv{visibility:hidden}
+details.q summary:focus-visible,details.sol summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.q .ans{padding:0 16px 14px 52px}
+details.q .ans p:last-child{margin-bottom:0}
+
+/* lab */
+.step{margin:26px 0 0;display:grid;grid-template-columns:34px minmax(0,1fr);gap:0 12px}
+.step .sn{font:600 13px/1 var(--mono);color:var(--accent);border:1.5px solid var(--accent);border-radius:50%;width:30px;height:30px;display:grid;place-items:center;margin-top:-4px}
+.step h3{margin-top:0}
+.cmd{position:relative;margin:10px 0 12px}
+.cmd pre{padding-right:72px}
+.copy{position:absolute;top:8px;right:8px;font:500 12px/1 var(--sans);color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:6px 9px;cursor:pointer}
+.copy:hover{color:var(--ink)}
+.copy:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.task{list-style:none;padding:0;margin:8px 0 14px;display:grid;gap:6px}
+.task li{display:grid;grid-template-columns:18px 1fr;gap:8px;margin:0}
+.task li::before{content:"";width:9px;height:9px;border:1.5px solid var(--muted);border-radius:2px;margin-top:8px}
+details.sol{border:1px dashed var(--line);border-radius:4px;margin:10px 0 14px;background:var(--surface)}
+details.sol summary{cursor:pointer;padding:10px 14px;font:500 14px var(--sans);color:var(--accent)}
+details.sol[open] summary{border-bottom:1px dashed var(--line)}
+details.sol .inner{padding:12px 14px 4px}
+
+.next{margin-top:48px;padding-top:22px;border-top:1px solid var(--line)}
+.next .eyebrow{margin-bottom:10px}
+.next p{color:var(--muted)}
+
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+
+/* course navigation: a link home, then links to every lesson */
+.course{max-width:1100px;margin:0 auto;padding-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.course .home{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-decoration:none;margin-right:6px;padding:6px 0}
+.course .home:hover{color:var(--ink)}
+.course .lesson,.course .here{display:inline-flex;align-items:baseline;gap:7px;padding:6px 10px 6px 8px;font:500 13px/1.2 var(--sans);color:var(--muted);text-decoration:none;background:var(--surface);border:1px solid var(--line);border-radius:3px}
+.course b{font:500 12px/1 var(--mono);color:var(--accent)}
+.course .lesson:hover{color:var(--ink);border-color:var(--muted)}
+.course a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.course .here{color:var(--ink);background:var(--accent-soft);border-color:var(--accent)}
+.meta a{color:inherit}
+@media (max-width:640px){.course .home{flex-basis:100%}}
+</style>
+</head>
+<body>
+<nav class="course" aria-label="All lessons in this course">
+  <a class="home" href="../">Docker Fundamentals</a>
+  <a class="lesson" href="../lesson-01/" title="Lesson 1: What a Container Is"><b>1</b>Containers</a>
+  <a class="lesson" href="../lesson-02/" title="Lesson 2: Building Container Images"><b>2</b>Building images</a>
+  <a class="lesson" href="../lesson-03/" title="Lesson 3: Production-Ready Images"><b>3</b>Production images</a>
+  <a class="lesson" href="../lesson-04/" title="Lesson 4: Volumes, Networks and Compose"><b>4</b>Volumes and Compose</a>
+  <a class="lesson" href="../lesson-05/" title="Lesson 5: Serving a Real Model"><b>5</b>A real model</a>
+  <a class="lesson" href="../lesson-06/" title="Lesson 6: Shipping to AWS and Cloudflare"><b>6</b>AWS and Cloudflare</a>
+  <span class="here" aria-current="page" title="Kubernetes, the Big Picture"><b>7</b>Kubernetes</span>
+</nav>
+
+<div class="shell">
+  <aside class="toc" aria-label="Lesson sections">
+    <nav>
+      <div class="label">Lesson 7</div>
+      <a href="#why"><span>1</span>Why Kubernetes exists</a>
+      <a href="#words"><span>2</span>The vocabulary</a>
+      <a href="#yaml"><span>3</span>Reading a Deployment</a>
+      <a href="#local"><span>4</span>Try it with Podman</a>
+      <a href="#kubectl"><span>5</span>On a real cluster</a>
+      <a href="#eks"><span>6</span>Kubernetes on AWS</a>
+      <a href="#read"><span>7</span>Reading your team's files</a>
+      <a href="#lab"><span>8</span>Lab</a>
+      <a href="#check"><span>9</span>Check yourself</a>
+      <a href="#done"><span>10</span>Course complete</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header>
+      <p class="eyebrow">Docker Fundamentals · Lesson 7 (optional) · Kubernetes, the big picture</p>
+      <h1>Kubernetes, the big picture</h1>
+      <p class="lede">You may never set up a Kubernetes cluster, but you'll likely read Kubernetes files: in your team's repositories, in open-source projects, in deployment reviews. Almost every idea in them is something you've already learned under another name. This lesson maps them, and lets you run a real Kubernetes file on your Mac with Podman.</p>
+      <div class="meta"><span><b>Reading</b> about 35 min</span><span><b>Lab</b> about 25 min</span><span><b>Uses</b> <code>hello-ai:2.0</code> from Lesson 4</span><span><b>Outputs</b> from <a href="../#tested">the test Mac</a>, autumn 2026</span></div>
+      <section style="padding-top:26px" aria-label="Goals">
+        <h3 style="margin-top:0">By the end you should be able to</h3>
+        <ul class="goals" style="margin-bottom:0">
+          <li><span>explain what Kubernetes does that a single <code>podman run</code> doesn't</span></li>
+          <li><span>map Pods, Deployments, Services, ConfigMaps, Secrets and probes to what you know from Lessons 1–5</span></li>
+          <li><span>read a Deployment file and say what it will do</span></li>
+          <li><span>run Kubernetes YAML locally with <code>podman kube play</code>, and know where Podman differs</span></li>
+          <li><span>recognise the everyday <code>kubectl</code> commands and what EKS adds on AWS</span></li>
+        </ul>
+      </section>
+    </header>
+
+    <section id="why">
+      <h2><span class="n">01</span>Why Kubernetes exists</h2>
+      <p>Everything so far ran on one machine. Production usually means many machines and many containers, and someone has to answer questions like these, all day, automatically:</p>
+      <ul>
+        <li>Which machine should this container run on, given the CPU and memory it needs?</li>
+        <li>A container crashed, or a whole machine died. What replaces it, and where?</li>
+        <li>We have a new image. How do we replace 10 running copies without downtime, and undo it if it's broken?</li>
+        <li>How do the other services find this one, when its copies keep moving between machines?</li>
+      </ul>
+      <p><strong>Kubernetes</strong> answers them. The key idea is <strong>desired state</strong>. You don't say "start 3 containers"; you write "there should always be 3 copies of this, using this image". Kubernetes' controllers keep comparing that with reality and fix any difference. If a copy dies, reality is 2, desired is 3, so a controller starts one. You change the image in the file, and a controller rolls it out.</p>
+      <p>ECS Express Mode and Cloudflare Containers (Lesson 6) do the same work for you, with fewer choices. Kubernetes gives you every choice, and every responsibility that comes with it.</p>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 720 250" role="img" aria-labelledby="f1t">
+            <title id="f1t">Traffic enters through an Ingress, goes to a Service, which balances across three Pods managed by a Deployment and spread over two nodes; the control plane watches desired and actual state</title>
+            <defs>
+              <marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker>
+            </defs>
+            <text class="d-m" x="10" y="118">users</text>
+            <path class="d-line" d="M46,114 L70,114" marker-end="url(#ah1)"/>
+            <rect class="d-kernel" x="74" y="92" width="96" height="44" rx="3"/>
+            <text class="d-tb" x="86" y="112">Ingress</text>
+            <text class="d-m" x="86" y="128">HTTP entry</text>
+            <path class="d-line" d="M170,114 L192,114" marker-end="url(#ah1)"/>
+            <rect class="d-app" x="196" y="92" width="104" height="44" rx="3"/>
+            <text class="d-tb" x="208" y="112">Service</text>
+            <text class="d-m" x="208" y="128">hello-ai</text>
+
+            <path class="d-line" d="M300,106 L352,64" marker-end="url(#ah1)"/>
+            <path class="d-line" d="M300,114 L352,114" marker-end="url(#ah1)"/>
+            <path class="d-line" d="M300,122 L352,186" marker-end="url(#ah1)"/>
+
+            <text class="d-h" x="340" y="16">DEPLOYMENT hello-ai · REPLICAS: 3</text>
+            <rect class="d-frame" x="340" y="26" width="200" height="112" rx="4"/>
+            <text class="d-h" x="352" y="42">NODE 1</text>
+            <rect class="d-box" x="356" y="50" width="170" height="30" rx="2"/><text class="d-t" x="368" y="70">Pod · api container</text>
+            <rect class="d-box" x="356" y="98" width="170" height="30" rx="2"/><text class="d-t" x="368" y="118">Pod · api container</text>
+            <rect class="d-frame" x="340" y="148" width="200" height="72" rx="4"/>
+            <text class="d-h" x="352" y="164">NODE 2</text>
+            <rect class="d-box" x="356" y="172" width="170" height="30" rx="2"/><text class="d-t" x="368" y="192">Pod · api container</text>
+
+            <rect class="d-hw" x="566" y="26" width="144" height="194" rx="3"/>
+            <text class="d-tb" x="578" y="50">Control plane</text>
+            <text class="d-m" x="578" y="76">API server</text>
+            <text class="d-m" x="578" y="96">scheduler</text>
+            <text class="d-m" x="578" y="116">controllers</text>
+            <text class="d-m" x="578" y="150">desired: 3</text>
+            <text class="d-m" x="578" y="170">actual: 3</text>
+            <text class="d-ok" x="578" y="196">nothing to fix</text>
+            <text class="d-m" x="340" y="242">Pods can land on any node; the Service always finds them by label.</text>
+          </svg>
+        </div>
+      </figure>
+    </section>
+
+    <section id="words">
+      <h2><span class="n">02</span>The vocabulary, mapped to what you know</h2>
+      <div class="table">
+        <table class="map">
+          <thead><tr><th>Kubernetes</th><th>What it is</th><th>You already know it as</th></tr></thead>
+          <tbody>
+            <tr><td>Node</td><td>A machine that runs containers</td><td>Your Podman VM</td></tr>
+            <tr><td>Pod</td><td>One or more containers that share a network namespace; the smallest thing Kubernetes runs</td><td>A Podman pod (Lesson 1's Podman table). Usually one app container per Pod.</td></tr>
+            <tr><td>Deployment</td><td>"Keep N copies of this Pod running, and roll out changes gradually"</td><td>The desired state behind ECS Express's tasks</td></tr>
+            <tr><td>Service</td><td>A stable name and address that spreads traffic over matching Pods</td><td>A Compose service name like <code>db</code> (Lesson 4)</td></tr>
+            <tr><td>Ingress (or Gateway)</td><td>Routes outside HTTP traffic to Services</td><td><code>-p</code> plus the load balancer from Lesson 6</td></tr>
+            <tr><td>ConfigMap</td><td>Non-secret settings</td><td><code>-e</code> and <code>--env-file</code> (Lesson 3)</td></tr>
+            <tr><td>Secret</td><td>Secret settings, stored separately</td><td><code>podman secret</code> (Lesson 3)</td></tr>
+            <tr><td>PersistentVolumeClaim</td><td>A request for storage that outlives Pods</td><td>A named volume (Lesson 4)</td></tr>
+            <tr><td>requests / limits</td><td>CPU and memory to reserve, and the maximum allowed</td><td><code>--cpus</code> and <code>--memory</code> (Lesson 5)</td></tr>
+            <tr><td>liveness / readiness probe</td><td>"Restart it if this fails" / "send no traffic if this fails"</td><td><code>/health/live</code> and <code>/health/ready</code> (Lesson 5)</td></tr>
+            <tr><td>Namespace</td><td>A folder that groups resources in a cluster, like "staging" and "production"</td><td>Nothing: this is <em>not</em> Lesson 1's Linux namespaces, despite the name</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="yaml">
+      <h2><span class="n">03</span>Reading a Deployment</h2>
+      <p>Kubernetes objects are written in YAML. Several can share a file, separated by <code>---</code>. Each starts with the same three keys: <code>apiVersion</code> and <code>kind</code> (what sort of object) and <code>metadata</code> (its name and labels). Here's hello-ai as a real cluster would run it:</p>
+      <div class="anno">
+        <div class="head"><span>hello-ai-k8s.yaml</span><span>4 objects</span></div>
+        <div class="row"><code>apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-ai-config
+data:
+  MODEL_NAME: keyword-sentiment-v1</code><p>Settings, stored in the cluster under the name <code>hello-ai-config</code>.</p></div>
+        <div class="row"><code>apiVersion: v1
+kind: Secret
+metadata:
+  name: hello-ai-secrets
+type: Opaque
+stringData:
+  API_KEY: not-a-real-key</code><p>A secret. Written into the file here to keep the example complete; in real repositories the value comes from a secret manager and never sits in Git.</p></div>
+        <div class="row"><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-ai
+spec:
+  replicas: 2</code><p>"Keep 2 copies running."</p></div>
+        <div class="row"><code>  selector:
+    matchLabels:
+      app: hello-ai
+  template:
+    metadata:
+      labels:
+        app: hello-ai</code><p><strong>Labels are how Kubernetes connects things.</strong> Every Pod made from the template gets the label <code>app: hello-ai</code>; the Deployment counts Pods with that label, and the Service below sends traffic to them.</p></div>
+        <div class="row"><code>    spec:
+      containers:
+        - name: api
+          image: 123456789012.dkr.ecr.eu-west-1.amazonaws.com/hello-ai:a1b2c3d4
+          ports:
+            - containerPort: 8000</code><p>The Pod's container: the commit-tagged image from Lesson 6, listening on 8000.</p></div>
+        <div class="row"><code>          envFrom:
+            - configMapRef:
+                name: hello-ai-config
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hello-ai-secrets
+                  key: API_KEY</code><p>All ConfigMap entries become environment variables, and one secret is added as <code>API_KEY</code>. Your app just reads <code>os.getenv</code>, as in Lesson 3.</p></div>
+        <div class="row"><code>          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi</code><p><strong>Requests</strong> are for placement: the scheduler only uses a node with 0.25 CPU (<code>250m</code>) and 256&nbsp;MiB free. <strong>Limits</strong> are enforced like <code>--cpus</code> and <code>--memory</code>: over 512&nbsp;MiB means OOMKilled (Lesson 5). A CPU limit means the <code>OMP_NUM_THREADS</code> advice applies.</p></div>
+        <div class="row"><code>          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 5</code><p>Liveness failing means restart the container. Readiness failing means stop sending it traffic. For hello-model you'd use <code>/health/live</code> and <code>/health/ready</code> (Lesson 5); a <code>startupProbe</code> gives slow-loading models extra time.</p></div>
+        <div class="row"><code>apiVersion: v1
+kind: Service
+metadata:
+  name: hello-ai
+spec:
+  selector:
+    app: hello-ai
+  ports:
+    - port: 80
+      targetPort: 8000</code><p>Inside the cluster, <code>http://hello-ai</code> (port 80) reaches any ready Pod labelled <code>app: hello-ai</code> on port 8000. The same idea as <code>db</code> in Compose.</p></div>
+      </div>
+    </section>
+
+    <section id="local">
+      <h2><span class="n">04</span>Try it with Podman</h2>
+      <p><code>podman kube play</code> reads Kubernetes YAML and creates the matching Podman pods, containers, secrets and volumes. It's not a cluster, but it's a quick way to test a file. The local version of the file differs in three lines: the local image, a <code>hostPort</code> so your Mac can reach it, and the liveness probe (explained in step 3).</p>
+
+      <h3>Step 1: play it</h3>
+      <div class="cmd"><pre><code>podman kube play hello-ai-podman.yaml
+podman pod ps
+podman ps --format '{{.Names}}\t{{.Status}}\t{{.Ports}}'
+curl localhost:8080/health</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>hello-ai-pod   Running   containers=2
+9f5017880561-infra   Up 7 seconds   0.0.0.0:8080-&gt;8000/tcp   <span class="c">← holds the pod's shared network namespace</span>
+hello-ai-pod-api     Up 7 seconds   0.0.0.0:8080-&gt;8000/tcp   <span class="c">← your container</span>
+{"status":"ok","model":"keyword-sentiment-v1",…}</code></pre></div>
+      <p>Two containers, as Lesson 1 described pods: a tiny "infra" container owns the network namespace, and your container joins it. That's why both show the same port.</p>
+
+      <h3>Step 2: settings and limits arrived</h3>
+      <div class="cmd"><pre><code>podman exec hello-ai-pod-api sh -c 'echo MODEL_NAME=$MODEL_NAME; [ -n "$API_KEY" ] &amp;&amp; echo API_KEY is set'
+podman inspect hello-ai-pod-api --format 'memory={{.HostConfig.Memory}} cpu={{.HostConfig.CpuQuota}}/{{.HostConfig.CpuPeriod}}'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>MODEL_NAME=keyword-sentiment-v1          <span class="c">← from the ConfigMap</span>
+API_KEY is set                           <span class="c">← from the Secret, stored as a podman secret</span>
+memory=536870912 cpu=100000/100000       <span class="c">← 512 MiB and 1 CPU, from limits</span></code></pre></div>
+
+      <h3>Step 3: the probe surprise</h3>
+      <p style="margin-bottom:0">With the real-cluster file's <code>httpGet</code> liveness probe, this happened after about half a minute:</p>
+      <div class="out"><p class="olabel">Output</p><pre><code>hello-ai-pod-api   Stopping (unhealthy)
+health=unhealthy streak=3 restarts=2
+/bin/sh: 1: curl: not found</code></pre></div>
+      <ol>
+        <li>Podman turns an <code>httpGet</code> probe into a health check that runs <code>curl</code> <em>inside</em> the container.</li>
+        <li>Your slim image has no <code>curl</code>, so every check failed.</li>
+        <li>A failing liveness probe means "restart it", so Podman restarted the container, twice by then.</li>
+      </ol>
+      <p style="margin-bottom:0">A real cluster makes <code>httpGet</code> requests from outside the container, so it doesn't need <code>curl</code> and this file works there unchanged. For local testing, the Podman file uses an <code>exec</code> probe that runs Python, like your Lesson 3 <code>HEALTHCHECK</code>:</p>
+      <div class="cmd"><pre><code>          livenessProbe:
+            exec:
+              command: ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+            periodSeconds: 10</code></pre></div>
+      <p>Result: <code>Up 11 seconds (healthy)</code>, 0 restarts.</p>
+
+      <h3>Step 4: what Podman ignores</h3>
+      <div class="table">
+        <table>
+          <thead><tr><th>In the YAML</th><th>Kubernetes</th><th><code>podman kube play</code> on your Mac</th></tr></thead>
+          <tbody>
+            <tr><td><code>replicas: 2</code></td><td>2 Pods</td><td>1 pod, without a warning</td></tr>
+            <tr><td><code>kind: Service</code></td><td>Stable name and load balancing</td><td>Ignored; use <code>hostPort</code> to reach the pod</td></tr>
+            <tr><td><code>readinessProbe</code></td><td>Controls traffic</td><td>Not used</td></tr>
+            <tr><td><code>livenessProbe: httpGet</code></td><td>Request from outside</td><td><code>curl</code> inside the container</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Step 5: clean up, and generate YAML from containers</h3>
+      <div class="cmd"><pre><code>podman kube down hello-ai-podman.yaml</code></pre></div>
+      <p>This removes the pod, its containers and the secret it created. Podman can also go the other way: <code>podman kube generate POD</code> writes Kubernetes YAML from running containers, a useful starting point. But look at what it produced for this pod:</p>
+      <div class="out"><p class="olabel">podman kube generate hello-ai-pod (excerpt)</p><pre><code>  containers:
+  - env:
+    - name: API_KEY
+      value: not-a-real-key          <span class="c">← the secret, written out as plain text</span>
+    - name: MODEL_NAME
+      value: keyword-sentiment-v1</code></pre></div>
+      <p>Generated files contain secret values as plain text. Never commit them without replacing those lines.</p>
+    </section>
+
+    <section id="kubectl">
+      <h2><span class="n">05</span>How it looks on a real cluster</h2>
+      <p>On a real cluster you use <code>kubectl</code>. These were not run for the course, which had no cluster, so this is for recognising them, not a transcript:</p>
+      <div class="table">
+        <table class="cmds">
+          <tbody>
+            <tr><td>kubectl apply -f hello-ai-k8s.yaml</td><td>Send the desired state to the cluster. Run it again after edits; it applies the differences.</td></tr>
+            <tr><td>kubectl get pods</td><td>List Pods with status and restart counts. The first thing to run when something's wrong.</td></tr>
+            <tr><td>kubectl describe pod NAME</td><td>Details plus <strong>events</strong>: failed probes, <code>OOMKilled</code>, image pull errors</td></tr>
+            <tr><td>kubectl logs NAME (-f)</td><td>Like <code>podman logs</code></td></tr>
+            <tr><td>kubectl exec -it NAME -- sh</td><td>Like <code>podman exec</code></td></tr>
+            <tr><td>kubectl port-forward svc/hello-ai 8080:80</td><td>Reach a Service from your laptop, like a temporary <code>-p</code></td></tr>
+            <tr><td>kubectl rollout status deployment/hello-ai</td><td>Watch a rollout progress</td></tr>
+            <tr><td>kubectl rollout undo deployment/hello-ai</td><td>Go back to the previous version</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>What happens when you change the image tag</h3>
+      <ol>
+        <li>You edit <code>image:</code> to the new commit tag and run <code>kubectl apply</code>.</li>
+        <li>The Deployment starts a new Pod with the new image, next to the old ones.</li>
+        <li>It waits until the new Pod's <strong>readiness</strong> probe passes, and only then sends it traffic and removes an old Pod.</li>
+        <li>It repeats until every Pod is new.</li>
+      </ol>
+      <p>If the new version never becomes ready, the rollout stops at step 3 and the old Pods keep serving. That's why a good readiness endpoint (Lesson 5) protects you from bad deploys.</p>
+    </section>
+
+    <section id="eks">
+      <h2><span class="n">06</span>Kubernetes on AWS: EKS</h2>
+      <p><strong>Amazon EKS</strong> runs the control plane for you, charged per cluster per hour. You still decide where Pods run and how traffic, permissions and secrets are connected:</p>
+      <div class="table">
+        <table>
+          <thead><tr><th>Need</th><th>Common EKS answer</th></tr></thead>
+          <tbody>
+            <tr><td>Machines for Pods</td><td>EC2 managed node groups, or Fargate for Pods (no GPUs on Fargate)</td></tr>
+            <tr><td>GPU models (Lesson 5)</td><td>A node group of GPU instances, such as g5 or g6</td></tr>
+            <tr><td>Traffic from the internet</td><td>The AWS Load Balancer Controller turns an Ingress into an Application Load Balancer</td></tr>
+            <tr><td>AWS permissions for Pods</td><td>EKS Pod Identity: roles for Pods, no keys, the same idea as GitLab's OIDC login in Lesson 6</td></tr>
+            <tr><td>Secrets from Secrets Manager</td><td>An add-on (External Secrets Operator or the Secrets Store CSI driver) that syncs them into the cluster</td></tr>
+            <tr><td>Images</td><td>ECR, exactly as in Lesson 6</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>ECS Express Mode or EKS?</strong> For one or a few services, Express Mode is far less to run. EKS makes sense when the company already runs Kubernetes, when you have many services and teams, or when you need its ecosystem: Helm charts, operators and GPU scheduling. Cloudflare has no Kubernetes offering; its Containers product is its managed answer.</p>
+      <p>Teams rarely write raw YAML for every environment. Look for <strong>Helm</strong> (templated YAML packages, with a <code>values.yaml</code> of settings) or <strong>Kustomize</strong> (a base plus per-environment patches). Underneath, it's the same objects you just read.</p>
+    </section>
+
+    <section id="read">
+      <h2><span class="n">07</span>Reading your team's files: a checklist</h2>
+      <p>When you open a Deployment, Helm chart or Kustomize folder at work, find these, in this order:</p>
+      <ol>
+        <li><strong>Image:</strong> which registry and tag? A commit tag, or a moving tag like <code>latest</code>?</li>
+        <li><strong>Resources:</strong> requests and limits. Do they match what the app really uses? Is <code>OMP_NUM_THREADS</code> set for model services?</li>
+        <li><strong>Probes:</strong> separate liveness and readiness? Does liveness avoid depending on the model or database?</li>
+        <li><strong>Settings and secrets:</strong> where do the values come from? Nothing secret should be written in the repository.</li>
+        <li><strong>Replicas and scaling:</strong> a fixed number, or a HorizontalPodAutoscaler?</li>
+        <li><strong>Traffic:</strong> which Service and Ingress point at it, and on what hostname?</li>
+        <li><strong>Security:</strong> <code>runAsNonRoot</code>, the user ID, a read-only root filesystem (Lesson 3).</li>
+      </ol>
+    </section>
+
+    <section id="lab">
+      <h2><span class="n">08</span>Lab</h2>
+      <p>Uses <code>hello-ai:2.0</code> from Lesson 4. Work in a new folder, <code>~/practice/k8s</code>.</p>
+
+      <div class="step">
+        <span class="sn">1</span>
+        <div>
+          <h3>Create both files</h3>
+          <p style="margin-bottom:0">Save the local version as <code>hello-ai-podman.yaml</code>:</p>
+          <details class="sol"><summary>Show hello-ai-podman.yaml</summary><div class="inner">
+            <div class="cmd"><pre><code>apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-ai-config
+data:
+  MODEL_NAME: keyword-sentiment-v1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hello-ai-secrets
+type: Opaque
+stringData:
+  API_KEY: not-a-real-key
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-ai
+  labels:
+    app: hello-ai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hello-ai
+  template:
+    metadata:
+      labels:
+        app: hello-ai
+    spec:
+      containers:
+        - name: api
+          image: localhost/hello-ai:2.0
+          ports:
+            - containerPort: 8000
+              hostPort: 8080
+          envFrom:
+            - configMapRef:
+                name: hello-ai-config
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hello-ai-secrets
+                  key: API_KEY
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: &quot;1&quot;
+              memory: 512Mi
+          livenessProbe:
+            exec:
+              command: [&quot;python&quot;, &quot;-c&quot;, &quot;import urllib.request; urllib.request.urlopen(&#x27;http://127.0.0.1:8000/health&#x27;, timeout=2)&quot;]
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-ai
+spec:
+  selector:
+    app: hello-ai
+  ports:
+    - port: 80
+      targetPort: 8000</code></pre></div>
+          </div></details>
+          <p>Then save a copy as <code>hello-ai-httpget.yaml</code> and change its liveness probe to the <code>httpGet</code> form from section 3.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">2</span>
+        <div>
+          <h3>Reproduce the probe surprise</h3>
+          <div class="cmd"><pre><code>podman kube play hello-ai-httpget.yaml
+curl localhost:8080/health
+podman ps --filter name=hello-ai-pod-api --format '{{.Status}}'</code></pre></div>
+          <p>Wait about 40 seconds and check the status again. Then read the reason, and tear it down:</p>
+          <div class="cmd"><pre><code>podman healthcheck run hello-ai-pod-api
+podman inspect hello-ai-pod-api --format 'restarts={{.RestartCount}}'
+podman kube down hello-ai-httpget.yaml</code></pre></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">3</span>
+        <div>
+          <h3>Run the working version and inspect it</h3>
+          <div class="cmd"><pre><code>podman kube play hello-ai-podman.yaml
+podman pod ps
+podman exec hello-ai-pod-api sh -c 'echo $MODEL_NAME'
+podman inspect hello-ai-pod-api --format 'memory={{.HostConfig.Memory}}'
+podman secret ls</code></pre></div>
+          <p>Wait for <code>(healthy)</code> in <code>podman ps</code>. Then change <code>replicas</code> to 3, run <code>podman kube play --replace hello-ai-podman.yaml</code>, and count the pods.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">4</span>
+        <div>
+          <h3>Generate YAML from the running pod</h3>
+          <div class="cmd"><pre><code>podman kube generate hello-ai-pod | less</code></pre></div>
+          <p>Find the <code>API_KEY</code> line, and the <code>resources</code> block that came from your limits.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">5</span>
+        <div>
+          <h3>Read like a reviewer</h3>
+          <p>Go through <code>hello-ai-k8s.yaml</code> from section 3 with the checklist from section 7. Write down one thing you'd change before production. (Several are possible: the Secret in the file, readiness and liveness sharing one endpoint, a missing <code>runAsNonRoot</code>…)</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">6</span>
+        <div>
+          <h3>Clean up</h3>
+          <div class="cmd"><pre><code>podman kube down hello-ai-podman.yaml
+podman pod ps</code></pre></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="check">
+      <h2><span class="n">09</span>Check yourself</h2>
+      <p>Try answering each question out loud before opening it.</p>
+      <div class="quiz">
+        <details class="q"><summary><span class="qn">Q1</span><span>What does "desired state" mean, and what happens when a Pod of a 3-replica Deployment crashes?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>You declare what should exist ("3 copies of this Pod"), not the steps to get there. Controllers keep comparing that with reality. After the crash reality is 2, so a controller creates a new Pod, possibly on another node.</p></div></details>
+        <details class="q"><summary><span class="qn">Q2</span><span>How does a Service know which Pods to send traffic to?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>By labels. Its <code>selector</code> (<code>app: hello-ai</code>) matches Pods carrying that label, and only ready ones get traffic. The Deployment's template gives every Pod the label.</p></div></details>
+        <details class="q"><summary><span class="qn">Q3</span><span>What's the difference between <code>requests</code> and <code>limits</code>?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Requests are reserved and used to choose a node; limits are the maximum, enforced at run time. Exceeding the memory limit gets the container OOMKilled; hitting the CPU limit slows it down.</p></div></details>
+        <details class="q"><summary><span class="qn">Q4</span><span>A model service's liveness and readiness probes both call <code>/health/ready</code>, and the model takes 3 minutes to load. What goes wrong?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Liveness fails during loading, so Kubernetes restarts the container before the model finishes: a restart loop. Liveness should call <code>/health/live</code>, and a <code>startupProbe</code> can give extra start-up time.</p></div></details>
+        <details class="q"><summary><span class="qn">Q5</span><span>Under <code>podman kube play</code>, your container keeps restarting as unhealthy, but the app works when you curl it. Why, and does the same file fail on a real cluster?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Podman runs <code>httpGet</code> probes with <code>curl</code> inside the container, and slim images don't have it. A real cluster makes the request from outside, so the file works there. Locally, use an <code>exec</code> probe.</p></div></details>
+        <details class="q"><summary><span class="qn">Q6</span><span>A new image version never becomes ready during a rollout. What do users see?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Nothing unusual. The rollout stalls because new Pods never pass readiness, and the old Pods keep serving traffic. <code>kubectl rollout undo</code> returns the Deployment to the previous version.</p></div></details>
+        <details class="q"><summary><span class="qn">Q7</span><span>A colleague wants to commit the output of <code>podman kube generate</code> to the repository. What do you check first?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Secret values: generated YAML writes them out as plain <code>value:</code> entries. Replace them with references to a Secret that's managed outside Git.</p></div></details>
+        <details class="q"><summary><span class="qn">Q8</span><span>Your team runs two small services on AWS and no one knows Kubernetes. EKS or ECS Express Mode?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>ECS Express Mode. It gives you load balancing, HTTPS, scaling and rollbacks with far less to operate. EKS pays off with many services, an existing Kubernetes platform, or a need for its ecosystem.</p></div></details>
+      </div>
+    </section>
+
+    <section id="done">
+      <h2><span class="n">10</span>Course complete</h2>
+      <p>That's the whole path, from a first container to reading the files your team deploys with:</p>
+      <div class="table">
+        <table>
+          <tbody>
+            <tr><td>Lesson 1</td><td>A container is a process with walls around it: namespaces, cgroups, images and layers</td></tr>
+            <tr><td>Lesson 2</td><td>Containerfiles, the build context, the layer cache, exec-form <code>CMD</code>, ports</td></tr>
+            <tr><td>Lesson 3</td><td>Non-root users, run-time secrets, health checks, pinned bases</td></tr>
+            <tr><td>Lesson 4</td><td>Volumes, networks, Compose</td></tr>
+            <tr><td>Lesson 5</td><td>Real models: PyTorch size, readiness, memory, threads, streaming, GPUs</td></tr>
+            <tr><td>Lesson 6</td><td>Registries, amd64 builds, GitLab CI, ECS Express Mode, Cloudflare Containers</td></tr>
+            <tr><td>Lesson 7</td><td>Kubernetes concepts, <code>podman kube play</code>, EKS</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Good next steps: read your team's Containerfiles and <code>.gitlab-ci.yml</code> with this course in mind; containerize a real project of yours end to end; and when you meet something new (Helm, Terraform, a service mesh), you'll already know which container idea it's built on.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('.cmd').forEach(function(box){
+    var pre = box.querySelector('pre');
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var clone = pre.cloneNode(true);
+      clone.querySelectorAll('.c').forEach(function(c){ c.remove(); });
+      var text = clone.textContent.split('\n').map(function(l){ return l.replace(/\s+$/,''); }).join('\n').trim();
+      var done = function(){ btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1400); };
+      var fallback = function(){
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Press ⌘C';
+      };
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+    });
+    box.appendChild(btn);
+  });
+
+  var links = {};
+  document.querySelectorAll('.toc a').forEach(function(a){ links[a.getAttribute('href').slice(1)] = a; });
+  if (!('IntersectionObserver' in window)) return;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting) {
+        Object.keys(links).forEach(function(k){ links[k].classList.remove('on'); });
+        if (links[e.target.id]) links[e.target.id].classList.add('on');
+      }
+    });
+  }, {rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('main section[id]').forEach(function(s){ obs.observe(s); });
+})();
+</script>
+</body>
+</html>

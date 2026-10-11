@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lesson 6: Shipping to AWS and Cloudflare · Docker Fundamentals</title>
+<meta name="description" content="Lesson 6 of Docker Fundamentals, a free hands-on course: Shipping to AWS and Cloudflare.">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --bg:#F2F4F7;
+  --surface:#FFFFFF;
+  --ink:#141D27;
+  --muted:#556375;
+  --line:#D4DBE4;
+  --accent:#1B5BA3;
+  --accent-soft:#E2EBF6;
+  --amber:#8F5B00;
+  --amber-soft:#FAEFD8;
+  --code-bg:#E8EDF3;
+  --ok:#23734A;
+  --ok-soft:#DFF1E6;
+  --bad:#B3261E;
+  --bad-soft:#FBE3E1;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+    --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+    --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+  --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+  --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16.5px/1.65 var(--sans);padding-inline:20px;padding-block:0 72px}
+.shell{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:40px}
+@media (min-width:1000px){.shell{grid-template-columns:210px minmax(0,1fr)}}
+button{font-family:var(--sans)}
+
+/* table of contents */
+.toc{padding-top:40px}
+.toc nav{display:flex;flex-direction:column;gap:2px}
+@media (min-width:1000px){.toc nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px)}}
+.toc .label{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.toc a{display:grid;grid-template-columns:22px 1fr;color:var(--muted);text-decoration:none;font-size:14px;line-height:1.35;padding:5px 0}
+.toc a span{font:500 12px/1.6 var(--mono);color:var(--muted)}
+.toc a:hover,.toc a.on{color:var(--ink)}
+.toc a.on span{color:var(--accent)}
+@media (max-width:999px){
+  .toc{padding-top:24px}
+  .toc nav{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));column-gap:16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:12px}
+  .toc .label{grid-column:1/-1}
+}
+
+main{max-width:720px;min-width:0}
+header{padding-top:48px;padding-bottom:8px}
+.eyebrow{font:500 12.5px/1 var(--mono);color:var(--accent);letter-spacing:.02em;margin:0 0 18px}
+h1{font-family:var(--display);font-stretch:78%;font-weight:760;font-size:clamp(34px,6vw,50px);line-height:1.02;letter-spacing:-.01em;margin:0 0 18px;text-wrap:balance}
+.lede{font-size:19px;line-height:1.55;margin:0 0 22px;max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13.5px;color:var(--muted);margin:0 0 8px}
+.meta b{color:var(--ink);font-weight:600}
+
+section{padding-top:44px;scroll-margin-top:16px}
+h2{font-family:var(--display);font-stretch:82%;font-weight:720;font-size:27px;line-height:1.15;margin:0 0 14px;text-wrap:balance;display:flex;gap:14px;align-items:baseline}
+h2 .n{font:500 14px/1 var(--mono);color:var(--accent);flex:none}
+h3{font:600 17px/1.3 var(--sans);margin:28px 0 8px}
+p{margin:0 0 14px;max-width:66ch}
+ul,ol{margin:0 0 16px;padding-left:22px;max-width:64ch}
+li{margin-bottom:6px}
+strong{font-weight:600}
+a{color:var(--accent)}
+code{font:400 .88em var(--mono);background:var(--code-bg);padding:.1em .35em;border-radius:3px}
+pre{margin:0;font:400 13.5px/1.6 var(--mono);white-space:pre;overflow-x:auto;padding:14px 16px;background:var(--code-bg);border-radius:4px;color:var(--ink)}
+pre code{background:none;padding:0;font-size:inherit}
+pre .c{color:var(--muted)}
+pre .hit{color:var(--ok)}
+pre .miss{color:var(--amber)}
+
+.goals{list-style:none;padding:0;display:grid;gap:8px;margin-top:6px}
+.goals li{display:grid;grid-template-columns:18px 1fr;gap:10px;margin:0}
+.goals li::before{content:"";width:10px;height:10px;border:1.5px solid var(--accent);margin-top:8px}
+
+/* callouts */
+.aside{background:var(--amber-soft);padding:14px 18px 4px;margin:18px 0 20px;border-radius:2px}
+.aside.key{background:var(--accent-soft)}
+.chip{display:inline-block;font:600 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px 4px;margin-bottom:8px;border:1px solid var(--amber);color:var(--amber)}
+.aside.key .chip{border-color:var(--accent);color:var(--accent)}
+.aside p{max-width:none}
+
+/* diagrams */
+figure{margin:22px 0 24px}
+.diagram{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px}
+.diagram svg{display:block;width:100%;min-width:600px;height:auto}
+figcaption{font-size:13.5px;color:var(--muted);margin-top:8px;max-width:66ch}
+.d-box{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.d-frame{fill:none;stroke:var(--muted);stroke-width:1.2}
+.d-app{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.2}
+.d-kernel{fill:var(--amber-soft);stroke:var(--amber);stroke-width:1.2}
+.d-hw{fill:var(--code-bg);stroke:var(--line);stroke-width:1.2}
+.d-write{fill:var(--surface);stroke:var(--accent);stroke-width:1.4;stroke-dasharray:5 4}
+.d-okbox{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.2}
+.d-badbox{fill:var(--bad-soft);stroke:var(--bad);stroke-width:1.2}
+.d-band1{fill:var(--amber-soft)}
+.d-band2{fill:var(--accent-soft)}
+.d-t{fill:var(--ink);font:500 13px var(--sans)}
+.d-tb{fill:var(--ink);font:600 13px var(--sans)}
+.d-m{fill:var(--muted);font:400 12.5px var(--sans)}
+.d-h{fill:var(--muted);font:600 11px var(--sans);letter-spacing:.09em}
+.d-ha{fill:var(--amber);font:600 11px var(--sans);letter-spacing:.09em}
+.d-hb{fill:var(--accent);font:600 11px var(--sans);letter-spacing:.09em}
+.d-code{fill:var(--ink);font:400 12px var(--mono)}
+.d-lab{fill:var(--muted);font:500 12px var(--mono)}
+.d-ok{fill:var(--ok);font:600 12.5px var(--sans)}
+.d-bad{fill:var(--bad);font:600 12.5px var(--sans)}
+.d-line{stroke:var(--muted);stroke-width:1.2;fill:none}
+.d-okline{stroke:var(--ok);stroke-width:1.4;fill:none}
+.d-badline{stroke:var(--bad);stroke-width:1.4;fill:none;stroke-dasharray:4 4}
+.d-head{fill:var(--muted)}
+.d-head-ok{fill:var(--ok)}
+.d-head-bad{fill:var(--bad)}
+
+/* annotated Containerfile */
+.anno{background:var(--surface);border:1px solid var(--line);border-radius:4px;margin:18px 0 22px;overflow:hidden}
+.anno .head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);font:500 12px/1 var(--mono);color:var(--muted);background:var(--bg)}
+.anno .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-bottom:1px solid var(--line)}
+.anno .row:last-child{border-bottom:0}
+.anno .row > code{display:block;background:var(--code-bg);border-radius:0;padding:12px 16px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.anno .row > p{margin:0;padding:11px 16px 12px;font-size:14.5px;line-height:1.55}
+.tag{display:inline-block;font:600 10px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px 3px;border-radius:2px;margin-right:6px;vertical-align:1px}
+.tag.layer{background:var(--accent-soft);color:var(--accent)}
+.tag.config{background:var(--amber-soft);color:var(--amber)}
+@media (max-width:640px){.anno .row{grid-template-columns:1fr}}
+
+/* tables */
+.table{overflow-x:auto;margin:16px 0 20px;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+th{font:600 11.5px/1.3 var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+td:first-child{font-weight:600;white-space:nowrap}
+.cmds td:first-child{font:500 13px var(--mono);white-space:normal;min-width:15em}
+.decide td:first-child{white-space:normal;min-width:12em}
+.decide td:nth-child(2){white-space:nowrap}
+.out{margin:10px 0 14px}
+.out .olabel{font:600 10.5px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.out pre{background:var(--surface);border:1px solid var(--line)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* cache comparison */
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 10px}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:4px;display:flex;flex-direction:column}
+.col h4{margin:0;padding:12px 16px 10px;font:600 14.5px/1.3 var(--sans);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.col h4 small{font:500 12px var(--sans);color:var(--muted)}
+.steps{list-style:none;margin:0;padding:6px 0;max-width:none}
+.steps li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:7px 16px;margin:0;font:400 13px/1.4 var(--mono)}
+.st{flex:none;font:600 10.5px/1 var(--sans);letter-spacing:.07em;text-transform:uppercase;padding:4px 7px 3px;border-radius:2px}
+.st.hit{background:var(--ok-soft);color:var(--ok)}
+.st.miss{background:var(--amber-soft);color:var(--amber)}
+.st.slow{background:var(--bad-soft);color:var(--bad)}
+.col .foot{margin-top:auto;padding:10px 16px 12px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:10px}
+.col .foot b{font:700 24px/1 var(--display);font-stretch:85%;font-variant-numeric:tabular-nums}
+.col .foot span{font-size:13px;color:var(--muted)}
+
+/* experiment result pair */
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 20px}
+.res{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+.res .lbl{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px}
+.res.good .lbl{color:var(--ok)}
+.res.poor .lbl{color:var(--bad)}
+.res code.big{display:block;font-size:13px;padding:8px 10px;margin:0 0 10px;white-space:pre-wrap;word-break:break-word}
+.res dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+.res dt{color:var(--muted)}
+.res dd{margin:0;font-variant-numeric:tabular-nums}
+
+/* quiz */
+.quiz{display:grid;gap:10px;margin-top:10px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:4px}
+details.q summary{cursor:pointer;list-style:none;padding:14px 16px;display:grid;grid-template-columns:28px 1fr auto;gap:8px;font-weight:500}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary .qn{font:500 13px/1.7 var(--mono);color:var(--accent)}
+details.q summary .rv{font:500 12px/1.9 var(--sans);color:var(--muted)}
+details.q[open] summary .rv{visibility:hidden}
+details.q summary:focus-visible,details.sol summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.q .ans{padding:0 16px 14px 52px}
+details.q .ans p:last-child{margin-bottom:0}
+
+/* lab */
+.step{margin:26px 0 0;display:grid;grid-template-columns:34px minmax(0,1fr);gap:0 12px}
+.step .sn{font:600 13px/1 var(--mono);color:var(--accent);border:1.5px solid var(--accent);border-radius:50%;width:30px;height:30px;display:grid;place-items:center;margin-top:-4px}
+.step h3{margin-top:0}
+.cmd{position:relative;margin:10px 0 12px}
+.cmd pre{padding-right:72px}
+.copy{position:absolute;top:8px;right:8px;font:500 12px/1 var(--sans);color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:6px 9px;cursor:pointer}
+.copy:hover{color:var(--ink)}
+.copy:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.task{list-style:none;padding:0;margin:8px 0 14px;display:grid;gap:6px}
+.task li{display:grid;grid-template-columns:18px 1fr;gap:8px;margin:0}
+.task li::before{content:"";width:9px;height:9px;border:1.5px solid var(--muted);border-radius:2px;margin-top:8px}
+details.sol{border:1px dashed var(--line);border-radius:4px;margin:10px 0 14px;background:var(--surface)}
+details.sol summary{cursor:pointer;padding:10px 14px;font:500 14px var(--sans);color:var(--accent)}
+details.sol[open] summary{border-bottom:1px dashed var(--line)}
+details.sol .inner{padding:12px 14px 4px}
+
+.next{margin-top:48px;padding-top:22px;border-top:1px solid var(--line)}
+.next .eyebrow{margin-bottom:10px}
+.next p{color:var(--muted)}
+
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+
+/* course navigation: a link home, then links to every lesson */
+.course{max-width:1100px;margin:0 auto;padding-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.course .home{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-decoration:none;margin-right:6px;padding:6px 0}
+.course .home:hover{color:var(--ink)}
+.course .lesson,.course .here{display:inline-flex;align-items:baseline;gap:7px;padding:6px 10px 6px 8px;font:500 13px/1.2 var(--sans);color:var(--muted);text-decoration:none;background:var(--surface);border:1px solid var(--line);border-radius:3px}
+.course b{font:500 12px/1 var(--mono);color:var(--accent)}
+.course .lesson:hover{color:var(--ink);border-color:var(--muted)}
+.course a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.course .here{color:var(--ink);background:var(--accent-soft);border-color:var(--accent)}
+.meta a{color:inherit}
+@media (max-width:640px){.course .home{flex-basis:100%}}
+</style>
+</head>
+<body>
+<nav class="course" aria-label="All lessons in this course">
+  <a class="home" href="../">Docker Fundamentals</a>
+  <a class="lesson" href="../lesson-01/" title="Lesson 1: What a Container Is"><b>1</b>Containers</a>
+  <a class="lesson" href="../lesson-02/" title="Lesson 2: Building Container Images"><b>2</b>Building images</a>
+  <a class="lesson" href="../lesson-03/" title="Lesson 3: Production-Ready Images"><b>3</b>Production images</a>
+  <a class="lesson" href="../lesson-04/" title="Lesson 4: Volumes, Networks and Compose"><b>4</b>Volumes and Compose</a>
+  <a class="lesson" href="../lesson-05/" title="Lesson 5: Serving a Real Model"><b>5</b>A real model</a>
+  <span class="here" aria-current="page" title="Shipping to AWS and Cloudflare"><b>6</b>AWS and Cloudflare</span>
+  <a class="lesson" href="../lesson-07/" title="Lesson 7: Kubernetes, the Big Picture"><b>7</b>Kubernetes</a>
+</nav>
+
+<div class="shell">
+  <aside class="toc" aria-label="Lesson sections">
+    <nav>
+      <div class="label">Lesson 6</div>
+      <a href="#path"><span>1</span>From your Mac to production</a>
+      <a href="#registries"><span>2</span>Registries and tags</a>
+      <a href="#arch"><span>3</span>Build for the server</a>
+      <a href="#gitlab"><span>4</span>The GitLab pipeline</a>
+      <a href="#aws-setup"><span>5</span>One-time AWS setup</a>
+      <a href="#aws"><span>6</span>Deploy to AWS</a>
+      <a href="#cloudflare"><span>7</span>Deploy to Cloudflare</a>
+      <a href="#choose"><span>8</span>AWS or Cloudflare?</a>
+      <a href="#lab"><span>9</span>Lab</a>
+      <a href="#check"><span>10</span>Check yourself</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header>
+      <p class="eyebrow">Docker Fundamentals · Lesson 6 · Shipping it</p>
+      <h1>From your Mac to AWS and Cloudflare</h1>
+      <p class="lede">Until now every image lived on your Mac. This lesson takes hello-ai the rest of the way: into a registry, built for the right CPU, built automatically by GitLab CI, and running on AWS ECS Express Mode or Cloudflare Containers.</p>
+      <div class="meta"><span><b>Reading</b> about 45 min</span><span><b>Lab</b> 30 min locally, plus optional real deploys</span><span><b>Uses</b> <code>hello-ai</code> from Lesson 4</span><span><b>Outputs</b> from <a href="../#tested">the test Mac</a>, autumn 2026</span></div>
+      <section style="padding-top:26px" aria-label="Goals">
+        <h3 style="margin-top:0">By the end you should be able to</h3>
+        <ul class="goals" style="margin-bottom:0">
+          <li><span>push and pull images to a registry, and tag them so you always know what's running</span></li>
+          <li><span>build <code>linux/amd64</code> or multi-architecture images on your Apple-silicon Mac</span></li>
+          <li><span>read and adapt a GitLab CI pipeline that builds with Buildah and logs in to AWS without stored keys</span></li>
+          <li><span>deploy a container to AWS with ECS Express Mode, including settings and secrets</span></li>
+          <li><span>deploy the same image to Cloudflare Containers behind a Worker</span></li>
+          <li><span>choose between the two for a given app</span></li>
+        </ul>
+      </section>
+      <div class="aside key" style="margin-top:22px">
+        <span class="chip">What was tested</span>
+        <p>Everything that runs locally was tested on the test Mac: the registry, amd64 and multi-architecture builds, the GitLab build job (simulated with the same Buildah image), and the Cloudflare configuration (type-checked and dry-run deployed). The AWS and Cloudflare account steps are written from their current documentation, checked on 28 September 2026, and were not run against real accounts. They also create resources that cost money.</p>
+      </div>
+    </header>
+
+    <section id="path">
+      <h2><span class="n">01</span>From your Mac to production</h2>
+      <p>In a team, nobody deploys images built on their laptop. You push code, and a pipeline builds, tests and publishes the image. That way every image is built the same way, from code everyone can see.</p>
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 720 226" role="img" aria-labelledby="f1t">
+            <title id="f1t">git push to GitLab; CI tests and builds the image; it goes to GitLab's registry; on the main branch it is copied to Amazon ECR; from ECR it is deployed to ECS Express Mode or Cloudflare Containers</title>
+            <defs>
+              <marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker>
+            </defs>
+            <rect class="d-box" x="10" y="20" width="110" height="60" rx="3"/>
+            <text class="d-tb" x="22" y="44">Your Mac</text>
+            <text class="d-code" x="22" y="66">git push</text>
+            <path class="d-line" d="M120,50 L146,50" marker-end="url(#ah1)"/>
+
+            <rect class="d-app" x="150" y="20" width="190" height="60" rx="3"/>
+            <text class="d-tb" x="162" y="44">GitLab CI</text>
+            <text class="d-m" x="162" y="66">test → build (Buildah, amd64)</text>
+            <path class="d-line" d="M340,50 L366,50" marker-end="url(#ah1)"/>
+
+            <rect class="d-box" x="370" y="20" width="160" height="60" rx="3"/>
+            <text class="d-tb" x="382" y="44">GitLab registry</text>
+            <text class="d-m" x="382" y="66">every commit</text>
+
+            <path class="d-line" d="M450,80 L450,126" marker-end="url(#ah1)"/>
+            <text class="d-lab" x="458" y="108">main: copy</text>
+
+            <rect class="d-okbox" x="370" y="130" width="160" height="60" rx="3"/>
+            <text class="d-tb" x="382" y="154">Amazon ECR</text>
+            <text class="d-m" x="382" y="176">release images</text>
+
+            <path class="d-line" d="M530,150 C548,150 548,110 562,110" marker-end="url(#ah1)"/>
+            <path class="d-line" d="M530,170 C548,170 548,196 562,196" marker-end="url(#ah1)"/>
+            <rect class="d-kernel" x="566" y="84" width="144" height="52" rx="3"/>
+            <text class="d-tb" x="578" y="106">ECS Express</text>
+            <text class="d-m" x="578" y="126">AWS</text>
+            <rect class="d-kernel" x="566" y="170" width="144" height="52" rx="3"/>
+            <text class="d-tb" x="578" y="192">Container</text>
+            <text class="d-m" x="578" y="212">Cloudflare</text>
+            <text class="d-m" x="10" y="130">Deploys are started by hand</text>
+            <text class="d-m" x="10" y="148">in GitLab, and only from main.</text>
+          </svg>
+        </div>
+      </figure>
+      <p>Why two registries? GitLab's built-in registry is free and needs no setup, so every commit's image goes there. Cloudflare can only pull from its own registry, Docker Hub, Amazon ECR or Google Artifact Registry, not GitLab's. So release images from <code>main</code> are copied to <strong>Amazon ECR</strong>, which both AWS and Cloudflare can use.</p>
+    </section>
+
+    <section id="registries">
+      <h2><span class="n">02</span>Registries and tags</h2>
+      <h3>Step 1: run a registry on your Mac</h3>
+      <p style="margin-bottom:0">A registry is just a server speaking the OCI distribution API (Lesson 1). The official one runs as a container, which makes it perfect for practice:</p>
+      <div class="cmd"><pre><code>podman run -d --name registry -p 5050:5000 docker.io/library/registry:3</code></pre></div>
+
+      <h3>Step 2: name, push, and look</h3>
+      <p style="margin-bottom:0">An image's name says where it lives (Lesson 1: registry, namespace, repository, tag). To push, give the image a name that starts with the registry's address:</p>
+      <div class="cmd"><pre><code>podman tag hello-ai:2.0 localhost:5050/hello-ai:a1b2c3d4
+podman push --tls-verify=false localhost:5050/hello-ai:a1b2c3d4
+curl localhost:5050/v2/_catalog
+curl localhost:5050/v2/hello-ai/tags/list</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>{"repositories":["hello-ai"]}
+{"name":"hello-ai","tags":["a1b2c3d4"]}</code></pre></div>
+      <p><code>podman tag</code> doesn't copy anything; it adds a second name to the same image. <code>--tls-verify=false</code> is only for this local practice registry, which has no HTTPS certificate. Real registries always use HTTPS.</p>
+
+      <h3>Step 3: real registry names and logins</h3>
+      <div class="table">
+        <table>
+          <thead><tr><th>Registry</th><th>Image name looks like</th><th>Log in with</th></tr></thead>
+          <tbody>
+            <tr><td>GitLab</td><td><code>registry.gitlab.com/group/project:tag</code></td><td>Automatic inside CI; a personal access token on your Mac</td></tr>
+            <tr><td>Amazon ECR</td><td><code>123456789012.dkr.ecr.eu-west-1.amazonaws.com/hello-ai:tag</code></td><td><code>aws ecr get-login-password | podman login --username AWS --password-stdin …</code></td></tr>
+            <tr><td>Cloudflare</td><td><code>registry.cloudflare.com/ACCOUNT_ID/hello-ai:tag</code></td><td>Through <code>wrangler</code></td></tr>
+            <tr><td>Docker Hub</td><td><code>docker.io/yourname/hello-ai:tag</code></td><td><code>podman login docker.io</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Step 4: tag with the commit, not <code>latest</code></h3>
+      <p>The pipeline in section 4 names every image after the Git commit it was built from, such as <code>hello-ai:a1b2c3d4</code>. Then "what's running in production?" has an exact answer: that commit. Rolling back means deploying the previous tag. <code>latest</code> can't tell you either (Lesson 1). On ECR you can make tags <strong>immutable</strong>, so a tag can never be overwritten with a different image.</p>
+    </section>
+
+    <section id="arch">
+      <h2><span class="n">03</span>Build for the server's CPU</h2>
+      <p>Your Mac builds <code>linux/arm64</code> images. Cloudflare Containers require <code>linux/amd64</code>, and ECS Express Mode also runs amd64 unless you choose ARM64 (Graviton) explicitly. An arm64 image on an amd64 server fails with <code>exec format error</code> (Lesson 1). Two ways to handle it:</p>
+
+      <h3>Option A: build amd64 only</h3>
+      <div class="cmd"><pre><code>podman build --format docker --platform linux/amd64 -t hello-ai:2.0-amd64 .
+podman image inspect hello-ai:2.0-amd64 --format '{{.Architecture}}'</code></pre></div>
+      <p>Your Mac runs the amd64 build steps through emulation, which is slower. The hello-ai build took 46 seconds. It can even run the result: the amd64 image answered <code>/health</code> after about 12 seconds (emulated start-up is slow), with <code>uname -m</code> reporting <code>x86_64</code> and Podman warning that the platform doesn't match. Use this to check an image, not to measure its speed.</p>
+
+      <h3>Option B: one tag, both architectures</h3>
+      <div class="cmd"><pre><code>podman build --format docker --platform linux/amd64,linux/arm64 --manifest hello-ai:multi .
+podman manifest inspect hello-ai:multi
+podman manifest push --all --tls-verify=false hello-ai:multi docker://localhost:5050/hello-ai:1.0</code></pre></div>
+      <div class="out"><p class="olabel">podman manifest inspect (shortened)</p><pre><code>application/vnd.oci.image.index.v1+json
+  linux/amd64  sha256:66ed617c7b47…
+  linux/arm64  sha256:b1876388efa4…</code></pre></div>
+      <p>This is the same kind of multi-platform index as <code>python:3.12-slim</code> (Lesson 3, section 6): each machine pulls its own variant. It took 54 seconds. <code>--all</code> matters: without it, only the index is pushed, not the images it lists.</p>
+      <p><strong>Which to use:</strong> build amd64 in CI for both targets. Add arm64 if you want to run on AWS Graviton, which is usually cheaper, or run the same tag on your Mac.</p>
+    </section>
+
+    <section id="gitlab">
+      <h2><span class="n">04</span>The GitLab pipeline</h2>
+      <p>GitLab reads <code>.gitlab-ci.yml</code> from the root of your repository. Each push starts a <strong>pipeline</strong>: <strong>jobs</strong> grouped into <strong>stages</strong>, and each job runs in a container you choose. Here's the full file, then the important parts:</p>
+      <details class="sol"><summary>Show the full .gitlab-ci.yml</summary><div class="inner">
+        <div class="cmd"><pre><code># Build hello-ai on every push, publish it to Amazon ECR from the default
+# branch, and deploy it to AWS or Cloudflare when someone presses &quot;play&quot;.
+stages: [test, build, release, deploy]
+
+variables:
+  IMAGE_TAG: $CI_COMMIT_SHORT_SHA   # every image is named after the commit it came from
+  # Set these as CI/CD variables in GitLab (Settings &gt; CI/CD &gt; Variables):
+  #   AWS_REGION, AWS_ROLE_ARN, ECR_REGISTRY, ECS_SERVICE_ARN,
+  #   CLOUDFLARE_API_TOKEN (masked), CLOUDFLARE_ACCOUNT_ID
+
+test:
+  stage: test
+  image: docker.io/library/python:3.12-slim
+  script:
+    - pip install --no-cache-dir -r requirements.txt
+    - python -c &quot;import main; print(&#x27;app imports fine&#x27;)&quot;
+
+build:
+  stage: build
+  image: quay.io/buildah/stable
+  variables:
+    STORAGE_DRIVER: vfs       # works inside a CI container without special storage
+    BUILDAH_FORMAT: docker    # keeps HEALTHCHECK (Lesson 3)
+  script:
+    - echo &quot;$CI_REGISTRY_PASSWORD&quot; | buildah login -u &quot;$CI_REGISTRY_USER&quot; --password-stdin &quot;$CI_REGISTRY&quot;
+    - buildah build --platform linux/amd64 -t &quot;$CI_REGISTRY_IMAGE:$IMAGE_TAG&quot; .
+    - buildah push &quot;$CI_REGISTRY_IMAGE:$IMAGE_TAG&quot;
+
+# Log in to AWS with a short-lived token instead of stored keys (OIDC).
+.aws-login:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com   # your GitLab address, as registered in AWS IAM
+  before_script:
+    - command -v aws &gt;/dev/null || dnf install -y -q awscli2
+    - &gt;
+      aws_sts_output=$(aws sts assume-role-with-web-identity
+      --role-arn &quot;$AWS_ROLE_ARN&quot;
+      --role-session-name &quot;gitlab-$CI_PROJECT_ID-$CI_PIPELINE_ID&quot;
+      --web-identity-token &quot;$GITLAB_OIDC_TOKEN&quot;
+      --duration-seconds 3600
+      --query &#x27;Credentials.[AccessKeyId,SecretAccessKey,SessionToken]&#x27;
+      --output text)
+    - export $(printf &quot;AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s&quot; $aws_sts_output)
+
+push-to-ecr:
+  stage: release
+  extends: .aws-login
+  image: quay.io/buildah/stable
+  variables:
+    STORAGE_DRIVER: vfs
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH &amp;&amp; $AWS_ROLE_ARN   # only once AWS is set up
+  script:
+    - echo &quot;$CI_REGISTRY_PASSWORD&quot; | buildah login -u &quot;$CI_REGISTRY_USER&quot; --password-stdin &quot;$CI_REGISTRY&quot;
+    - aws ecr get-login-password --region &quot;$AWS_REGION&quot; | buildah login -u AWS --password-stdin &quot;$ECR_REGISTRY&quot;
+    - buildah pull &quot;$CI_REGISTRY_IMAGE:$IMAGE_TAG&quot;
+    - buildah tag &quot;$CI_REGISTRY_IMAGE:$IMAGE_TAG&quot; &quot;$ECR_REGISTRY/hello-ai:$IMAGE_TAG&quot;
+    - buildah push &quot;$ECR_REGISTRY/hello-ai:$IMAGE_TAG&quot;
+
+deploy-aws:
+  stage: deploy
+  extends: .aws-login
+  image:
+    name: public.ecr.aws/aws-cli/aws-cli:latest
+    entrypoint: [&quot;&quot;]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH &amp;&amp; $ECS_SERVICE_ARN
+      when: manual              # a person decides when production changes
+  script:
+    - &gt;
+      aws ecs update-express-gateway-service
+      --region &quot;$AWS_REGION&quot;
+      --service-arn &quot;$ECS_SERVICE_ARN&quot;
+      --primary-container &quot;{\&quot;image\&quot;:\&quot;$ECR_REGISTRY/hello-ai:$IMAGE_TAG\&quot;,\&quot;containerPort\&quot;:8000}&quot;
+
+deploy-cloudflare:
+  stage: deploy
+  image: docker.io/library/node:22-slim
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH &amp;&amp; $CLOUDFLARE_API_TOKEN
+      when: manual
+  script:
+    - cd cloudflare
+    - npm ci
+    - sed -i &quot;s|/hello-ai:[^\&quot;]*\&quot;|/hello-ai:$IMAGE_TAG\&quot;|&quot; wrangler.jsonc   # point at this commit&#x27;s image
+    - npx wrangler deploy</code></pre></div>
+      </div></details>
+
+      <div class="anno">
+        <div class="head"><span>.gitlab-ci.yml, the important parts</span><span>4 stages</span></div>
+        <div class="row"><code>stages: [test, build, release, deploy]
+variables:
+  IMAGE_TAG: $CI_COMMIT_SHORT_SHA</code><p>Stages run in order; a failure stops the pipeline. <code>CI_COMMIT_SHORT_SHA</code> is one of GitLab's predefined variables: the commit's short ID, used as the tag.</p></div>
+        <div class="row"><code>build:
+  image: quay.io/buildah/stable
+  variables:
+    STORAGE_DRIVER: vfs
+    BUILDAH_FORMAT: docker</code><p>The build job runs in the official Buildah image. Buildah is the engine inside <code>podman build</code>, so CI builds exactly like your Mac, with no Docker needed. GitLab's documentation recommends it. <code>BUILDAH_FORMAT: docker</code> keeps your <code>HEALTHCHECK</code> (Lesson 3).</p></div>
+        <div class="row"><code>  script:
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - buildah build --platform linux/amd64 -t "$CI_REGISTRY_IMAGE:$IMAGE_TAG" .
+    - buildah push "$CI_REGISTRY_IMAGE:$IMAGE_TAG"</code><p>GitLab supplies a short-lived registry password and your project's image name. Build for amd64, push to GitLab's registry.</p></div>
+        <div class="row"><code>.aws-login:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com</code><p>A reusable piece (the leading dot means "not a job"). GitLab issues a signed token that says which project and branch this job runs for. AWS trusts it (section 5), so <strong>no AWS keys are stored in GitLab</strong>. If your company runs its own GitLab, use its address.</p></div>
+        <div class="row"><code>  before_script:
+    - …aws sts assume-role-with-web-identity --role-arn "$AWS_ROLE_ARN" --web-identity-token "$GITLAB_OIDC_TOKEN" …
+    - export $(printf "AWS_ACCESS_KEY_ID=%s …" $aws_sts_output)</code><p>Swap the token for temporary AWS credentials valid for one hour. This is GitLab's documented pattern.</p></div>
+        <div class="row"><code>push-to-ecr:
+  extends: .aws-login
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH &amp;&amp; $AWS_ROLE_ARN</code><p>Only on <code>main</code>, and only once <code>AWS_ROLE_ARN</code> has been set up, so the pipeline works before AWS is configured. It copies the tested image from GitLab's registry to ECR.</p></div>
+        <div class="row"><code>deploy-aws:
+  …
+  rules:
+    - if: … &amp;&amp; $ECS_SERVICE_ARN
+      when: manual</code><p><code>when: manual</code> adds a ▶ button in GitLab: production only changes when a person clicks it. The script runs <code>aws ecs update-express-gateway-service</code> with the new image.</p></div>
+        <div class="row"><code>deploy-cloudflare:
+  image: docker.io/library/node:22-slim
+  script:
+    - cd cloudflare
+    - npm ci
+    - sed -i "s|/hello-ai:[^\"]*\"|/hello-ai:$IMAGE_TAG\"|" wrangler.jsonc
+    - npx wrangler deploy</code><p>Points the Cloudflare configuration at this commit's image, then deploys. Needs <code>CLOUDFLARE_API_TOKEN</code> and <code>CLOUDFLARE_ACCOUNT_ID</code> as CI/CD variables.</p></div>
+      </div>
+
+      <h3>What was verified</h3>
+      <p style="margin-bottom:0">The build job's commands were run on the test Mac, inside the same <code>quay.io/buildah/stable</code> image GitLab would use, pushing to the local registry from section 2:</p>
+      <div class="out"><p class="olabel">Output</p><pre><code>[2/2] STEP 9/10: HEALTHCHECK --interval=30s …
+[2/2] STEP 10/10: CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+Writing manifest to image destination
+pushed registry:5000/hello-ai:a1b2c3d4</code></pre></div>
+      <p>The pushed image was <code>amd64</code>, kept its health check, ran as <code>app</code>, and answered <code>/health</code>. The <code>test</code> job's commands and the <code>sed</code> line (in the same <code>node:22-slim</code> image) were run too, and the file was parsed as YAML. The AWS login and ECR steps need a real account.</p>
+      <div class="aside">
+        <span class="chip">Runners</span>
+        <p>Buildah was run with <code>--privileged</code>. On GitLab.com's hosted runners that works. On a company's own runners, Buildah may need the runner to allow it. If the build job fails with permission or "unshare" errors, ask whoever manages your runners.</p>
+      </div>
+      <p>Set these under <strong>Settings → CI/CD → Variables</strong>: <code>AWS_REGION</code>, <code>AWS_ROLE_ARN</code>, <code>ECR_REGISTRY</code>, <code>ECS_SERVICE_ARN</code>, <code>CLOUDFLARE_ACCOUNT_ID</code>, and <code>CLOUDFLARE_API_TOKEN</code> (marked <em>masked</em> so it never appears in logs).</p>
+    </section>
+
+    <section id="aws-setup">
+      <h2><span class="n">05</span>One-time AWS setup</h2>
+      <p>Done once per account, usually by whoever manages AWS. Replace <code>123456789012</code> with your account ID, <code>eu-west-1</code> with your region, and <code>mygroup/hello-ai</code> with your GitLab project path.</p>
+
+      <h3>1. A repository for the images</h3>
+      <div class="cmd"><pre><code>aws ecr create-repository --repository-name hello-ai --image-tag-mutability IMMUTABLE --region eu-west-1</code></pre></div>
+
+      <h3>2. Let AWS trust GitLab's tokens</h3>
+      <div class="cmd"><pre><code>aws iam create-open-id-connect-provider --url https://gitlab.com --client-id-list https://gitlab.com</code></pre></div>
+      <p>The client ID must equal the <code>aud</code> in <code>.gitlab-ci.yml</code>.</p>
+
+      <h3>3. A role that only your project's main branch can use</h3>
+      <p style="margin-bottom:0">Save as <code>gitlab-trust.json</code>. The condition is the security boundary: other projects, and other branches of yours, can't use this role.</p>
+      <div class="cmd"><pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": { "Federated": "arn:aws:iam::123456789012:oidc-provider/gitlab.com" },
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": {
+        "gitlab.com:sub": "project_path:mygroup/hello-ai:ref_type:branch:ref:main"
+      }
+    }
+  }]
+}</code></pre></div>
+      <div class="cmd"><pre><code>aws iam create-role --role-name gitlab-ci-hello-ai --assume-role-policy-document file://gitlab-trust.json
+aws iam attach-role-policy --role-name gitlab-ci-hello-ai \
+  --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser</code></pre></div>
+      <p>That covers pushing to ECR. The <code>deploy-aws</code> job also needs permission to update your Express service. Ask your AWS admin to add a policy scoped to that one service; if something is missing, AWS's error message names the exact permission.</p>
+
+      <h3>4. The two roles ECS Express Mode needs</h3>
+      <p style="margin-bottom:0">From AWS's getting-started guide: an <strong>execution role</strong> (lets ECS pull your image and write logs) and an <strong>infrastructure role</strong> (lets ECS create the load balancer and networking):</p>
+      <div class="cmd"><pre><code>aws iam create-role --role-name ecsTaskExecutionRole --assume-role-policy-document \
+  '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+aws iam attach-role-policy --role-name ecsTaskExecutionRole \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+aws iam create-role --role-name ecsInfrastructureRoleForExpressServices --assume-role-policy-document \
+  '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ecs.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+aws iam attach-role-policy --role-name ecsInfrastructureRoleForExpressServices \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSInfrastructureRoleforExpressGatewayServices</code></pre></div>
+      <p>New roles take about a minute to become usable. If the next command says it can't assume a role, wait and retry.</p>
+    </section>
+
+    <section id="aws">
+      <h2><span class="n">06</span>Deploy to AWS with ECS Express Mode</h2>
+      <p>AWS used to recommend App Runner for "just run my container". <strong>App Runner stopped accepting new customers on 30 April 2026.</strong> Its replacement is <strong>Amazon ECS Express Mode</strong>, launched in November 2025. With one command it creates a Fargate service, a load balancer with HTTPS, a URL, autoscaling, logging and alarms. It costs nothing extra; you pay for what it creates. The load balancer costs money even when idle.</p>
+
+      <h3>Step 1: store the secret</h3>
+      <div class="cmd"><pre><code>aws secretsmanager create-secret --name hello-ai/api-key --secret-string 'your-real-key' --region eu-west-1</code></pre></div>
+      <p>The execution role must be allowed to read it (<code>secretsmanager:GetSecretValue</code> on this secret). The standard execution policy doesn't include that, so add it. ECS then passes the value in as an environment variable, the AWS version of Lesson 3's Podman secret.</p>
+
+      <h3>Step 2: create the service</h3>
+      <div class="cmd"><pre><code>aws ecs create-express-gateway-service \
+  --region eu-west-1 \
+  --service-name hello-ai \
+  --execution-role-arn arn:aws:iam::123456789012:role/ecsTaskExecutionRole \
+  --infrastructure-role-arn arn:aws:iam::123456789012:role/ecsInfrastructureRoleForExpressServices \
+  --primary-container '{
+    "image": "123456789012.dkr.ecr.eu-west-1.amazonaws.com/hello-ai:a1b2c3d4",
+    "containerPort": 8000,
+    "environment": [{"name": "MODEL_NAME", "value": "keyword-sentiment-v1"}],
+    "secrets": [{"name": "API_KEY", "valueFrom": "arn:aws:secretsmanager:eu-west-1:123456789012:secret:hello-ai/api-key-AbCdEf"}]
+  }' \
+  --health-check-path /health \
+  --cpu 512 --memory 1024 \
+  --monitor-resources</code></pre></div>
+      <div class="table">
+        <table>
+          <thead><tr><th>Setting</th><th>Why it's there</th></tr></thead>
+          <tbody>
+            <tr><td><code>"containerPort": 8000</code></td><td>The default is <strong>80</strong>. Without this, the load balancer knocks on a port nobody listens on.</td></tr>
+            <tr><td><code>--health-check-path /health</code></td><td>The default is <strong><code>/ping</code></strong>, which hello-ai doesn't have, so every task would be marked unhealthy. For hello-model, use <code>/health/ready</code> (Lesson 5).</td></tr>
+            <tr><td><code>environment</code> and <code>secrets</code></td><td>Lesson 3's run-time settings. The secret's value never appears in the service definition, only its ARN.</td></tr>
+            <tr><td><code>--cpu 512 --memory 1024</code></td><td>0.5 vCPU and 1 GB, in AWS's units. For hello-model, set memory from your Lesson 5 measurements, and add <code>OMP_NUM_THREADS</code> to match the CPU.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>When the status reaches <code>ACTIVE</code>, the app is at <code>https://&lt;service-name&gt;.ecs.&lt;region&gt;.on.aws/</code>. Logs go to CloudWatch. To inspect or remove it later:</p>
+      <div class="cmd"><pre><code>aws ecs describe-express-gateway-service --service-arn SERVICE_ARN
+aws ecs monitor-express-gateway-service --service-arn SERVICE_ARN
+aws ecs delete-express-gateway-service --service-arn SERVICE_ARN</code></pre></div>
+      <p>Updates come from the pipeline's <code>deploy-aws</code> job. Express Mode rolls out the new version gradually and rolls back automatically if error rates rise.</p>
+      <div class="aside key">
+        <span class="chip">Your database</span>
+        <p>Lesson 4's Postgres becomes <strong>Amazon RDS for PostgreSQL</strong> in production. Pass its address as <code>DATABASE_URL</code>, with the password in Secrets Manager. hello-ai works without a database too: <code>/health</code> reports <code>"database":"not configured"</code>.</p>
+      </div>
+    </section>
+
+    <section id="cloudflare">
+      <h2><span class="n">07</span>Deploy to Cloudflare Containers</h2>
+      <p>Cloudflare Containers is generally available on the Workers Paid plan. It works differently from AWS: your container sits behind a <strong>Worker</strong>, Cloudflare's small serverless function. The Worker receives every request and forwards it to a container instance, which starts on demand and goes to sleep when idle.</p>
+      <div class="table">
+        <table>
+          <thead><tr><th>Instance type</th><th>vCPU</th><th>Memory</th><th>Disk</th></tr></thead>
+          <tbody>
+            <tr><td>lite</td><td>1/16</td><td>256 MiB</td><td>2 GB</td></tr>
+            <tr><td>basic</td><td>1/4</td><td>1 GiB</td><td>4 GB</td></tr>
+            <tr><td>standard-1</td><td>1/2</td><td>4 GiB</td><td>8 GB</td></tr>
+            <tr><td>standard-2</td><td>1</td><td>6 GiB</td><td>12 GB</td></tr>
+            <tr><td>standard-3</td><td>2</td><td>8 GiB</td><td>16 GB</td></tr>
+            <tr><td>standard-4</td><td>4</td><td>12 GiB</td><td>20 GB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li><strong>Images must be <code>linux/amd64</code></strong>, and an image can't be bigger than the instance's disk.</li>
+        <li><strong>Disk is temporary:</strong> when an instance sleeps, it wakes with a fresh disk from the image. Keep data in a database or R2, and bake models into the image (Lesson 5, section 8).</li>
+        <li><strong>Only HTTP reaches the container</strong>, through the Worker.</li>
+      </ul>
+
+      <div class="aside">
+        <span class="chip">Podman</span>
+        <p>By default, <code>wrangler deploy</code> builds your image with the Docker command-line tool, and Cloudflare's docs say Docker must be running. Building with Podman is a known problem (Podman doesn't accept a flag wrangler passes, reported as workers-sdk issue #9755). The way around it, and the better practice anyway: point wrangler at an image <strong>already in a registry</strong>. Then no local build happens at deploy time. ECR from section 5 is one of the supported registries.</p>
+      </div>
+
+      <h3>Step 1: create the project from Cloudflare's template</h3>
+      <div class="cmd"><pre><code>npm create cloudflare@latest cloudflare -- --template=cloudflare/templates/containers-template --no-deploy --git=false</code></pre></div>
+      <p>Run it in <code>~/practice/hello-ai</code>. It creates a <code>cloudflare</code> folder with a Worker, a sample container and <code>wrangler.jsonc</code>. Replace two files with the versions below. The sample container isn't needed, because we use our image.</p>
+      <p><strong>Add <code>cloudflare/</code> to <code>.containerignore</code> straight away.</strong> The folder contains <code>node_modules</code>, and <code>COPY . .</code> would otherwise put it into your image.</p>
+
+      <h3>Step 2: the Worker</h3>
+      <div class="cmd"><pre><code>import { Container, getContainer } from &quot;@cloudflare/containers&quot;;
+import { env } from &quot;cloudflare:workers&quot;;
+
+// One class describes the container: which port it listens on, when it may
+// sleep, and which settings it receives (like `-e` in podman run).
+export class HelloAi extends Container&lt;Env&gt; {
+	defaultPort = 8000;
+	sleepAfter = &quot;10m&quot;;
+	envVars = {
+		MODEL_NAME: env.MODEL_NAME,
+		API_KEY: env.API_KEY, // a Worker secret: npx wrangler secret put API_KEY
+	};
+}
+
+// The Worker receives every request and forwards it to the container.
+export default {
+	async fetch(request: Request, env: Env): Promise&lt;Response&gt; {
+		return getContainer(env.HELLO_AI).fetch(request);
+	},
+};</code></pre></div>
+      <ul>
+        <li><code>class HelloAi extends Container</code> describes the container: port 8000, sleep after 10 idle minutes, and the environment variables it gets, like <code>-e</code> in <code>podman run</code>.</li>
+        <li><code>getContainer(env.HELLO_AI)</code> returns one shared instance. Cloudflare's template also shows spreading requests over several instances with <code>getRandom</code>.</li>
+      </ul>
+
+      <h3>Step 3: the configuration</h3>
+      <div class="cmd"><pre><code>{
+	&quot;$schema&quot;: &quot;node_modules/wrangler/config-schema.json&quot;,
+	&quot;name&quot;: &quot;hello-ai&quot;,
+	&quot;main&quot;: &quot;src/index.ts&quot;,
+	&quot;compatibility_date&quot;: &quot;2025-10-08&quot;,
+	&quot;compatibility_flags&quot;: [&quot;nodejs_compat&quot;],
+	&quot;observability&quot;: { &quot;enabled&quot;: true },
+	&quot;vars&quot;: { &quot;MODEL_NAME&quot;: &quot;keyword-sentiment-v1&quot; },
+	&quot;containers&quot;: [
+		{
+			&quot;class_name&quot;: &quot;HelloAi&quot;,
+			// A prebuilt linux/amd64 image in Amazon ECR (built by GitLab CI)
+			&quot;image&quot;: &quot;123456789012.dkr.ecr.eu-west-1.amazonaws.com/hello-ai:1.0&quot;,
+			&quot;instance_type&quot;: &quot;basic&quot;,
+			&quot;max_instances&quot;: 3
+		}
+	],
+	&quot;durable_objects&quot;: {
+		&quot;bindings&quot;: [{ &quot;class_name&quot;: &quot;HelloAi&quot;, &quot;name&quot;: &quot;HELLO_AI&quot; }]
+	},
+	&quot;migrations&quot;: [{ &quot;new_sqlite_classes&quot;: [&quot;HelloAi&quot;], &quot;tag&quot;: &quot;v1&quot; }]
+}</code></pre></div>
+      <p><code>image</code> is the ECR address, not a Dockerfile. <code>durable_objects</code> and <code>migrations</code> are how Cloudflare keeps track of container instances; they come from the template, renamed.</p>
+
+      <h3>Step 4: check it without an account</h3>
+      <div class="cmd"><pre><code>cd cloudflare
+printf 'API_KEY=local-dev-not-a-real-key\n' &gt; .dev.vars
+npx wrangler types
+npx tsc --noEmit
+npx wrangler deploy --dry-run</code></pre></div>
+      <div class="out"><p class="olabel">Output of the dry run on the test Mac</p><pre><code>Your Worker has access to the following bindings:
+env.HELLO_AI (HelloAi)                       Durable Object
+env.MODEL_NAME ("keyword-sentiment-v1")      Environment Variable
+The following containers are available:
+- hello-ai-helloai (123456789012.dkr.ecr.eu-west-1.amazonaws.com/hello-ai:1.0)
+--dry-run: exiting now.</code></pre></div>
+      <p><code>.dev.vars</code> holds local stand-ins for secrets; <code>wrangler types</code> reads it to know <code>API_KEY</code> exists. The template's <code>.gitignore</code> already keeps <code>.dev.vars</code> out of Git.</p>
+
+      <h3>Step 5: deploy for real</h3>
+      <div class="cmd"><pre><code>npx wrangler login
+npx wrangler containers registries configure 123456789012.dkr.ecr.eu-west-1.amazonaws.com --aws-access-key-id=AKIA…
+npx wrangler secret put API_KEY
+npx wrangler deploy
+npx wrangler containers list</code></pre></div>
+      <p>The registry command stores read-only AWS credentials so Cloudflare can pull from ECR; give that key permission to pull only. The first deploy takes a few minutes to be ready. The app is then at <code>https://hello-ai.&lt;your-subdomain&gt;.workers.dev</code>. The first request after a sleep starts the container, so expect a few seconds' delay then.</p>
+    </section>
+
+    <section id="choose">
+      <h2><span class="n">08</span>AWS or Cloudflare?</h2>
+      <div class="table">
+        <table>
+          <thead><tr><th></th><th>ECS Express Mode</th><th>Cloudflare Containers</th></tr></thead>
+          <tbody>
+            <tr><td>When it runs</td><td>Always at least one task; scales with load</td><td>Starts on request, sleeps when idle</td></tr>
+            <tr><td>Cold starts</td><td>None while a task runs</td><td>A few seconds after a sleep</td></tr>
+            <tr><td>Sizes</td><td>Fargate sizes, far beyond 4 vCPU and 12 GiB</td><td>Up to 4 vCPU, 12 GiB (standard-4)</td></tr>
+            <tr><td>Disk</td><td>Temporary; add EFS for shared files</td><td>Temporary, reset on every sleep</td></tr>
+            <tr><td>Databases</td><td>RDS in the same private network</td><td>External Postgres through Hyperdrive, or D1</td></tr>
+            <tr><td>GPUs</td><td>No (Fargate). Use EC2 GPU instances.</td><td>No. Use Workers AI.</td></tr>
+            <tr><td>You also get</td><td>Load balancer, HTTPS, autoscaling, rollbacks, CloudWatch</td><td>Cloudflare's global network, Workers in front for routing and auth</td></tr>
+            <tr><td>Paying for</td><td>Running tasks and the load balancer, even when idle</td><td>Only while instances run, plus the Workers Paid plan</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>A rough rule: steady traffic, a Postgres database and larger models point to AWS. Spiky or low traffic, where scaling to zero saves money, and apps already on Cloudflare point to Cloudflare. Either way, the image is the same. That's the promise from Lesson 1, and it holds.</p>
+    </section>
+
+    <section id="lab">
+      <h2><span class="n">09</span>Lab</h2>
+      <p>Steps 1 to 4 are free and local. Steps 5 and 6 need accounts and cost money. The first use downloads the <code>registry:3</code> image (62 MB) and the <code>quay.io/buildah/stable</code> image (651 MB).</p>
+
+      <div class="step">
+        <span class="sn">1</span>
+        <div>
+          <h3>Push and pull through a registry</h3>
+          <div class="cmd"><pre><code>cd ~/practice/hello-ai
+podman run -d --name registry -p 5050:5000 docker.io/library/registry:3
+TAG=$(date +%H%M%S)       <span class="c"># in CI this would be the commit ID</span>
+podman tag hello-ai:2.0 localhost:5050/hello-ai:$TAG
+podman push --tls-verify=false localhost:5050/hello-ai:$TAG
+curl localhost:5050/v2/hello-ai/tags/list</code></pre></div>
+          <p>Then delete your local copy with <code>podman rmi</code> and pull it back with <code>podman pull --tls-verify=false …</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">2</span>
+        <div>
+          <h3>Build for amd64, and for both</h3>
+          <div class="cmd"><pre><code>time podman build --format docker --platform linux/amd64 -t hello-ai:2.0-amd64 .
+podman image inspect hello-ai:2.0-amd64 --format '{{.Architecture}}'
+podman build --format docker --platform linux/amd64,linux/arm64 --manifest hello-ai:multi .
+podman manifest inspect hello-ai:multi
+podman manifest push --all --tls-verify=false hello-ai:multi docker://localhost:5050/hello-ai:multi</code></pre></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">3</span>
+        <div>
+          <h3>Run the GitLab build job on your Mac</h3>
+          <p style="margin-bottom:0">This runs the <code>build</code> job's commands in GitLab's Buildah image, pushing to your registry instead of GitLab's:</p>
+          <div class="cmd"><pre><code>podman network create ci-net
+podman network connect ci-net registry
+podman run --rm --privileged --network ci-net -v ./:/builds/app -w /builds/app \
+  -e STORAGE_DRIVER=vfs -e BUILDAH_FORMAT=docker quay.io/buildah/stable \
+  sh -c 'buildah build --platform linux/amd64 -t registry:5000/hello-ai:ci . &amp;&amp; buildah push --tls-verify=false registry:5000/hello-ai:ci'
+curl localhost:5050/v2/hello-ai/tags/list</code></pre></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">4</span>
+        <div>
+          <h3>Dry-run the Cloudflare deploy</h3>
+          <p>Follow section 7, steps 1 to 4, inside <code>~/practice/hello-ai</code>, and add <code>cloudflare/</code> to <code>.containerignore</code>. No Cloudflare account is needed for the dry run. You should see the same bindings and container list.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">5</span>
+        <div>
+          <h3>Optional: run the pipeline on GitLab</h3>
+          <p>Create a GitLab project, add <code>.gitlab-ci.yml</code> (above) and the <code>cloudflare</code> folder, and push hello-ai. Without any AWS or Cloudflare variables, the <code>test</code> and <code>build</code> jobs run, and the image appears under <strong>Deploy → Container registry</strong>. The release and deploy jobs stay hidden until their variables exist.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">6</span>
+        <div>
+          <h3>Optional: deploy for real</h3>
+          <p><strong>AWS:</strong> sections 5 and 6, then open the service URL and <code>/health</code>. Delete the service when you're done: the load balancer is billed every hour. <strong>Cloudflare:</strong> section 7, step 5. Idle instances sleep and cost nothing, apart from the plan.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">7</span>
+        <div>
+          <h3>Clean up</h3>
+          <div class="cmd"><pre><code>podman rm -f registry
+podman network rm ci-net
+podman volume prune
+podman manifest rm hello-ai:multi
+podman rmi hello-ai:2.0-amd64</code></pre></div>
+          <p><code>podman volume prune</code> asks before deleting. It catches the registry's anonymous volume (Lesson 4, section 2) along with any other unused volumes, so read the list before confirming.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="check">
+      <h2><span class="n">10</span>Check yourself</h2>
+      <p>Try answering each question out loud before opening it.</p>
+      <div class="quiz">
+        <details class="q"><summary><span class="qn">Q1</span><span>Why tag images with the commit ID instead of <code>latest</code> or <code>v1</code>?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>A commit ID identifies exactly which code is running, can't accidentally be reused for different code, and makes rollback a matter of deploying the previous tag. With immutable tags in ECR, it can't be overwritten either.</p></div></details>
+        <details class="q"><summary><span class="qn">Q2</span><span>Your Mac-built image deploys to Cloudflare and fails immediately. What's the first thing you check?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>The architecture. Macs build <code>linux/arm64</code>; Cloudflare Containers require <code>linux/amd64</code>. Build with <code>--platform linux/amd64</code> (as the pipeline does) or as a multi-architecture index.</p></div></details>
+        <details class="q"><summary><span class="qn">Q3</span><span>You pushed a multi-architecture image, but the server says there's no amd64 variant. What was probably forgotten?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p><code>--all</code> on <code>podman manifest push</code>. Without it, only the index was pushed, not the per-platform images it points to.</p></div></details>
+        <details class="q"><summary><span class="qn">Q4</span><span>How does the pipeline get into AWS without an AWS key stored in GitLab? And why can't another project use the same role?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>GitLab issues a signed OIDC token for each job (<code>id_tokens</code>), and <code>assume-role-with-web-identity</code> exchanges it for credentials valid for one hour. The role's trust policy only accepts tokens whose <code>sub</code> is your project's <code>main</code> branch.</p></div></details>
+        <details class="q"><summary><span class="qn">Q5</span><span>You created an ECS Express service for hello-ai with just an image. Tasks keep being replaced and the URL never works. Which two defaults bit you?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>The container port defaults to 80 (hello-ai listens on 8000), and the health-check path defaults to <code>/ping</code> (hello-ai has <code>/health</code>). Set <code>containerPort</code> and <code>--health-check-path</code>.</p></div></details>
+        <details class="q"><summary><span class="qn">Q6</span><span>Why does the Cloudflare configuration point at an ECR image instead of the Containerfile?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>With a Containerfile, <code>wrangler deploy</code> builds the image locally with Docker, which doesn't work with Podman. With a registry image, no build happens at deploy time, and Cloudflare runs exactly the image your pipeline built and tested.</p></div></details>
+        <details class="q"><summary><span class="qn">Q7</span><span>hello-model downloads its weights at start-up into its disk. It works on AWS, but on Cloudflare every first request after a quiet period is very slow. Why?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Cloudflare instances sleep when idle and wake with a fresh disk, so the model is downloaded again on every wake-up. Bake the model into the image for Cloudflare.</p></div></details>
+        <details class="q"><summary><span class="qn">Q8</span><span>Your app gets steady traffic all day, uses Postgres, and needs 16&nbsp;GB of memory. AWS or Cloudflare?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>AWS. Cloudflare's largest instance is 12 GiB, steady traffic gains nothing from scaling to zero, and RDS can sit in the same private network as the service.</p></div></details>
+      </div>
+
+      <div class="next">
+        <p class="eyebrow">Next · Lesson 7 (optional)</p>
+        <h3 style="margin-top:0">Kubernetes, the big picture</h3>
+        <p>Pods, Deployments, Services and probes: enough to read your team's Kubernetes files, tried locally with <code>podman kube play</code>.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('.cmd').forEach(function(box){
+    var pre = box.querySelector('pre');
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var clone = pre.cloneNode(true);
+      clone.querySelectorAll('.c').forEach(function(c){ c.remove(); });
+      var text = clone.textContent.split('\n').map(function(l){ return l.replace(/\s+$/,''); }).join('\n').trim();
+      var done = function(){ btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1400); };
+      var fallback = function(){
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Press ⌘C';
+      };
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+    });
+    box.appendChild(btn);
+  });
+
+  var links = {};
+  document.querySelectorAll('.toc a').forEach(function(a){ links[a.getAttribute('href').slice(1)] = a; });
+  if (!('IntersectionObserver' in window)) return;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting) {
+        Object.keys(links).forEach(function(k){ links[k].classList.remove('on'); });
+        if (links[e.target.id]) links[e.target.id].classList.add('on');
+      }
+    });
+  }, {rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('main section[id]').forEach(function(s){ obs.observe(s); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lesson 2: Building Container Images · Docker Fundamentals</title>
+<meta name="description" content="Lesson 2 of Docker Fundamentals, a free hands-on course: Building Container Images.">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --bg:#F2F4F7;
+  --surface:#FFFFFF;
+  --ink:#141D27;
+  --muted:#556375;
+  --line:#D4DBE4;
+  --accent:#1B5BA3;
+  --accent-soft:#E2EBF6;
+  --amber:#8F5B00;
+  --amber-soft:#FAEFD8;
+  --code-bg:#E8EDF3;
+  --ok:#23734A;
+  --ok-soft:#DFF1E6;
+  --bad:#B3261E;
+  --bad-soft:#FBE3E1;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+    --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+    --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+  --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+  --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16.5px/1.65 var(--sans);padding-inline:20px;padding-block:0 72px}
+.shell{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:40px}
+@media (min-width:1000px){.shell{grid-template-columns:210px minmax(0,1fr)}}
+button{font-family:var(--sans)}
+
+/* table of contents */
+.toc{padding-top:40px}
+.toc nav{display:flex;flex-direction:column;gap:2px}
+@media (min-width:1000px){.toc nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px)}}
+.toc .label{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.toc a{display:grid;grid-template-columns:22px 1fr;color:var(--muted);text-decoration:none;font-size:14px;line-height:1.35;padding:5px 0}
+.toc a span{font:500 12px/1.6 var(--mono);color:var(--muted)}
+.toc a:hover,.toc a.on{color:var(--ink)}
+.toc a.on span{color:var(--accent)}
+@media (max-width:999px){
+  .toc{padding-top:24px}
+  .toc nav{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));column-gap:16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:12px}
+  .toc .label{grid-column:1/-1}
+}
+
+main{max-width:720px;min-width:0}
+header{padding-top:48px;padding-bottom:8px}
+.eyebrow{font:500 12.5px/1 var(--mono);color:var(--accent);letter-spacing:.02em;margin:0 0 18px}
+h1{font-family:var(--display);font-stretch:78%;font-weight:760;font-size:clamp(34px,6vw,50px);line-height:1.02;letter-spacing:-.01em;margin:0 0 18px;text-wrap:balance}
+.lede{font-size:19px;line-height:1.55;margin:0 0 22px;max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13.5px;color:var(--muted);margin:0 0 8px}
+.meta b{color:var(--ink);font-weight:600}
+
+section{padding-top:44px;scroll-margin-top:16px}
+h2{font-family:var(--display);font-stretch:82%;font-weight:720;font-size:27px;line-height:1.15;margin:0 0 14px;text-wrap:balance;display:flex;gap:14px;align-items:baseline}
+h2 .n{font:500 14px/1 var(--mono);color:var(--accent);flex:none}
+h3{font:600 17px/1.3 var(--sans);margin:28px 0 8px}
+p{margin:0 0 14px;max-width:66ch}
+ul,ol{margin:0 0 16px;padding-left:22px;max-width:64ch}
+li{margin-bottom:6px}
+strong{font-weight:600}
+a{color:var(--accent)}
+code{font:400 .88em var(--mono);background:var(--code-bg);padding:.1em .35em;border-radius:3px}
+pre{margin:0;font:400 13.5px/1.6 var(--mono);white-space:pre;overflow-x:auto;padding:14px 16px;background:var(--code-bg);border-radius:4px;color:var(--ink)}
+pre code{background:none;padding:0;font-size:inherit}
+pre .c{color:var(--muted)}
+pre .hit{color:var(--ok)}
+pre .miss{color:var(--amber)}
+
+.goals{list-style:none;padding:0;display:grid;gap:8px;margin-top:6px}
+.goals li{display:grid;grid-template-columns:18px 1fr;gap:10px;margin:0}
+.goals li::before{content:"";width:10px;height:10px;border:1.5px solid var(--accent);margin-top:8px}
+
+/* callouts */
+.aside{background:var(--amber-soft);padding:14px 18px 4px;margin:18px 0 20px;border-radius:2px}
+.aside.key{background:var(--accent-soft)}
+.chip{display:inline-block;font:600 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px 4px;margin-bottom:8px;border:1px solid var(--amber);color:var(--amber)}
+.aside.key .chip{border-color:var(--accent);color:var(--accent)}
+.aside p{max-width:none}
+
+/* diagrams */
+figure{margin:22px 0 24px}
+.diagram{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px}
+.diagram svg{display:block;width:100%;min-width:600px;height:auto}
+figcaption{font-size:13.5px;color:var(--muted);margin-top:8px;max-width:66ch}
+.d-box{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.d-frame{fill:none;stroke:var(--muted);stroke-width:1.2}
+.d-app{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.2}
+.d-kernel{fill:var(--amber-soft);stroke:var(--amber);stroke-width:1.2}
+.d-hw{fill:var(--code-bg);stroke:var(--line);stroke-width:1.2}
+.d-write{fill:var(--surface);stroke:var(--accent);stroke-width:1.4;stroke-dasharray:5 4}
+.d-okbox{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.2}
+.d-badbox{fill:var(--bad-soft);stroke:var(--bad);stroke-width:1.2}
+.d-band1{fill:var(--amber-soft)}
+.d-band2{fill:var(--accent-soft)}
+.d-t{fill:var(--ink);font:500 13px var(--sans)}
+.d-tb{fill:var(--ink);font:600 13px var(--sans)}
+.d-m{fill:var(--muted);font:400 12.5px var(--sans)}
+.d-h{fill:var(--muted);font:600 11px var(--sans);letter-spacing:.09em}
+.d-ha{fill:var(--amber);font:600 11px var(--sans);letter-spacing:.09em}
+.d-hb{fill:var(--accent);font:600 11px var(--sans);letter-spacing:.09em}
+.d-code{fill:var(--ink);font:400 12px var(--mono)}
+.d-lab{fill:var(--muted);font:500 12px var(--mono)}
+.d-ok{fill:var(--ok);font:600 12.5px var(--sans)}
+.d-bad{fill:var(--bad);font:600 12.5px var(--sans)}
+.d-line{stroke:var(--muted);stroke-width:1.2;fill:none}
+.d-okline{stroke:var(--ok);stroke-width:1.4;fill:none}
+.d-badline{stroke:var(--bad);stroke-width:1.4;fill:none;stroke-dasharray:4 4}
+.d-head{fill:var(--muted)}
+.d-head-ok{fill:var(--ok)}
+.d-head-bad{fill:var(--bad)}
+
+/* annotated Containerfile */
+.anno{background:var(--surface);border:1px solid var(--line);border-radius:4px;margin:18px 0 22px;overflow:hidden}
+.anno .head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);font:500 12px/1 var(--mono);color:var(--muted);background:var(--bg)}
+.anno .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-bottom:1px solid var(--line)}
+.anno .row:last-child{border-bottom:0}
+.anno .row > code{display:block;background:var(--code-bg);border-radius:0;padding:12px 16px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.anno .row > p{margin:0;padding:11px 16px 12px;font-size:14.5px;line-height:1.55}
+.tag{display:inline-block;font:600 10px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px 3px;border-radius:2px;margin-right:6px;vertical-align:1px}
+.tag.layer{background:var(--accent-soft);color:var(--accent)}
+.tag.config{background:var(--amber-soft);color:var(--amber)}
+@media (max-width:640px){.anno .row{grid-template-columns:1fr}}
+
+/* tables */
+.table{overflow-x:auto;margin:16px 0 20px;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+th{font:600 11.5px/1.3 var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+td:first-child{font-weight:600;white-space:nowrap}
+.cmds td:first-child{font:500 13px var(--mono);white-space:normal;min-width:15em}
+.decide td:first-child{white-space:normal;min-width:12em}
+.decide td:nth-child(2){white-space:nowrap}
+.out{margin:10px 0 14px}
+.out .olabel{font:600 10.5px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.out pre{background:var(--surface);border:1px solid var(--line)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* cache comparison */
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 10px}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:4px;display:flex;flex-direction:column}
+.col h4{margin:0;padding:12px 16px 10px;font:600 14.5px/1.3 var(--sans);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.col h4 small{font:500 12px var(--sans);color:var(--muted)}
+.steps{list-style:none;margin:0;padding:6px 0;max-width:none}
+.steps li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:7px 16px;margin:0;font:400 13px/1.4 var(--mono)}
+.st{flex:none;font:600 10.5px/1 var(--sans);letter-spacing:.07em;text-transform:uppercase;padding:4px 7px 3px;border-radius:2px}
+.st.hit{background:var(--ok-soft);color:var(--ok)}
+.st.miss{background:var(--amber-soft);color:var(--amber)}
+.st.slow{background:var(--bad-soft);color:var(--bad)}
+.col .foot{margin-top:auto;padding:10px 16px 12px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:10px}
+.col .foot b{font:700 24px/1 var(--display);font-stretch:85%;font-variant-numeric:tabular-nums}
+.col .foot span{font-size:13px;color:var(--muted)}
+
+/* experiment result pair */
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 20px}
+.res{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+.res .lbl{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px}
+.res.good .lbl{color:var(--ok)}
+.res.poor .lbl{color:var(--bad)}
+.res code.big{display:block;font-size:13px;padding:8px 10px;margin:0 0 10px;white-space:pre-wrap;word-break:break-word}
+.res dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+.res dt{color:var(--muted)}
+.res dd{margin:0;font-variant-numeric:tabular-nums}
+
+/* quiz */
+.quiz{display:grid;gap:10px;margin-top:10px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:4px}
+details.q summary{cursor:pointer;list-style:none;padding:14px 16px;display:grid;grid-template-columns:28px 1fr auto;gap:8px;font-weight:500}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary .qn{font:500 13px/1.7 var(--mono);color:var(--accent)}
+details.q summary .rv{font:500 12px/1.9 var(--sans);color:var(--muted)}
+details.q[open] summary .rv{visibility:hidden}
+details.q summary:focus-visible,details.sol summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.q .ans{padding:0 16px 14px 52px}
+details.q .ans p:last-child{margin-bottom:0}
+
+/* lab */
+.step{margin:26px 0 0;display:grid;grid-template-columns:34px minmax(0,1fr);gap:0 12px}
+.step .sn{font:600 13px/1 var(--mono);color:var(--accent);border:1.5px solid var(--accent);border-radius:50%;width:30px;height:30px;display:grid;place-items:center;margin-top:-4px}
+.step h3{margin-top:0}
+.cmd{position:relative;margin:10px 0 12px}
+.cmd pre{padding-right:72px}
+.copy{position:absolute;top:8px;right:8px;font:500 12px/1 var(--sans);color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:6px 9px;cursor:pointer}
+.copy:hover{color:var(--ink)}
+.copy:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.task{list-style:none;padding:0;margin:8px 0 14px;display:grid;gap:6px}
+.task li{display:grid;grid-template-columns:18px 1fr;gap:8px;margin:0}
+.task li::before{content:"";width:9px;height:9px;border:1.5px solid var(--muted);border-radius:2px;margin-top:8px}
+details.sol{border:1px dashed var(--line);border-radius:4px;margin:10px 0 14px;background:var(--surface)}
+details.sol summary{cursor:pointer;padding:10px 14px;font:500 14px var(--sans);color:var(--accent)}
+details.sol[open] summary{border-bottom:1px dashed var(--line)}
+details.sol .inner{padding:12px 14px 4px}
+
+.next{margin-top:48px;padding-top:22px;border-top:1px solid var(--line)}
+.next .eyebrow{margin-bottom:10px}
+.next p{color:var(--muted)}
+
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+/* course navigation: a link home, then links to every lesson */
+.course{max-width:1100px;margin:0 auto;padding-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.course .home{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-decoration:none;margin-right:6px;padding:6px 0}
+.course .home:hover{color:var(--ink)}
+.course .lesson,.course .here{display:inline-flex;align-items:baseline;gap:7px;padding:6px 10px 6px 8px;font:500 13px/1.2 var(--sans);color:var(--muted);text-decoration:none;background:var(--surface);border:1px solid var(--line);border-radius:3px}
+.course b{font:500 12px/1 var(--mono);color:var(--accent)}
+.course .lesson:hover{color:var(--ink);border-color:var(--muted)}
+.course a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.course .here{color:var(--ink);background:var(--accent-soft);border-color:var(--accent)}
+.meta a{color:inherit}
+@media (max-width:640px){.course .home{flex-basis:100%}}
+</style>
+</head>
+<body>
+<nav class="course" aria-label="All lessons in this course">
+  <a class="home" href="../">Docker Fundamentals</a>
+  <a class="lesson" href="../lesson-01/" title="Lesson 1: What a Container Is"><b>1</b>Containers</a>
+  <span class="here" aria-current="page" title="Building Container Images"><b>2</b>Building images</span>
+  <a class="lesson" href="../lesson-03/" title="Lesson 3: Production-Ready Images"><b>3</b>Production images</a>
+  <a class="lesson" href="../lesson-04/" title="Lesson 4: Volumes, Networks and Compose"><b>4</b>Volumes and Compose</a>
+  <a class="lesson" href="../lesson-05/" title="Lesson 5: Serving a Real Model"><b>5</b>A real model</a>
+  <a class="lesson" href="../lesson-06/" title="Lesson 6: Shipping to AWS and Cloudflare"><b>6</b>AWS and Cloudflare</a>
+  <a class="lesson" href="../lesson-07/" title="Lesson 7: Kubernetes, the Big Picture"><b>7</b>Kubernetes</a>
+</nav>
+
+<div class="shell">
+  <aside class="toc" aria-label="Lesson sections">
+    <nav>
+      <div class="label">Lesson 2</div>
+      <a href="#build-run"><span>1</span>Build time vs run time</a>
+      <a href="#containerfile"><span>2</span>A Containerfile, line by line</a>
+      <a href="#context"><span>3</span>The build context</a>
+      <a href="#cache"><span>4</span>The layer cache</a>
+      <a href="#cmd"><span>5</span>CMD and exec form</a>
+      <a href="#running"><span>6</span>Tags, ports and env</a>
+      <a href="#reference"><span>7</span>Command reference</a>
+      <a href="#lab"><span>8</span>Lab: containerize hello-ai</a>
+      <a href="#check"><span>9</span>Check yourself</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header>
+      <p class="eyebrow">Docker Fundamentals · Lesson 2 · Building images</p>
+      <h1>Building your first image</h1>
+      <p class="lede">In Lesson 1 you used images other people built. Now you'll write the recipe yourself, and learn the handful of rules that decide whether your builds are fast, your images are clean, and your app actually answers when you call it.</p>
+      <div class="meta"><span><b>Reading</b> about 30 min</span><span><b>Lab</b> about 30 min</span><span><b>Practice app</b> <code>~/practice/hello-ai</code></span><span><b>Outputs</b> from <a href="../#tested">the test Mac</a>, autumn 2026</span></div>
+      <section style="padding-top:26px" aria-label="Goals">
+        <h3 style="margin-top:0">By the end you should be able to</h3>
+        <ul class="goals" style="margin-bottom:0">
+          <li><span>write a Containerfile for a Python web service and explain every line</span></li>
+          <li><span>say which instructions run at build time and which at run time</span></li>
+          <li><span>keep secrets and junk out of an image with <code>.containerignore</code></span></li>
+          <li><span>order instructions so a code change rebuilds in under a second</span></li>
+          <li><span>explain why <code>podman stop</code> sometimes takes 10 seconds, and fix it</span></li>
+          <li><span>run your image so it's reachable from your Mac, and debug it when it isn't</span></li>
+        </ul>
+      </section>
+    </header>
+
+    <section id="build-run">
+      <h2><span class="n">01</span>Build time and run time</h2>
+      <p>An image goes through two separate moments, often on different machines and days apart:</p>
+      <ul>
+        <li><strong>Build time</strong>: <code>podman build</code> reads your Containerfile and executes it step by step. Each step that changes files is saved as a layer. The result is an image: layers plus a config, exactly like the <code>python.tar</code> you unpacked.</li>
+        <li><strong>Run time</strong>: <code>podman run</code> takes the finished image and starts a container from it. Only now does the default command run.</li>
+      </ul>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 720 258" role="img" aria-labelledby="f1t">
+            <title id="f1t">A Containerfile and build context go into podman build, which produces an image of layers and a config; podman run turns the image into a running container</title>
+            <defs>
+              <marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker>
+            </defs>
+            <rect class="d-box" x="10" y="30" width="175" height="96" rx="3"/>
+            <text class="d-tb" x="22" y="52">Containerfile</text>
+            <text class="d-code" x="22" y="70">FROM python…</text>
+            <text class="d-code" x="22" y="86">COPY . .</text>
+            <text class="d-code" x="22" y="102">RUN pip install</text>
+            <text class="d-code" x="22" y="118">CMD ["uvicorn"…]</text>
+            <rect class="d-box" x="10" y="136" width="175" height="66" rx="3"/>
+            <text class="d-tb" x="22" y="157">Build context ( . )</text>
+            <text class="d-code" x="22" y="177">main.py  .env</text>
+            <text class="d-code" x="22" y="194">requirements.txt</text>
+
+            <path class="d-line" d="M190,116 L280,116" marker-end="url(#ah1)"/>
+            <text class="d-lab" x="235" y="106" text-anchor="middle">podman build</text>
+
+            <rect class="d-box" x="285" y="30" width="170" height="172" rx="3"/>
+            <text class="d-tb" x="297" y="50">Image</text>
+            <rect class="d-app" x="297" y="60" width="146" height="24" rx="2"/><text class="d-code" x="305" y="76">COPY . .</text>
+            <rect class="d-box" x="297" y="88" width="146" height="24" rx="2"/><text class="d-code" x="305" y="104">RUN pip install</text>
+            <rect class="d-box" x="297" y="116" width="146" height="24" rx="2"/><text class="d-code" x="305" y="132">COPY requirements</text>
+            <rect class="d-hw" x="297" y="144" width="146" height="24" rx="2"/><text class="d-code" x="305" y="160">python:3.12-slim</text>
+            <rect class="d-kernel" x="297" y="173" width="146" height="22" rx="2"/><text class="d-code" x="305" y="188">config: CMD, ENV</text>
+
+            <path class="d-line" d="M460,116 L555,116" marker-end="url(#ah1)"/>
+            <text class="d-lab" x="507" y="106" text-anchor="middle">podman run</text>
+
+            <rect class="d-box" x="560" y="30" width="150" height="172" rx="3"/>
+            <text class="d-tb" x="572" y="50">Container</text>
+            <rect class="d-write" x="572" y="60" width="126" height="24" rx="2"/><text class="d-m" x="580" y="76">writable layer</text>
+            <rect class="d-hw" x="572" y="88" width="126" height="24" rx="2"/><text class="d-m" x="580" y="104">image layers</text>
+            <rect class="d-app" x="572" y="118" width="126" height="44" rx="2"/>
+            <text class="d-code" x="580" y="136">uvicorn …</text>
+            <text class="d-m" x="580" y="153">PID 1, from CMD</text>
+            <text class="d-m" x="572" y="186">+ ports, env, limits</text>
+
+            <rect class="d-band1" x="10" y="214" width="450" height="40" rx="3"/>
+            <text class="d-ha" x="22" y="231">BUILD TIME</text>
+            <text class="d-m" x="22" y="247">RUN and COPY execute here. Results are saved as layers.</text>
+            <rect class="d-band2" x="470" y="214" width="240" height="40" rx="3"/>
+            <text class="d-hb" x="482" y="231">RUN TIME</text>
+            <text class="d-m" x="482" y="247">CMD starts the main process.</text>
+          </svg>
+        </div>
+        <figcaption>The config records <code>CMD</code> at build time, but nothing runs it until a container starts.</figcaption>
+      </figure>
+
+      <h3>RUN does work now; CMD leaves a note for later</h3>
+      <p>A Containerfile mixes two kinds of lines:</p>
+      <ul>
+        <li><strong><code>RUN</code>: do this now, while building the image, and keep whatever files it creates.</strong></li>
+        <li><strong><code>CMD</code>: write down which program to start later, whenever a container is started.</strong></li>
+      </ul>
+      <p>Think of setting up a laptop for a colleague. You install all the software yourself; that's <code>RUN</code>, done once, and what remains is files on the disk. Then you stick a note on the lid saying "double-click Server to start"; that's <code>CMD</code>. Writing the note doesn't start anything. The server only starts when your colleague opens the laptop, and it starts again every time they do.</p>
+
+      <h3>Example: the same command at build time and at run time</h3>
+      <p style="margin-bottom:0">This Containerfile calls <code>date</code> twice, once in <code>RUN</code> and once in <code>CMD</code>:</p>
+      <div class="cmd"><pre><code>FROM docker.io/library/python:3.12-slim
+RUN date &gt; /built-at.txt
+CMD ["sh", "-c", "echo \"built at: $(cat /built-at.txt)\"; echo \"now:      $(date)\""]</code></pre></div>
+      <p style="margin-bottom:0">Built on the test Mac, with two containers started a few seconds apart:</p>
+      <div class="out"><p class="olabel">Output</p><pre><code>built at: Sun Sep 27 21:28:21 UTC 2026
+now:      Sun Sep 27 21:28:25 UTC 2026
+---
+built at: Sun Sep 27 21:28:21 UTC 2026    <span class="c">← same as before</span>
+now:      Sun Sep 27 21:28:27 UTC 2026    <span class="c">← changed</span></code></pre></div>
+      <ul>
+        <li>The <code>RUN date</code> line ran <strong>once, during the build</strong>, at 21:28:21. The only thing kept was the file it wrote, <code>/built-at.txt</code>, saved as a 2&nbsp;kB layer. Every container from this image sees that same frozen time.</li>
+        <li>The <code>date</code> inside <code>CMD</code> did nothing during the build; it was stored in the image's config. It runs fresh <strong>each time a container starts</strong>, which is why "now" is different every time.</li>
+      </ul>
+
+      <h3>What RUN keeps and what it throws away</h3>
+      <p style="margin-bottom:6px">For each <code>RUN</code> line, the builder:</p>
+      <ol>
+        <li>starts a temporary container from the image built so far,</li>
+        <li>runs your command inside it,</li>
+        <li><strong>waits for the command to finish</strong>,</li>
+        <li>saves the files that changed as a new layer,</li>
+        <li>throws the temporary container away, <strong>including any programs still running in it</strong>.</li>
+      </ol>
+      <p>So an image contains files, never running programs. <code>RUN pip install fastapi</code> works because what you need afterwards is files: the installed package. <code>RUN service postgresql start</code> achieves nothing: the database starts, the step ends, and the running database is thrown away with the temporary container.</p>
+
+      <h3>Example: <code>RUN uvicorn</code> never finishes</h3>
+      <p style="margin-bottom:0">Look at step 3 above: the builder waits for the command to finish. <code>pip install</code> finishes after a few seconds. A web server is designed to <em>never</em> finish; it keeps running until someone stops it. Here is the practice app with the server start wrongly placed in <code>RUN</code>:</p>
+      <div class="cmd"><pre><code>COPY main.py .
+RUN uvicorn main:app --host 0.0.0.0 --port 8000</code></pre></div>
+      <p style="margin-bottom:0">On the test Mac, the build output got this far and then stopped:</p>
+      <div class="out"><p class="olabel">Output</p><pre><code>STEP 6/6: RUN uvicorn main:app --host 0.0.0.0 --port 8000
+INFO:     Started server process [2]
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)</code></pre></div>
+      <p style="margin-bottom:6px">After 30 seconds it was still there, and it would have waited forever:</p>
+      <ul>
+        <li>The builder is waiting for step 6 to finish so it can save the layer.</li>
+        <li>Uvicorn is doing its job: running and waiting for requests.</li>
+        <li>Nobody can send it any, because this is a build step, not a container with a published port.</li>
+        <li>The image never gets created.</li>
+      </ul>
+      <p>If this happens to you, stop the build with Ctrl+C. Then run <code>podman ps -a --external</code>, which also lists temporary build containers, to check nothing was left behind. On the test Mac, a build stopped this way kept running inside the Podman VM and had to be cleaned up there too.</p>
+      <p style="margin-bottom:0">The correct version splits the two jobs:</p>
+      <div class="cmd"><pre><code>RUN pip install --no-cache-dir -r requirements.txt                   <span class="c"># build time: finishes, leaves files</span>
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]   <span class="c"># run time: starts with each container</span></code></pre></div>
+
+      <h3>How to decide for any line</h3>
+      <p>Ask: <strong>"Should this happen once, when the image is made, and leave files behind? Or every time a container starts, and keep running?"</strong></p>
+      <div class="table">
+        <table class="decide">
+          <thead><tr><th>Task</th><th>Where it goes</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Install Python or system packages</td><td><code>RUN</code></td><td>Once; the result is files</td></tr>
+            <tr><td>Compile code, download files you want in the image</td><td><code>RUN</code></td><td>Once; the result is files</td></tr>
+            <tr><td>Start the web server</td><td><code>CMD</code></td><td>Must run for the whole life of the container</td></tr>
+            <tr><td>Run database migrations</td><td>At container start, not <code>RUN</code></td><td>The real database only exists at run time</td></tr>
+            <tr><td>Read an API key or other settings</td><td>At run time (<code>-e</code>)</td><td>Values differ per environment and must not be in the image</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="containerfile">
+      <h2><span class="n">02</span>A Containerfile, line by line</h2>
+      <p>Here is the complete Containerfile for the practice app, a small FastAPI service. It's seven instructions, and each one is a choice worth understanding. The tag on each line shows whether it adds a <span class="tag layer">layer</span> of files or only changes a <span class="tag config">config</span> setting.</p>
+
+      <div class="anno">
+        <div class="head"><span>hello-ai/Containerfile</span><span>7 instructions</span></div>
+        <div class="row"><code>FROM docker.io/library/python:3.12-slim</code><p><span class="tag layer">layers</span>Start from this image. All of its layers become the bottom of yours. It must be the first instruction.</p></div>
+        <div class="row"><code>WORKDIR /app</code><p><span class="tag config">config</span>Set the current directory for the following instructions and for the running container. Creates <code>/app</code> if it doesn't exist.</p></div>
+        <div class="row"><code>COPY requirements.txt .</code><p><span class="tag layer">layer</span>Copy one file from the build context into <code>/app</code> (<code>.</code> means the WORKDIR). Only the dependency list, on purpose: see section 4.</p></div>
+        <div class="row"><code>RUN pip install --no-cache-dir -r requirements.txt</code><p><span class="tag layer">layer</span>Run a command during the build, inside a temporary container, and save the files it changed: 24&nbsp;MB of packages here. <code>--no-cache-dir</code> stops pip leaving its download cache in the layer.</p></div>
+        <div class="row"><code>COPY . .</code><p><span class="tag layer">layer</span>Copy the entire build context into <code>/app</code>: your code, and anything else in the folder that isn't excluded.</p></div>
+        <div class="row"><code>EXPOSE 8000</code><p><span class="tag config">config</span>Document the port the app listens on. It doesn't open or publish anything.</p></div>
+        <div class="row"><code>CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]</code><p><span class="tag config">config</span>The default command, stored for run time. The square-bracket form and <code>0.0.0.0</code> both matter; sections 5 and 6 explain why.</p></div>
+      </div>
+
+      <p>After a build, <code>podman history hello-ai:0.1</code> confirms the split: the <code>RUN</code> line is 23.8&nbsp;MB, the two <code>COPY</code> lines are a few kB, and <code>WORKDIR</code>, <code>EXPOSE</code> and <code>CMD</code> are 0&nbsp;B. The finished image is 173&nbsp;MB: 149&nbsp;MB of <code>python:3.12-slim</code> plus your 24&nbsp;MB.</p>
+
+      <h3>The instructions you'll use most</h3>
+      <div class="table">
+        <table>
+          <thead><tr><th>Instruction</th><th>What it does</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td><code>FROM</code></td><td>Choose the base image</td><td>Its layers</td></tr>
+            <tr><td><code>RUN</code></td><td>Run a command at build time</td><td>Layer</td></tr>
+            <tr><td><code>COPY</code></td><td>Copy files from the build context</td><td>Layer</td></tr>
+            <tr><td><code>ADD</code></td><td>Like COPY, but can also download URLs and unpack archives. Prefer COPY: it does only what it says.</td><td>Layer</td></tr>
+            <tr><td><code>WORKDIR</code></td><td>Set the working directory</td><td>Config</td></tr>
+            <tr><td><code>ENV</code></td><td>Set an environment variable for later steps and for the container</td><td>Config</td></tr>
+            <tr><td><code>ARG</code></td><td>A variable that exists only during the build, set with <code>--build-arg</code></td><td>Build only</td></tr>
+            <tr><td><code>EXPOSE</code></td><td>Document the listening port</td><td>Config</td></tr>
+            <tr><td><code>USER</code></td><td>Run later steps and the container as this user (Lesson 3)</td><td>Config</td></tr>
+            <tr><td><code>LABEL</code></td><td>Attach metadata, such as a version or source repository</td><td>Config</td></tr>
+            <tr><td><code>CMD</code></td><td>Default command; replaced by any command you pass to <code>podman run</code></td><td>Config</td></tr>
+            <tr><td><code>ENTRYPOINT</code></td><td>Fixed program to run; CMD becomes its default arguments</td><td>Config</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="context">
+      <h2><span class="n">03</span>The build context and <code style="font-size:.8em">.containerignore</code></h2>
+      <p>The dot at the end of <code>podman build -t hello-ai:0.1 .</code> is not decoration. It's the <strong>build context</strong>: the folder whose files the build can see. <code>COPY</code> paths are relative to it, and nothing outside it is reachable, so <code>COPY ../secrets.txt .</code> fails.</p>
+      <p><code>COPY . .</code> copies the <em>whole</em> context. Built without an ignore file, the practice app's image contained this:</p>
+      <div class="cmd"><pre><code>$ podman run --rm hello-ai:0.1 ls -a /app
+.  ..  .env  Containerfile  main.py  requirements.txt
+
+$ podman run --rm hello-ai:0.1 cat /app/.env
+API_KEY=not-a-real-key-just-for-the-lesson</code></pre></div>
+      <p>The <code>.env</code> file with the API key is in the image. Anyone who can pull it can read the key, and as Lesson 1 showed, deleting it in a later step doesn't remove it from the earlier layer. In a real project the same line would also copy <code>.git</code>, your virtualenv, notebooks, caches and any model files lying around.</p>
+      <p>The fix is a <code>.containerignore</code> file next to the Containerfile. It lists what to leave out of the context, one pattern per line. Podman also reads <code>.dockerignore</code>, which uses the same syntax.</p>
+      <div class="cmd"><pre><code><span class="c"># secrets and local settings</span>
+.env
+.env.*
+<span class="c"># version control, virtualenvs, Python caches</span>
+.git
+.venv
+**/__pycache__
+**/*.pyc
+<span class="c"># build files the running app doesn't need</span>
+Containerfile
+.containerignore</code></pre></div>
+      <p>With this file in place, <code>/app</code> contains only <code>main.py</code> and <code>requirements.txt</code>. <code>**/</code> matches at any depth, so a <code>__pycache__</code> folder inside a subfolder is excluded too.</p>
+      <div class="aside key">
+        <span class="chip">Rule</span>
+        <p><strong>Create <code>.containerignore</code> before your first <code>COPY . .</code>, not after.</strong> It keeps secrets out, keeps images small, and keeps builds fast, because excluded files are never processed and changes to them never invalidate the cache.</p>
+      </div>
+    </section>
+
+    <section id="cache">
+      <h2><span class="n">04</span>The layer cache</h2>
+      <p>Every layer the builder creates is kept. On the next build, it walks the Containerfile from the top and asks, for each instruction, "have I already built exactly this, on top of exactly the same layer?"</p>
+      <ul>
+        <li>For <code>RUN</code>, "exactly this" means the same command text.</li>
+        <li>For <code>COPY</code> and <code>ADD</code>, it also means the copied files have the same contents.</li>
+        <li>If the answer is yes, the stored layer is reused and the output says <code>Using cache</code>. At the <strong>first</strong> no, that step and <strong>every step after it</strong> are rebuilt, because each layer sits on top of the one before.</li>
+      </ul>
+      <p>Here is the real output of rebuilding the practice app after editing only <code>main.py</code>:</p>
+      <div class="cmd"><pre><code>STEP 2/7: WORKDIR /app
+<span class="hit">--> Using cache 8a9a2edd78f7…</span>
+STEP 3/7: COPY requirements.txt .
+<span class="hit">--> Using cache 8466a0c9008b…</span>
+STEP 4/7: RUN pip install --no-cache-dir -r requirements.txt
+<span class="hit">--> Using cache 1f91524495ec…</span>
+STEP 5/7: COPY . .
+<span class="miss">--> 5e307e1b4a4b</span>              <span class="c"># main.py changed: rebuilt from here down</span></code></pre></div>
+
+      <h3>Order instructions from least to most frequently changed</h3>
+      <p>Your code changes many times a day. Your dependency list changes occasionally. The base image changes rarely. Put them in that order, from the top, and the expensive <code>pip install</code> stays cached while you work. Here is the same edit to <code>main.py</code> with the two possible orders, timed on the test Mac:</p>
+
+      <div class="compare">
+        <div class="col">
+          <h4>Dependencies first <small>recommended</small></h4>
+          <ul class="steps">
+            <li>FROM python:3.12-slim <span class="st hit">cached</span></li>
+            <li>COPY requirements.txt . <span class="st hit">cached</span></li>
+            <li>RUN pip install … <span class="st hit">cached</span></li>
+            <li>COPY . . <span class="st miss">rebuilt</span></li>
+          </ul>
+          <div class="foot"><b>0.7 s</b><span>rebuild after editing main.py</span></div>
+        </div>
+        <div class="col">
+          <h4>Code first <small>slow</small></h4>
+          <ul class="steps">
+            <li>FROM python:3.12-slim <span class="st hit">cached</span></li>
+            <li>COPY . . <span class="st miss">rebuilt</span></li>
+            <li>RUN pip install … <span class="st slow">reinstalled</span></li>
+          </ul>
+          <div class="foot"><b>6.0 s</b><span>every edit reinstalls every package</span></div>
+        </div>
+      </div>
+      <p>With two small packages the difference is seconds. With <code>torch</code> and <code>transformers</code>, the right-hand column means several minutes and gigabytes of downloads on <em>every</em> code change.</p>
+
+      <h3>Two traps, because the cache only looks at text</h3>
+      <ul>
+        <li><strong>The cache doesn't know the internet changed.</strong> <code>RUN pip install -r requirements.txt</code> stays cached even after new package versions are released, because the command text is the same. This is one reason to pin exact versions (<code>fastapi==0.141.1</code>): the image you get shouldn't depend on whether a step happened to be cached. When you <em>want</em> fresh packages, such as security updates, rebuild with <code>podman build --no-cache</code>.</li>
+        <li><strong>Keep <code>apt-get update</code> and <code>apt-get install</code> in one <code>RUN</code>.</strong> On separate lines, the <code>update</code> layer gets cached with a package list that goes stale. Months later someone adds a package to the install line, the install step rebuilds against the old list, and fails with <code>404 Not Found</code>. The standard pattern is below. Cleaning up in the same step keeps the list files out of the layer.</li>
+      </ul>
+      <div class="cmd"><pre><code>RUN apt-get update \
+ &amp;&amp; apt-get install -y --no-install-recommends ffmpeg \
+ &amp;&amp; rm -rf /var/lib/apt/lists/*</code></pre></div>
+    </section>
+
+    <section id="cmd">
+      <h2><span class="n">05</span>CMD, ENTRYPOINT and the exec form</h2>
+      <p><code>CMD</code> can be written two ways, and they behave differently at run time:</p>
+      <ul>
+        <li><strong>Exec form</strong>, a JSON list: <code>CMD ["uvicorn", "main:app", "--host", "0.0.0.0"]</code>. Podman starts <code>uvicorn</code> directly, so uvicorn is PID 1.</li>
+        <li><strong>Shell form</strong>, plain text: <code>CMD uvicorn main:app --host 0.0.0.0</code>. Podman runs <code>/bin/sh -c "uvicorn …"</code>, so the <em>shell</em> is PID 1 and uvicorn is its child.</li>
+      </ul>
+      <p>Remember from Lesson 1 that <code>podman stop</code> sends <code>SIGTERM</code> to PID 1 and waits 10 seconds before killing. The shell doesn't pass <code>SIGTERM</code> on to uvicorn, so nothing reacts. Both were measured on the test Mac:</p>
+
+      <div class="pair">
+        <div class="res good">
+          <p class="lbl">Exec form</p>
+          <code class="big">CMD ["uvicorn", "main:app", …]</code>
+          <dl><dt>PID 1</dt><dd><code>uvicorn main:app …</code></dd><dt>podman stop</dt><dd>0.4 s</dd><dt>Status</dt><dd><code>Exited (0)</code>, clean shutdown</dd></dl>
+        </div>
+        <div class="res poor">
+          <p class="lbl">Shell form</p>
+          <code class="big">CMD uvicorn main:app …</code>
+          <dl><dt>PID 1</dt><dd><code>/bin/sh -c uvicorn …</code></dd><dt>podman stop</dt><dd>10.2 s</dd><dt>Status</dt><dd><code>Exited (137)</code>, killed</dd></dl>
+        </div>
+      </div>
+      <p>The 137 means every deployment and every restart kills your app mid-request instead of letting it finish. <strong>Always use the exec form for <code>CMD</code> and <code>ENTRYPOINT</code>.</strong> Shell form is fine for <code>RUN</code>, because build steps aren't stopped with signals.</p>
+      <div class="aside">
+        <span class="chip">Watch the quotes</span>
+        <p>The exec form is JSON, so it needs <strong>double</strong> quotes. <code>CMD ['uvicorn', 'main:app']</code> isn't valid JSON, and the builder quietly treats the whole line as shell form, bringing back the 10-second stop.</p>
+      </div>
+
+      <h3>ENTRYPOINT vs CMD</h3>
+      <p>When both are set, <code>ENTRYPOINT</code> is the program and <code>CMD</code> supplies its default arguments. Anything you type after the image name in <code>podman run</code> replaces only the <code>CMD</code> part:</p>
+      <div class="table">
+        <table>
+          <thead><tr><th>Containerfile</th><th><code>podman run image</code></th><th><code>podman run image --port 9000</code></th></tr></thead>
+          <tbody>
+            <tr><td style="white-space:normal;font-weight:400"><code>CMD ["uvicorn", "main:app", "--port", "8000"]</code></td><td style="font-weight:400">uvicorn on port 8000</td><td style="font-weight:400">Error: tries to run a program called <code>--port</code></td></tr>
+            <tr><td style="white-space:normal;font-weight:400"><code>ENTRYPOINT ["uvicorn", "main:app"]</code><br><code>CMD ["--port", "8000"]</code></td><td style="font-weight:400">uvicorn on port 8000</td><td style="font-weight:400">uvicorn on port 9000</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>For a web service, a single exec-form <code>CMD</code> is the simplest choice: it's easy to read and easy to override when debugging, for example <code>podman run -it hello-ai:0.1 bash</code>. Reach for <code>ENTRYPOINT</code> when the image is really one tool, such as a CLI that always runs with different arguments.</p>
+    </section>
+
+    <section id="running">
+      <h2><span class="n">06</span>Tags, ports and environment variables</h2>
+
+      <h3>Tags</h3>
+      <p><code>-t hello-ai:0.1</code> names the image. Because the name has no registry in front, Podman stores it as <code>localhost/hello-ai:0.1</code>, which is what <code>podman images</code> shows. Give each build a version tag instead of relying on <code>latest</code>, so you always know which build is running and can go back to the previous one. Pushing to a registry comes in a later lesson.</p>
+
+      <h3>Ports: <code>-p</code> publishes, <code>EXPOSE</code> doesn't</h3>
+      <p>A container has its own network namespace, with its own network interface and its own ports. Your Mac can't reach them until you <strong>publish</strong> a port with <code>-p host:container</code>. <code>-p 8000:8000</code> forwards port 8000 on your Mac to port 8000 in the container. On macOS the traffic passes through the Podman VM on the way, but you don't have to do anything about that. <code>EXPOSE</code> in the Containerfile publishes nothing: without <code>-p</code>, <code>curl localhost:8000</code> fails with <code>Couldn't connect to server</code>.</p>
+
+      <h3>Why the app must listen on 0.0.0.0</h3>
+      <p>Inside the container, <code>127.0.0.1</code> means <em>the container's own</em> loopback interface, not your Mac. Forwarded traffic arrives on the container's network interface, so a server that listens only on <code>127.0.0.1</code> never sees it.</p>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 720 224" role="img" aria-labelledby="f2t">
+            <title id="f2t">A request from the Mac is forwarded by -p to the container's network interface; a server bound to 0.0.0.0 receives it, a server bound to 127.0.0.1 does not</title>
+            <defs>
+              <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker>
+              <marker id="ah2ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="d-head-ok" d="M0,0 L10,5 L0,10 z"/></marker>
+              <marker id="ah2bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="d-head-bad" d="M0,0 L10,5 L0,10 z"/></marker>
+            </defs>
+            <rect class="d-box" x="10" y="54" width="170" height="92" rx="3"/>
+            <text class="d-tb" x="22" y="76">Your Mac</text>
+            <rect class="d-hw" x="22" y="90" width="146" height="40" rx="2"/>
+            <text class="d-code" x="30" y="115">curl localhost:8000</text>
+
+            <path class="d-line" d="M180,110 L318,110" marker-end="url(#ah2)"/>
+            <text class="d-lab" x="249" y="100" text-anchor="middle">-p 8000:8000</text>
+            <text class="d-m" x="249" y="128" text-anchor="middle">forwards the port</text>
+
+            <rect class="d-frame" x="322" y="12" width="388" height="200" rx="4"/>
+            <text class="d-h" x="336" y="34">CONTAINER · OWN NETWORK NAMESPACE</text>
+            <rect class="d-app" x="336" y="88" width="98" height="44" rx="3"/>
+            <text class="d-tb" x="385" y="107" text-anchor="middle">eth0</text>
+            <text class="d-m" x="385" y="124" text-anchor="middle">port 8000</text>
+
+            <path class="d-okline" d="M434,100 L472,74" marker-end="url(#ah2ok)"/>
+            <path class="d-badline" d="M434,120 L472,152" marker-end="url(#ah2bad)"/>
+
+            <rect class="d-okbox" x="476" y="48" width="222" height="56" rx="3"/>
+            <text class="d-code" x="488" y="70">--host 0.0.0.0</text>
+            <text class="d-ok" x="488" y="91">Listens everywhere: works</text>
+
+            <rect class="d-badbox" x="476" y="126" width="222" height="72" rx="3"/>
+            <text class="d-code" x="488" y="148">--host 127.0.0.1</text>
+            <text class="d-bad" x="488" y="168">Loopback only: fails</text>
+            <text class="d-m" x="488" y="187">"Connection reset by peer"</text>
+          </svg>
+        </div>
+        <figcaption>On the test Mac: with <code>--host 127.0.0.1</code>, curl from the Mac fails, while the same request made from inside the container succeeds.</figcaption>
+      </figure>
+      <p>Many frameworks default to <code>127.0.0.1</code> because that's safe on a laptop, so this bites almost everyone once. If the app works from inside the container (<code>podman exec</code>) but not from outside, check the host address first.</p>
+
+      <h3>Environment variables</h3>
+      <p>Settings that differ between environments don't belong in the image. Pass them when the container starts with <code>-e</code>. The practice app reads <code>MODEL_NAME</code>, so the same image can report a different model:</p>
+      <div class="cmd"><pre><code>podman run -d -p 8000:8000 -e MODEL_NAME=sentiment-v2 hello-ai:0.1
+curl localhost:8000/health   <span class="c"># {"status":"ok","model":"sentiment-v2"}</span></code></pre></div>
+      <p>This is also how API keys should reach your app: at run time, from outside the image. Lesson 3 covers doing that safely in production.</p>
+    </section>
+
+    <section id="reference">
+      <h2><span class="n">07</span>Command reference</h2>
+      <div class="table">
+        <table class="cmds">
+          <tbody>
+            <tr><td>podman build -t NAME:TAG .</td><td>Build from <code>./Containerfile</code> (or <code>Dockerfile</code>) with the current folder as context</td></tr>
+            <tr><td>podman build -f FILE -t NAME:TAG .</td><td>Use a Containerfile with a different name or location</td></tr>
+            <tr><td>podman build --no-cache -t NAME:TAG .</td><td>Ignore the cache and run every step again</td></tr>
+            <tr><td>podman images</td><td>List images and their sizes</td></tr>
+            <tr><td>podman history IMAGE</td><td>List an image's layers, their sizes and the instruction that made each</td></tr>
+            <tr><td>podman run -d --name N -p 8000:8000 -e KEY=VALUE IMAGE</td><td>Start in the background, publish a port, set an environment variable</td></tr>
+            <tr><td>podman logs N</td><td>Output of the main process. Add <code>-f</code> to keep following it.</td></tr>
+            <tr><td>podman exec -it N bash</td><td>Open a shell inside a running container</td></tr>
+            <tr><td>podman stop N · podman rm N</td><td>Stop a container · remove it</td></tr>
+            <tr><td>podman rmi IMAGE</td><td>Remove an image</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="lab">
+      <h2><span class="n">08</span>Lab: containerize hello-ai</h2>
+      <p>The practice app is in <code>~/practice/hello-ai</code>, where the <a href="../#setup">setup step</a> put it. It is a FastAPI service with <code>/health</code> and <code>/predict</code>, a pinned <code>requirements.txt</code>, and a <code>.env</code> with a fake API key. Your job is to write the container files. Try each step before opening its solution.</p>
+
+      <div class="step">
+        <span class="sn">1</span>
+        <div>
+          <h3>Look at the app</h3>
+          <div class="cmd"><pre><code>cd ~/practice/hello-ai
+ls -a
+cat main.py requirements.txt</code></pre></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">2</span>
+        <div>
+          <h3>Write the Containerfile</h3>
+          <p style="margin-bottom:4px">Create <code>~/practice/hello-ai/Containerfile</code> that:</p>
+          <ul class="task">
+            <li><span>starts from <code>docker.io/library/python:3.12-slim</code></span></li>
+            <li><span>works in <code>/app</code></span></li>
+            <li><span>installs the dependencies in a way that stays cached when only code changes</span></li>
+            <li><span>copies the code</span></li>
+            <li><span>documents port 8000</span></li>
+            <li><span>starts uvicorn on <code>0.0.0.0:8000</code>, in the form that stops cleanly</span></li>
+          </ul>
+          <details class="sol"><summary>Show solution</summary><div class="inner">
+            <div class="cmd"><pre><code>FROM docker.io/library/python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]</code></pre></div>
+          </div></details>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">3</span>
+        <div>
+          <h3>Build it</h3>
+          <div class="cmd"><pre><code>podman build -t hello-ai:0.1 .</code></pre></div>
+          <p>The first build takes about 10 seconds. Read the output: you'll see <code>STEP 1/7</code> to <code>STEP 7/7</code>, pip installing packages, and a warning that pip is running as root. That warning is harmless in an image build; Lesson 3 explains why. Then look at what you made:</p>
+          <div class="cmd"><pre><code>podman images hello-ai
+podman history hello-ai:0.1</code></pre></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">4</span>
+        <div>
+          <h3>Run it and call it</h3>
+          <div class="cmd"><pre><code>podman run -d --name api -p 8000:8000 hello-ai:0.1
+curl localhost:8000/health
+curl -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{"text": "the new build is fast and it works"}'
+podman logs api</code></pre></div>
+          <p>You should get <code>{"status":"ok",…}</code> and a <code>"positive"</code> prediction, and the logs show both requests. Also open <a href="http://localhost:8000/docs">localhost:8000/docs</a> in your browser: that's FastAPI's interactive API page, served from inside the container.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">5</span>
+        <div>
+          <h3>Find the leak, then fix it</h3>
+          <div class="cmd"><pre><code>podman run --rm hello-ai:0.1 ls -a /app
+podman run --rm hello-ai:0.1 cat /app/.env</code></pre></div>
+          <p>Your fake API key is inside the image. Write a <code>.containerignore</code> that keeps it out, along with anything else that doesn't belong. Then build <code>hello-ai:0.2</code> and run the two commands above against it.</p>
+          <details class="sol"><summary>Show solution</summary><div class="inner">
+            <div class="cmd"><pre><code><span class="c"># secrets and local settings</span>
+.env
+.env.*
+<span class="c"># version control, virtualenvs, Python caches</span>
+.git
+.venv
+**/__pycache__
+**/*.pyc
+<span class="c"># build files the running app doesn't need</span>
+Containerfile
+.containerignore</code></pre></div>
+            <div class="cmd"><pre><code>podman build -t hello-ai:0.2 .
+podman run --rm hello-ai:0.2 ls -a /app   <span class="c"># only main.py and requirements.txt</span></code></pre></div>
+          </div></details>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">6</span>
+        <div>
+          <h3>Watch the cache work</h3>
+          <p>Add a word to <code>POSITIVE</code> in <code>main.py</code> (for example <code>"amazing"</code>), then rebuild and time it:</p>
+          <div class="cmd"><pre><code>time podman build -t hello-ai:0.3 .</code></pre></div>
+          <p>Steps 2 to 4 should say <code>Using cache</code>, and the build should take about a second. For comparison, move <code>COPY . .</code> above the <code>pip install</code> line, edit <code>main.py</code> again and rebuild: pip reinstalls everything. Put the order back when you're done.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">7</span>
+        <div>
+          <h3>Time the stop signal</h3>
+          <div class="cmd"><pre><code>time podman stop api
+podman ps -a --filter name=api</code></pre></div>
+          <p>Well under a second, <code>Exited (0)</code>. Now start the same image through a shell, which is exactly what a shell-form <code>CMD</code> does, and stop it:</p>
+          <div class="cmd"><pre><code>podman run -d --name api-shell -p 8001:8000 hello-ai:0.1 sh -c "uvicorn main:app --host 0.0.0.0 --port 8000"
+time podman stop api-shell
+podman ps -a --filter name=api-shell</code></pre></div>
+          <p>About 10 seconds, <code>Exited (137)</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">8</span>
+        <div>
+          <h3>Break the networking on purpose</h3>
+          <div class="cmd"><pre><code>podman run -d --name api-lo -p 8002:8000 hello-ai:0.1 uvicorn main:app --host 127.0.0.1 --port 8000
+curl localhost:8002/health
+podman exec api-lo python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/health').read())"</code></pre></div>
+          <p>From your Mac: <code>Connection reset by peer</code>. From inside the container: it works. That combination always points to the listen address.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">9</span>
+        <div>
+          <h3>Clean up</h3>
+          <div class="cmd"><pre><code>podman rm -f api api-shell api-lo
+podman rmi hello-ai:0.1 hello-ai:0.2</code></pre></div>
+          <p>Keep <code>hello-ai:0.3</code> and the project folder: Lesson 3 builds on them.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="check">
+      <h2><span class="n">09</span>Check yourself</h2>
+      <p>Try answering each question out loud before opening it.</p>
+      <div class="quiz">
+        <details class="q"><summary><span class="qn">Q1</span><span>What's the difference between <code>RUN</code> and <code>CMD</code>? What happens if you write <code>RUN uvicorn main:app</code>?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p><code>RUN</code> executes during the build and saves the changed files as a layer. <code>CMD</code> only records the command that starts when a container runs. <code>RUN uvicorn main:app</code> starts the server during the build; it never exits, so the build hangs.</p></div></details>
+        <details class="q"><summary><span class="qn">Q2</span><span>A Containerfile has <code>COPY . .</code> before <code>RUN pip install</code>. You change one line in <code>main.py</code>. What gets rebuilt, and why?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>The <code>COPY . .</code> step, because a copied file changed, and then every step after it, including the full <code>pip install</code>. Copy <code>requirements.txt</code> and install first, then copy the code.</p></div></details>
+        <details class="q"><summary><span class="qn">Q3</span><span>Your image contains <code>.env</code>, but the Containerfile never mentions it. How did it get there, and is adding <code>RUN rm /app/.env</code> a fix?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p><code>COPY . .</code> copies the whole build context, including <code>.env</code>. Deleting it in a later step only hides it; the file is still in the <code>COPY</code> layer and anyone with the image can extract it. The fix is to exclude it in <code>.containerignore</code>, and to change the key if the image was ever pushed.</p></div></details>
+        <details class="q"><summary><span class="qn">Q4</span><span>Your API works when you call it with <code>podman exec</code> from inside the container, but <code>curl</code> from your Mac says "Connection reset by peer". What's the most likely cause?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>The server listens on <code>127.0.0.1</code>, the container's own loopback, so traffic forwarded to the container's network interface never reaches it. Start it with <code>--host 0.0.0.0</code>.</p></div></details>
+        <details class="q"><summary><span class="qn">Q5</span><span>Your Containerfile has <code>EXPOSE 8000</code>, but <code>curl localhost:8000</code> can't connect at all. What's missing?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Publishing the port. <code>EXPOSE</code> is documentation only; you need <code>-p 8000:8000</code> on <code>podman run</code>.</p></div></details>
+        <details class="q"><summary><span class="qn">Q6</span><span><code>podman stop</code> always takes 10 seconds and the container ends with exit code 137. What do you look for in the Containerfile?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>A shell-form <code>CMD</code> or <code>ENTRYPOINT</code>, including one written with single quotes. The shell is PID 1, doesn't pass <code>SIGTERM</code> on, and gets killed after the grace period. Switch to the exec form with double quotes.</p></div></details>
+        <details class="q"><summary><span class="qn">Q7</span><span>A colleague has <code>RUN apt-get update</code> and <code>RUN apt-get install -y ffmpeg</code> on separate lines. Months later they add a package to the install line and the build fails with 404 errors. Why?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>The <code>update</code> layer was reused from the cache, with a months-old package list. The changed install step rebuilt against that stale list and asked for package versions the mirrors no longer have. Keep <code>update</code> and <code>install</code> in one <code>RUN</code>.</p></div></details>
+        <details class="q"><summary><span class="qn">Q8</span><span>Your image uses <code>ENTRYPOINT ["python", "train.py"]</code> and <code>CMD ["--epochs", "3"]</code>. What runs for <code>podman run img</code>, and for <code>podman run img --epochs 10</code>?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p><code>python train.py --epochs 3</code>, then <code>python train.py --epochs 10</code>. Arguments after the image name replace <code>CMD</code>; <code>ENTRYPOINT</code> stays.</p></div></details>
+      </div>
+
+      <div class="next">
+        <p class="eyebrow">Next · Lesson 3</p>
+        <h3 style="margin-top:0">Production-ready images</h3>
+        <p>Running as a non-root user, getting configuration and secrets in at run time, health checks, and what changes when the image holds a real model.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  // copy buttons on commands
+  document.querySelectorAll('.cmd').forEach(function(box){
+    var pre = box.querySelector('pre');
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var clone = pre.cloneNode(true);
+      clone.querySelectorAll('.c').forEach(function(c){ c.remove(); });
+      var text = clone.textContent.split('\n').map(function(l){ return l.replace(/\s+$/,''); }).join('\n').trim();
+      var done = function(){ btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1400); };
+      var fallback = function(){
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Press ⌘C';
+      };
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+    });
+    box.appendChild(btn);
+  });
+
+  // highlight the current section in the table of contents
+  var links = {};
+  document.querySelectorAll('.toc a').forEach(function(a){ links[a.getAttribute('href').slice(1)] = a; });
+  if (!('IntersectionObserver' in window)) return;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting) {
+        Object.keys(links).forEach(function(k){ links[k].classList.remove('on'); });
+        if (links[e.target.id]) links[e.target.id].classList.add('on');
+      }
+    });
+  }, {rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('main section[id]').forEach(function(s){ obs.observe(s); });
+})();
+</script>
+</body>
+</html>

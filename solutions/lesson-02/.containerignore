@@ -1,0 +1,11 @@
+# secrets and local settings
+.env
+.env.*
+# version control, virtualenvs, Python caches
+.git
+.venv
+**/__pycache__
+**/*.pyc
+# build files the running app doesn't need
+Containerfile
+.containerignore

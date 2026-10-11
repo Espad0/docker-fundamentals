@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lesson 1: What a Container Is · Docker Fundamentals</title>
+<meta name="description" content="Lesson 1 of Docker Fundamentals, a free hands-on course: What a Container Is.">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --bg:#F2F4F7;
+  --surface:#FFFFFF;
+  --ink:#141D27;
+  --muted:#556375;
+  --line:#D4DBE4;
+  --accent:#1B5BA3;
+  --on-accent:#FFFFFF;
+  --accent-soft:#E2EBF6;
+  --amber:#8F5B00;
+  --amber-soft:#FAEFD8;
+  --code-bg:#E8EDF3;
+  --hl:#FCEFC0;
+  --hl-edge:#E2B93B;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+    --accent:#7BB0EA;--on-accent:#0D131A;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+    --hl:#352D12;--hl-edge:#A8872A;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+  --accent:#7BB0EA;--on-accent:#0D131A;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+  --hl:#352D12;--hl-edge:#A8872A;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16.5px/1.65 var(--sans);padding-inline:20px;padding-block:0 150px}
+.shell{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:40px}
+@media (min-width:1000px){.shell{grid-template-columns:210px minmax(0,1fr)}}
+button{font-family:var(--sans)}
+
+/* table of contents */
+.toc{padding-top:40px}
+.toc nav{display:flex;flex-direction:column;gap:2px}
+@media (min-width:1000px){.toc nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px)}}
+.toc .label{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.toc a{display:grid;grid-template-columns:22px 1fr;color:var(--muted);text-decoration:none;font-size:14px;line-height:1.35;padding:5px 0}
+.toc a span{font:500 12px/1.6 var(--mono);color:var(--muted)}
+.toc a:hover,.toc a.on{color:var(--ink)}
+.toc a.on span{color:var(--accent)}
+@media (max-width:999px){
+  .toc{padding-top:24px;order:0}
+  .toc nav{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));column-gap:16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:12px}
+  .toc .label{grid-column:1/-1}
+}
+
+main{max-width:700px;min-width:0}
+header{padding-top:48px;padding-bottom:8px}
+.eyebrow{font:500 12.5px/1 var(--mono);color:var(--accent);letter-spacing:.02em;margin:0 0 18px}
+h1{font-family:var(--display);font-stretch:78%;font-weight:760;font-size:clamp(34px,6vw,50px);line-height:1.02;letter-spacing:-.01em;margin:0 0 18px;text-wrap:balance}
+.lede{font-size:19px;line-height:1.55;color:var(--ink);margin:0 0 22px;max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13.5px;color:var(--muted);margin:0 0 8px}
+.meta b{color:var(--ink);font-weight:600}
+
+
+section{padding-top:44px;scroll-margin-top:16px}
+h2{font-family:var(--display);font-stretch:82%;font-weight:720;font-size:27px;line-height:1.15;margin:0 0 14px;text-wrap:balance;display:flex;gap:14px;align-items:baseline}
+h2 .n{font:500 14px/1 var(--mono);color:var(--accent);flex:none}
+h3{font:600 17px/1.3 var(--sans);margin:28px 0 8px}
+p{margin:0 0 14px;max-width:66ch}
+ul,ol{margin:0 0 16px;padding-left:22px;max-width:64ch}
+li{margin-bottom:6px}
+strong{font-weight:600}
+a{color:var(--accent)}
+code{font:400 .88em var(--mono);background:var(--code-bg);padding:.1em .35em;border-radius:3px}
+pre{margin:0;font:400 13.5px/1.6 var(--mono);white-space:pre;overflow-x:auto;padding:14px 16px;background:var(--code-bg);border-radius:4px;color:var(--ink)}
+pre code{background:none;padding:0;font-size:inherit}
+pre .c{color:var(--muted)}
+
+.goals{list-style:none;padding:0;display:grid;gap:8px;margin-top:6px}
+.goals li{display:grid;grid-template-columns:18px 1fr;gap:10px;margin:0}
+.goals li::before{content:"";width:10px;height:10px;border:1.5px solid var(--accent);margin-top:8px}
+
+/* callouts: square, tinted, labelled chip */
+.aside{background:var(--amber-soft);padding:14px 18px 4px;margin:18px 0 20px;border-radius:2px}
+.aside.key{background:var(--accent-soft)}
+.chip{display:inline-block;font:600 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px 4px;margin-bottom:8px;border:1px solid var(--amber);color:var(--amber)}
+.aside.key .chip{border-color:var(--accent);color:var(--accent)}
+.aside p{max-width:none}
+
+/* diagrams */
+figure{margin:22px 0 24px}
+.diagram{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px}
+.diagram svg{display:block;width:100%;min-width:600px;height:auto}
+figcaption{font-size:13.5px;color:var(--muted);margin-top:8px;max-width:66ch}
+.d-box{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.d-app{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.2}
+.d-kernel{fill:var(--amber-soft);stroke:var(--amber);stroke-width:1.2}
+.d-hw{fill:var(--code-bg);stroke:var(--line);stroke-width:1.2}
+.d-write{fill:var(--surface);stroke:var(--accent);stroke-width:1.4;stroke-dasharray:5 4}
+.d-gone{fill:none;stroke:var(--muted);stroke-width:1.2;stroke-dasharray:4 4}
+.d-t{fill:var(--ink);font:500 13px var(--sans)}
+.d-tb{fill:var(--ink);font:600 13px var(--sans)}
+.d-m{fill:var(--muted);font:400 12.5px var(--sans)}
+.d-h{fill:var(--muted);font:600 11px var(--sans);letter-spacing:.09em}
+.d-code{fill:var(--muted);font:400 11.5px var(--mono)}
+.d-lab{fill:var(--muted);font:500 12px var(--mono)}
+.d-line{stroke:var(--muted);stroke-width:1.2;fill:none}
+.d-head{fill:var(--muted)}
+
+/* image reference anatomy */
+.ref{display:flex;flex-wrap:wrap;align-items:flex-start;gap:0 2px;font:500 clamp(15px,3.6vw,20px)/1.2 var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:18px 18px 14px;margin:18px 0 8px}
+.ref .part{display:flex;flex-direction:column;gap:6px}
+.ref .part b{font-weight:500;padding-bottom:6px;border-bottom:2px solid var(--line)}
+.ref .part small{font:500 11px/1.2 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ref .p1 b{border-color:var(--amber)} .ref .p2 b{border-color:var(--muted)} .ref .p3 b{border-color:var(--accent)} .ref .p4 b{border-color:var(--ink)}
+.ref .sep{color:var(--muted)}
+
+/* tables */
+.table{overflow-x:auto;margin:16px 0 20px;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+th{font:600 11.5px/1.3 var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+td:first-child{font-weight:600;white-space:nowrap}
+.vocab td:first-child{font:500 14px var(--mono);font-weight:500}
+
+/* quiz */
+.quiz{display:grid;gap:10px;margin-top:10px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:4px}
+details.q summary{cursor:pointer;list-style:none;padding:14px 16px;display:grid;grid-template-columns:28px 1fr auto;gap:8px;font-weight:500}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary .qn{font:500 13px/1.7 var(--mono);color:var(--accent)}
+details.q summary .rv{font:500 12px/1.9 var(--sans);color:var(--muted)}
+details.q[open] summary .rv{visibility:hidden}
+details.q summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.q .ans{padding:0 16px 14px 52px;color:var(--ink)}
+details.q .ans p:last-child{margin-bottom:0}
+
+/* steps in the lab */
+.step{margin:22px 0 0}
+.step h3{margin-top:0}
+.cmd{position:relative;margin:10px 0 12px}
+.cmd pre{padding-right:72px}
+.copy{position:absolute;top:8px;right:8px;font:500 12px/1 var(--sans);color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:6px 9px;cursor:pointer}
+.copy:hover{color:var(--ink)}
+.copy:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+.blk{margin-bottom:16px}
+.next{margin-top:48px;padding-top:22px;border-top:1px solid var(--line)}
+.next .eyebrow{margin-bottom:10px}
+.next p{color:var(--muted)}
+
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+/* course navigation: a link home, then links to every lesson */
+.course{max-width:1100px;margin:0 auto;padding-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.course .home{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-decoration:none;margin-right:6px;padding:6px 0}
+.course .home:hover{color:var(--ink)}
+.course .lesson,.course .here{display:inline-flex;align-items:baseline;gap:7px;padding:6px 10px 6px 8px;font:500 13px/1.2 var(--sans);color:var(--muted);text-decoration:none;background:var(--surface);border:1px solid var(--line);border-radius:3px}
+.course b{font:500 12px/1 var(--mono);color:var(--accent)}
+.course .lesson:hover{color:var(--ink);border-color:var(--muted)}
+.course a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.course .here{color:var(--ink);background:var(--accent-soft);border-color:var(--accent)}
+.meta a{color:inherit}
+@media (max-width:640px){.course .home{flex-basis:100%}}
+</style>
+</head>
+<body>
+<nav class="course" aria-label="All lessons in this course">
+  <a class="home" href="../">Docker Fundamentals</a>
+  <span class="here" aria-current="page" title="What a Container Is"><b>1</b>Containers</span>
+  <a class="lesson" href="../lesson-02/" title="Lesson 2: Building Container Images"><b>2</b>Building images</a>
+  <a class="lesson" href="../lesson-03/" title="Lesson 3: Production-Ready Images"><b>3</b>Production images</a>
+  <a class="lesson" href="../lesson-04/" title="Lesson 4: Volumes, Networks and Compose"><b>4</b>Volumes and Compose</a>
+  <a class="lesson" href="../lesson-05/" title="Lesson 5: Serving a Real Model"><b>5</b>A real model</a>
+  <a class="lesson" href="../lesson-06/" title="Lesson 6: Shipping to AWS and Cloudflare"><b>6</b>AWS and Cloudflare</a>
+  <a class="lesson" href="../lesson-07/" title="Lesson 7: Kubernetes, the Big Picture"><b>7</b>Kubernetes</a>
+</nav>
+
+<div class="shell">
+  <aside class="toc" aria-label="Lesson sections">
+    <nav>
+      <div class="label">Lesson 1</div>
+      <a href="#problem"><span>1</span>The problem</a>
+      <a href="#process"><span>2</span>Processes, not VMs</a>
+      <a href="#mac"><span>3</span>Why your Mac needs a VM</a>
+      <a href="#images"><span>4</span>Images and layers</a>
+      <a href="#containers"><span>5</span>Containers</a>
+      <a href="#lifecycle"><span>6</span>Lifecycle</a>
+      <a href="#registries"><span>7</span>Registries and names</a>
+      <a href="#podman"><span>8</span>Podman vs Docker</a>
+      <a href="#vocab"><span>9</span>Vocabulary</a>
+      <a href="#check"><span>10</span>Check yourself</a>
+      <a href="#lab"><span>11</span>See it for real</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header id="intro">
+      <p class="eyebrow">Docker Fundamentals · Lesson 1 · Theory</p>
+      <div data-seg="intro-1">
+        <h1>What a container actually is</h1>
+        <p class="lede" style="margin-bottom:0">Before writing a Containerfile, you need an accurate picture of what happens when you run one. Most confusing container behaviour follows from a few facts about processes, filesystems and kernels, and this lesson covers those facts.</p>
+      </div>
+      <div class="meta" style="margin-top:22px"><span><b>Reading</b> about 25 min</span><span><b>Lab</b> 10 min, optional</span><span><b>Tool</b> Podman (all of it applies to Docker)</span><span><b>Outputs</b> from <a href="../#tested">the test Mac</a>, autumn 2026</span></div>
+      <section style="padding-top:26px" aria-label="Goals" data-seg="intro-2">
+        <h3 style="margin-top:0">By the end you should be able to explain</h3>
+        <ul class="goals" style="margin-bottom:0">
+          <li><span>why a container starts in milliseconds and a VM doesn't</span></li>
+          <li><span>the difference between an image and a container, and where your data goes when a container is removed</span></li>
+          <li><span>why deleting a file in a later build step doesn't make an image smaller</span></li>
+          <li><span>why an image built on an Apple-silicon Mac can crash on a server with <code>exec format error</code></span></li>
+          <li><span>what Podman does differently from Docker, and what stays the same</span></li>
+        </ul>
+      </section>
+    </header>
+
+    <section id="problem">
+      <h2><span class="n">01</span>The problem containers solve</h2>
+      <p data-seg="problem-1">An application is more than its source code. A typical AI web service needs a specific Python version, pinned packages like <code>torch</code> and <code>transformers</code>, system libraries such as <code>libgomp</code> or <code>ffmpeg</code>, environment variables, and a start command. Each of these can differ between your laptop, a colleague's laptop, CI and production. When one of them does, you get the classic “works on my machine” bug.</p>
+      <p data-seg="problem-2">A container packages the application together with <strong>everything it needs from the operating system's user space</strong>: the runtime, the libraries, the files and the default command. The result runs the same way anywhere a container engine is available. That is why teams ship containers rather than instructions for setting up a server.</p>
+    </section>
+
+    <section id="process">
+      <h2><span class="n">02</span>Containers are processes, not small VMs</h2>
+      <p data-seg="process-1">This is the most important idea in the lesson. A <strong>virtual machine</strong> emulates a whole computer: it boots its own operating system with its own kernel on top of a hypervisor. A <strong>container</strong> is an ordinary Linux process running on the host's kernel. The kernel restricts what that process can see and use, so from the inside it looks like a separate machine.</p>
+
+      <figure data-seg="process-2">
+        <div class="diagram">
+          <svg viewBox="0 0 720 262" role="img" aria-labelledby="d1t">
+            <title id="d1t">Two VMs each carry their own guest OS and kernel on a hypervisor; three containers share one Linux kernel</title>
+            <text class="d-h" x="10" y="20">VIRTUAL MACHINES</text>
+            <text class="d-h" x="370" y="20">CONTAINERS</text>
+
+            <rect class="d-app" x="10" y="34" width="160" height="40" rx="3"/><text class="d-t" x="90" y="59" text-anchor="middle">API</text>
+            <rect class="d-app" x="190" y="34" width="160" height="40" rx="3"/><text class="d-t" x="270" y="59" text-anchor="middle">Postgres</text>
+            <rect class="d-box" x="10" y="80" width="160" height="40" rx="3"/><text class="d-t" x="90" y="105" text-anchor="middle">Python, libs</text>
+            <rect class="d-box" x="190" y="80" width="160" height="40" rx="3"/><text class="d-t" x="270" y="105" text-anchor="middle">Postgres libs</text>
+            <rect class="d-kernel" x="10" y="126" width="160" height="40" rx="3"/><text class="d-t" x="90" y="151" text-anchor="middle">Guest OS + kernel</text>
+            <rect class="d-kernel" x="190" y="126" width="160" height="40" rx="3"/><text class="d-t" x="270" y="151" text-anchor="middle">Guest OS + kernel</text>
+            <rect class="d-hw" x="10" y="180" width="340" height="36" rx="3"/><text class="d-t" x="180" y="203" text-anchor="middle">Hypervisor</text>
+            <rect class="d-hw" x="10" y="222" width="340" height="36" rx="3"/><text class="d-t" x="180" y="245" text-anchor="middle">Hardware</text>
+
+            <text class="d-m" x="370" y="52">No guest kernels to boot.</text>
+            <rect class="d-app" x="370" y="80" width="106" height="40" rx="3"/><text class="d-t" x="423" y="105" text-anchor="middle">API</text>
+            <rect class="d-app" x="487" y="80" width="106" height="40" rx="3"/><text class="d-t" x="540" y="105" text-anchor="middle">Model worker</text>
+            <rect class="d-app" x="604" y="80" width="106" height="40" rx="3"/><text class="d-t" x="657" y="105" text-anchor="middle">Postgres</text>
+            <rect class="d-box" x="370" y="126" width="106" height="40" rx="3"/><text class="d-t" x="423" y="151" text-anchor="middle">Python, libs</text>
+            <rect class="d-box" x="487" y="126" width="106" height="40" rx="3"/><text class="d-t" x="540" y="151" text-anchor="middle">Python, torch</text>
+            <rect class="d-box" x="604" y="126" width="106" height="40" rx="3"/><text class="d-t" x="657" y="151" text-anchor="middle">Postgres libs</text>
+            <rect class="d-kernel" x="370" y="180" width="340" height="36" rx="3"/><text class="d-t" x="540" y="203" text-anchor="middle">Shared Linux kernel (namespaces, cgroups)</text>
+            <rect class="d-hw" x="370" y="222" width="340" height="36" rx="3"/><text class="d-t" x="540" y="245" text-anchor="middle">Hardware</text>
+          </svg>
+        </div>
+        <figcaption>Each VM carries a full guest OS. Containers carry only user-space files (the image) and share the host's kernel.</figcaption>
+      </figure>
+
+      <div data-seg="process-3">
+        <p>The kernel provides two features that make this isolation work:</p>
+        <ul style="margin-bottom:0">
+          <li><strong>Namespaces control what a process can see.</strong> A process in its own PID namespace sees itself as PID 1 and can't see other processes on the host. Other namespaces give it its own network interfaces and ports, its own hostname, its own mount table (and therefore its own root filesystem) and its own view of user IDs.</li>
+          <li><strong>Control groups (cgroups) control what a process can use.</strong> They cap CPU, memory and the number of processes. When you pass <code>--memory 2g</code>, a cgroup enforces it. If a model loads more than that, the kernel's OOM killer ends the process.</li>
+        </ul>
+      </div>
+      <div data-seg="process-4" style="margin-top:16px">
+        <p>Add a separate root filesystem, which comes from the image, and you have a container. There is no other machinery. This explains most container behaviour:</p>
+        <ul style="margin-bottom:0">
+          <li><strong>Fast start.</strong> Starting a container means starting a process, not booting a kernel. It takes milliseconds.</li>
+          <li><strong>Low overhead.</strong> There is no guest OS using memory, so one host can run many containers.</li>
+          <li><strong>Linux containers need a Linux kernel.</strong> The container brings its own libraries but never its own kernel.</li>
+          <li><strong>Weaker isolation than a VM.</strong> All containers share one kernel, so a kernel bug can affect all of them. This is why running containers as a non-root user matters, and why cloud providers often run containers inside lightweight VMs.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="mac">
+      <h2><span class="n">03</span>Why your Mac runs a VM anyway</h2>
+      <p data-seg="mac-1">macOS uses its own kernel (Darwin), not Linux, so it can't run Linux containers directly. Podman solves this with <code>podman machine</code>: a small Linux VM (Fedora CoreOS) that runs in the background. The <code>podman</code> command on your Mac sends each request over a socket to the Podman service inside that VM, and the containers run there. Docker Desktop, OrbStack and Colima work the same way.</p>
+      <div data-seg="mac-2">
+        <p>Three consequences are worth knowing from day one:</p>
+        <ul style="margin-bottom:0">
+          <li><strong>The VM has its own resource limits.</strong> If a container runs out of memory while loading a model, the VM's limit may be the cause. You can change it with <code>podman machine set --memory</code> and <code>--cpus</code>, then restart the machine.</li>
+          <li><strong>Mounting files from your Mac crosses the VM boundary.</strong> Sharing your source folder with a container works, but file I/O is slower than on Linux.</li>
+          <li><strong>CPU architecture matters.</strong> On an Apple-silicon Mac, the VM is <code>arm64</code>, so images you build are <code>linux/arm64</code> by default. Most servers are <code>linux/amd64</code>. An arm64 image on an amd64 server fails with <code>exec format error</code>. You'll learn to build for the right platform with <code>--platform linux/amd64</code> in a later lesson.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="images">
+      <h2><span class="n">04</span>Images: the template</h2>
+      <div data-seg="images-1">
+        <p>An <strong>image</strong> is a read-only template for a container. It has two parts:</p>
+        <ol style="margin-bottom:0">
+          <li><strong>A stack of filesystem layers.</strong> Each layer is a diff: the files one build step added, changed or deleted, stored as an archive and identified by the SHA-256 hash of its contents.</li>
+          <li><strong>A config.</strong> This holds the default command, environment variables, working directory, the user to run as, exposed ports and the target platform (such as <code>linux/amd64</code>).</li>
+        </ol>
+      </div>
+      <p data-seg="images-2" style="margin-top:16px">You build images from a <strong>Containerfile</strong>. Docker calls it a Dockerfile, and the syntax is identical. Each instruction that changes files, mainly <code>RUN</code>, <code>COPY</code> and <code>ADD</code>, produces a new layer on top of the previous ones. When the engine assembles the container's root filesystem, it stacks the layers with a union filesystem (usually overlayfs), so the process sees one merged directory tree.</p>
+
+      <figure data-seg="images-3">
+        <div class="diagram">
+          <svg viewBox="0 0 720 236" role="img" aria-labelledby="d2t">
+            <title id="d2t">Two containers each have their own writable layer on top of the same four read-only image layers</title>
+            <rect class="d-write" x="60" y="16" width="175" height="42" rx="3"/>
+            <text class="d-tb" x="147.5" y="34" text-anchor="middle">Container A</text>
+            <text class="d-m" x="147.5" y="50" text-anchor="middle">writable layer</text>
+            <rect class="d-write" x="245" y="16" width="175" height="42" rx="3"/>
+            <text class="d-tb" x="332.5" y="34" text-anchor="middle">Container B</text>
+            <text class="d-m" x="332.5" y="50" text-anchor="middle">writable layer</text>
+
+            <rect class="d-app" x="60" y="76" width="360" height="34" rx="3"/>
+            <text class="d-t" x="74" y="98">COPY your code</text><text class="d-code" x="406" y="98" text-anchor="end">sha256:7d2e…</text>
+            <rect class="d-box" x="60" y="114" width="360" height="34" rx="3"/>
+            <text class="d-t" x="74" y="136">RUN pip install (dependencies)</text><text class="d-code" x="406" y="136" text-anchor="end">sha256:c41a…</text>
+            <rect class="d-box" x="60" y="152" width="360" height="34" rx="3"/>
+            <text class="d-t" x="74" y="174">Python 3.12 runtime</text><text class="d-code" x="406" y="174" text-anchor="end">sha256:0b9f…</text>
+            <rect class="d-hw" x="60" y="190" width="360" height="34" rx="3"/>
+            <text class="d-t" x="74" y="212">Debian base files</text><text class="d-code" x="406" y="212" text-anchor="end">sha256:e3f8…</text>
+
+            <path class="d-line" d="M50,76 L44,76 L44,224 L50,224"/>
+            <text class="d-h" x="28" y="150" text-anchor="middle" transform="rotate(-90 28 150)">IMAGE (READ-ONLY)</text>
+
+            <path class="d-line" d="M426,37 L442,37"/>
+            <text class="d-tb" x="450" y="32">Writable layer, one per container</text>
+            <text class="d-m" x="450" y="50">Changes land here, copy-on-write.</text>
+            <text class="d-m" x="450" y="66">Deleted with the container.</text>
+
+            <path class="d-line" d="M426,150 L442,150"/>
+            <text class="d-tb" x="450" y="128">Read-only image layers</text>
+            <text class="d-m" x="450" y="146">Each is a filesystem diff named by</text>
+            <text class="d-m" x="450" y="162">its content hash. Shared by every</text>
+            <text class="d-m" x="450" y="178">container and image built on them.</text>
+          </svg>
+        </div>
+        <figcaption>Layers are listed newest first. The bottom three come from the base image <code>python:3.12-slim</code>; the hashes are shortened examples.</figcaption>
+      </figure>
+
+      <p data-seg="images-4">Because layers are identified by their content, they are stored and downloaded once. If ten of your images use <code>python:3.12-slim</code> as their base, its layers exist on disk once, and a registry push sends only the layers the registry doesn't already have.</p>
+
+      <div class="aside key" data-seg="images-5">
+        <span class="chip">Gotcha</span>
+        <p><strong>Deleting a file in a later layer doesn't shrink the image.</strong> A later layer can only record “this file is deleted”, which hides the file; the bytes stay in the earlier layer. If one <code>RUN</code> step downloads a 4&nbsp;GB model and the next step deletes it, your image still contains 4&nbsp;GB. Clean up in the same step that created the files, or use a multi-stage build, which you'll learn later.</p>
+      </div>
+
+      <p data-seg="images-6">Layers also make builds fast. The builder caches each layer, and when you rebuild, it reuses every layer up to the first instruction whose inputs changed. The order of instructions therefore decides how much of the build is reused. This is the main topic of Lesson 2.</p>
+    </section>
+
+    <section id="containers">
+      <h2><span class="n">05</span>Containers: a running instance</h2>
+      <div data-seg="containers-1">
+        <p>A <strong>container</strong> is what you get when you start an image. It consists of:</p>
+        <ul style="margin-bottom:0">
+          <li>the image's read-only layers,</li>
+          <li>a thin <strong>writable layer</strong> on top, unique to this container,</li>
+          <li>runtime settings you choose at start: published ports, environment variables, mounted volumes, memory and CPU limits,</li>
+          <li>and a running main process.</li>
+        </ul>
+      </div>
+      <p data-seg="containers-2" style="margin-top:16px">If you think in code, an image is like a class and a container is like an object: you can create many independent instances from one image, and each has its own state.</p>
+      <p data-seg="containers-3">When a container modifies a file that came from the image, the file is first copied into its writable layer and the change is made there. This is <strong>copy-on-write</strong>. The image itself never changes, which is why a hundred containers can share one image safely.</p>
+
+      <div class="aside key" data-seg="containers-4">
+        <span class="chip">Key rule</span>
+        <p><strong>Treat containers as disposable.</strong> When a container is removed, its writable layer goes with it. A new deployment replaces your containers with new ones from a new image. Anything worth keeping, such as user uploads, database files or downloaded model weights you don't want to download again, must live in a <strong>volume</strong> (storage managed outside the container, covered in a later lesson) or in an external service like a database or object storage.</p>
+      </div>
+    </section>
+
+    <section id="lifecycle">
+      <h2><span class="n">06</span>The container lifecycle</h2>
+
+      <figure data-seg="lifecycle-1">
+        <div class="diagram">
+          <svg viewBox="0 0 720 220" role="img" aria-labelledby="d3t">
+            <title id="d3t">Container states: created, running, paused, exited, removed</title>
+            <defs>
+              <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker>
+            </defs>
+            <text class="d-m" x="70" y="13" text-anchor="middle">from an image</text>
+            <path class="d-line" d="M70,20 L70,66" marker-end="url(#ah3)"/>
+            <text class="d-lab" x="78" y="47">create</text>
+
+            <rect class="d-box" x="10" y="70" width="120" height="44" rx="3"/><text class="d-tb" x="70" y="97" text-anchor="middle">Created</text>
+            <rect class="d-app" x="210" y="70" width="120" height="44" rx="3"/><text class="d-tb" x="270" y="97" text-anchor="middle">Running</text>
+            <rect class="d-box" x="410" y="70" width="120" height="44" rx="3"/><text class="d-tb" x="470" y="97" text-anchor="middle">Exited</text>
+            <rect class="d-gone" x="610" y="70" width="100" height="44" rx="3"/><text class="d-tb" x="660" y="97" text-anchor="middle">Removed</text>
+            <rect class="d-box" x="210" y="166" width="120" height="44" rx="3"/><text class="d-tb" x="270" y="193" text-anchor="middle">Paused</text>
+
+            <path class="d-line" d="M130,92 L206,92" marker-end="url(#ah3)"/><text class="d-lab" x="168" y="84" text-anchor="middle">start</text>
+            <path class="d-line" d="M330,92 L406,92" marker-end="url(#ah3)"/><text class="d-lab" x="370" y="84" text-anchor="middle">exit/stop</text>
+            <path class="d-line" d="M530,92 L606,92" marker-end="url(#ah3)"/><text class="d-lab" x="570" y="84" text-anchor="middle">rm</text>
+            <path class="d-line" d="M470,70 C470,30 270,30 270,66" marker-end="url(#ah3)"/><text class="d-lab" x="370" y="30" text-anchor="middle">start again</text>
+            <path class="d-line" d="M252,114 L252,162" marker-end="url(#ah3)"/><text class="d-lab" x="244" y="143" text-anchor="end">pause</text>
+            <path class="d-line" d="M288,166 L288,118" marker-end="url(#ah3)"/><text class="d-lab" x="296" y="143">unpause</text>
+
+            <text class="d-m" x="10" y="146">podman run =</text>
+            <text class="d-m" x="10" y="163">create + start</text>
+            <text class="d-m" x="410" y="146">Writable layer still</text>
+            <text class="d-m" x="410" y="163">exists until rm.</text>
+            <text class="d-m" x="610" y="146">Writable layer</text>
+            <text class="d-m" x="610" y="163">is gone.</text>
+          </svg>
+        </div>
+        <figcaption>An exited container isn't gone. It keeps its writable layer and logs until you remove it, which is why <code>podman ps -a</code> can show many old containers.</figcaption>
+      </figure>
+
+      <p data-seg="lifecycle-2">A container isn't a machine that stays switched on. It's <strong>one program with walls around it</strong>, and when that program finishes, the container is done. The rest of this section explains why, because it's behind several confusing first experiences.</p>
+
+      <div class="blk" data-seg="lifecycle-3">
+        <h3>The main process</h3>
+        <p>Every image names a command to run when a container starts:</p>
+        <div class="table">
+          <table>
+            <thead><tr><th>Image</th><th>Default command</th></tr></thead>
+            <tbody>
+              <tr><td><code>python:3.12-slim</code></td><td><code>python3</code>, an interactive Python prompt</td></tr>
+              <tr><td><code>nginx</code></td><td><code>nginx</code>, a web server</td></tr>
+              <tr><td>your FastAPI image</td><td>something like <code>uvicorn main:app</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-bottom:0">If you add a command after the image name in <code>podman run</code>, it replaces the default:</p>
+        <div class="cmd" style="margin-bottom:0"><pre><code>podman run docker.io/library/python:3.12-slim python -c "print('hi')"</code></pre></div>
+      </div>
+
+      <div class="blk" data-seg="lifecycle-4">
+        <p>Whichever command runs is the container's <strong>main process</strong>. Inside the container it gets process ID 1, <strong>PID 1</strong>, because it's the first process there. Any other processes in the container were started by it.</p>
+        <p>A virtual machine keeps running after your app ends, because a whole operating system is running underneath. A container has nothing underneath, so:</p>
+        <ul>
+          <li><strong>Container running = main process running.</strong></li>
+          <li><strong>Main process ends = container stops.</strong> Any other processes still inside are killed at the same moment.</li>
+        </ul>
+        <p style="margin-bottom:0">It works like running <code>python script.py</code> in your terminal: the process runs until the script finishes, then it's gone. A container behaves the same way, with isolation added.</p>
+      </div>
+
+      <div class="blk" data-seg="lifecycle-5">
+        <h3>Why <code>podman run python:3.12-slim</code> exits instantly</h3>
+        <div class="cmd"><pre><code>podman run docker.io/library/python:3.12-slim</code></pre></div>
+        <ol style="margin-bottom:0">
+          <li>The container starts <code>python3</code>, the image's default command.</li>
+          <li>Normally <code>python3</code> shows a <code>&gt;&gt;&gt;</code> prompt and waits for you to type.</li>
+          <li>Without <code>-it</code>, your keyboard isn't connected to the container. Python sees there's no terminal, so it doesn't show a prompt. It reads its input as a script instead, and that input is empty.</li>
+          <li>An empty script has nothing to do, so Python exits successfully.</li>
+          <li>The main process ended, so the container stops. Your shell prompt comes back instantly, with no output. <code>podman ps -a</code> shows <code>Exited (0)</code>, and 0 means success.</li>
+        </ol>
+      </div>
+
+      <div class="blk" data-seg="lifecycle-6">
+        <p style="margin-bottom:0">Nothing is broken; Python simply had no work to do. Compare:</p>
+        <div class="cmd"><pre><code>podman run -it docker.io/library/python:3.12-slim</code></pre></div>
+        <p style="margin-bottom:0"><code>-i</code> connects your keyboard and <code>-t</code> gives it a terminal, so now you get a <code>&gt;&gt;&gt;</code> prompt. The container runs for as long as you stay in Python. Type <code>exit()</code> and the container stops, for the same reason as above.</p>
+      </div>
+
+      <div class="blk" data-seg="lifecycle-7">
+        <h3>Why a web server must stay in the foreground</h3>
+        <p>On a normal server, many programs send themselves to the background: you run <code>nginx</code>, it starts a hidden copy of itself, and your command returns straight away while the server keeps running. That works there because the operating system keeps everything alive. In a container, it breaks:</p>
+        <ol>
+          <li>The command you started is PID 1.</li>
+          <li>It starts a background copy of itself, then the original exits.</li>
+          <li>PID 1 exited, so the container stops, and the background copy is killed with it.</li>
+          <li>The container starts and exits immediately, and the server never answers a request.</li>
+        </ol>
+        <p style="margin-bottom:0">So in a container the server must run <strong>in the foreground</strong>: the main process <em>is</em> the server, and it keeps running until it's told to stop. The official nginx image runs <code>nginx -g 'daemon off;'</code> for this reason. <code>uvicorn</code> and <code>gunicorn</code> run in the foreground by default, so your AI apps are usually fine. In a Containerfile, avoid <code>&amp;</code>, <code>nohup</code>, <code>--daemon</code> flags and <code>service … start</code>.</p>
+      </div>
+
+      <div class="aside key" data-seg="lifecycle-8">
+        <span class="chip">Don't confuse</span>
+        <p><code>podman run -d</code> is not the same as a program going to the background. <code>-d</code> only means your terminal doesn't wait for the container. Inside the container, the main process still runs in the foreground as normal.</p>
+      </div>
+
+      <p data-seg="lifecycle-9"><strong>Stopping is a two-step signal.</strong> <code>podman stop</code> sends <code>SIGTERM</code>, waits a grace period (10 seconds by default), then sends <code>SIGKILL</code>. Your app should handle <code>SIGTERM</code> by finishing in-flight requests and exiting. For an AI service that is mid-way through a long generation, this is the difference between a clean shutdown and a dropped response. The exit code tells you what happened: <code>0</code> is success, and <code>137</code> (128 + signal 9) means the process was killed, either by <code>SIGKILL</code> after the grace period or by the OOM killer.</p>
+    </section>
+
+    <section id="registries">
+      <h2><span class="n">07</span>Registries and image names</h2>
+      <p data-seg="registries-1">A <strong>registry</strong> is a server that stores images: Docker Hub, GitHub's <code>ghcr.io</code>, Red Hat's <code>quay.io</code>, AWS ECR, Google Artifact Registry. You <code>pull</code> images from registries and <code>push</code> your own. A full image reference has four parts:</p>
+
+      <div class="ref" data-seg="registries-1" aria-label="Image reference docker.io/library/python:3.12-slim">
+        <span class="part p1"><b>docker.io</b><small>Registry</small></span><span class="sep">/</span>
+        <span class="part p2"><b>library</b><small>Namespace</small></span><span class="sep">/</span>
+        <span class="part p3"><b>python</b><small>Repository</small></span><span class="sep">:</span>
+        <span class="part p4"><b>3.12-slim</b><small>Tag</small></span>
+      </div>
+      <p style="font-size:14px;color:var(--muted)"><code>library</code> is the namespace Docker Hub uses for its official images. Your company's images might look like <code>123456789.dkr.ecr.eu-west-1.amazonaws.com/team/rag-api:1.4.2</code>.</p>
+
+      <ul data-seg="registries-2">
+        <li><strong>A tag is a movable label.</strong> <code>python:3.12-slim</code> is rebuilt regularly with security patches, so the same tag points to different images over time. <code>latest</code> has no special meaning; it's only the tag used when you don't write one, and it's a poor choice for anything you deploy.</li>
+        <li><strong>A digest is an exact identity.</strong> <code>python@sha256:…</code> identifies the image by a hash of its contents and can never change. Use digests or specific version tags when you need reproducible deployments.</li>
+        <li><strong>One tag can cover several platforms.</strong> Most official images publish a manifest list with one variant per platform, such as <code>linux/amd64</code> and <code>linux/arm64</code>. The engine pulls the variant that matches the machine, which is why the same <code>pull</code> works on your Mac and on a server.</li>
+      </ul>
+
+      <div class="aside" data-seg="registries-3">
+        <span class="chip">Podman</span>
+        <p>Docker assumes that a short name like <code>python</code> means Docker Hub. Podman doesn't assume a registry: depending on its configuration, it may ask you to pick one, or search a list of registries. Get used to writing <strong>fully qualified names</strong>, such as <code>docker.io/library/python:3.12-slim</code>. It avoids the prompt, and it's a good habit for security, because you always know which registry you're pulling from.</p>
+      </div>
+    </section>
+
+    <section id="podman">
+      <h2><span class="n">08</span>Podman vs Docker</h2>
+      <p data-seg="podman-1">Both tools follow the <strong>OCI</strong> (Open Container Initiative) standards for images and runtimes. An image built with Podman runs on Docker and Kubernetes, and the reverse is also true. The commands match closely enough that many people run <code>alias docker=podman</code>. The differences are in the architecture:</p>
+
+      <div class="table" data-seg="podman-2">
+        <table>
+          <thead><tr><th></th><th>Docker</th><th>Podman</th></tr></thead>
+          <tbody>
+            <tr><td>Architecture</td><td>The CLI sends every command to a long-running background service, <code>dockerd</code>.</td><td>No central service. Each container is started directly and watched by a small monitor process, <code>conmon</code>.</td></tr>
+            <tr><td>Privileges</td><td>The service traditionally runs as root. Rootless mode exists but isn't the default.</td><td>Rootless by default. Root inside a container maps to your unprivileged user outside it.</td></tr>
+            <tr><td>Build file</td><td><code>Dockerfile</code></td><td><code>Containerfile</code> or <code>Dockerfile</code>, same syntax</td></tr>
+            <tr><td>Multi-container apps</td><td><code>docker compose</code></td><td><code>podman compose</code>, which reads the same compose files, or <code>podman kube play</code> for Kubernetes YAML</td></tr>
+            <tr><td>Pods</td><td>Not available</td><td>Groups of containers that share a network namespace, the same idea as Kubernetes pods</td></tr>
+            <tr><td>On macOS</td><td>A Linux VM managed by Docker Desktop</td><td>A Linux VM managed by <code>podman machine</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p data-seg="podman-3">For this course, the practical effect is small. Examples you find online written for <code>docker</code> will almost always work if you replace the word with <code>podman</code>. When your team's scripts or CI use Docker, your images still work there.</p>
+    </section>
+
+    <section id="vocab">
+      <h2><span class="n">09</span>Vocabulary</h2>
+      <div class="table" data-seg="vocab-1">
+        <table class="vocab">
+          <tbody>
+            <tr><td>image</td><td>Read-only template: a stack of layers plus a config.</td></tr>
+            <tr><td>layer</td><td>One filesystem diff, identified by the hash of its contents.</td></tr>
+            <tr><td>container</td><td>A running (or stopped) instance of an image: image layers, a writable layer, runtime settings and a main process.</td></tr>
+            <tr><td>Containerfile</td><td>The recipe for building an image. Called Dockerfile by Docker.</td></tr>
+            <tr><td>registry</td><td>A server that stores and serves images.</td></tr>
+            <tr><td>tag</td><td>A movable, human-readable label for an image version.</td></tr>
+            <tr><td>digest</td><td>An exact, unchangeable image identity: <code>sha256:…</code>.</td></tr>
+            <tr><td>namespace</td><td>Kernel feature that limits what a process can see.</td></tr>
+            <tr><td>cgroup</td><td>Kernel feature that limits what a process can use.</td></tr>
+            <tr><td>volume</td><td>Storage that lives outside a container and survives its removal.</td></tr>
+            <tr><td>OCI</td><td>The open standards for image format and container runtimes that Docker, Podman and Kubernetes share.</td></tr>
+            <tr><td>podman machine</td><td>The Linux VM that runs your containers on macOS.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="check">
+      <h2><span class="n">10</span>Check yourself</h2>
+      <p data-seg="check-0">Try answering each question out loud before opening it.</p>
+      <div class="quiz">
+        <details class="q" data-seg="q1"><summary><span class="qn">Q1</span><span>Why does a container start in under a second while a VM takes much longer?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Starting a container means starting a process on a kernel that's already running, with namespaces and cgroups applied. A VM has to boot a whole operating system and its kernel first.</p></div></details>
+        <details class="q" data-seg="q2"><summary><span class="qn">Q2</span><span>Your service saves user uploads to <code>/app/uploads</code> inside the container. You deploy a new version. What happens to the uploads?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>They are lost. The new version runs in a new container from a new image, and the old container's writable layer is deleted when it's removed. Uploads belong in a volume or in object storage.</p></div></details>
+        <details class="q" data-seg="q3"><summary><span class="qn">Q3</span><span>A Containerfile downloads a 4 GB model in one <code>RUN</code> step and deletes it in the next. How much does the model add to the image?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>The full 4 GB. The first layer still contains the file; the second layer only records that it's deleted. Download and delete in the same step, or use a multi-stage build.</p></div></details>
+        <details class="q" data-seg="q4"><summary><span class="qn">Q4</span><span>An image built on your Apple-silicon Mac fails on the production server with <code>exec format error</code>. Why?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>It was built for <code>linux/arm64</code> because the Podman VM on your Mac is arm64. The server is <code>linux/amd64</code> and can't run arm64 binaries. Build with <code>--platform linux/amd64</code>, or build in CI on an amd64 machine.</p></div></details>
+        <details class="q" data-seg="q5"><summary><span class="qn">Q5</span><span>You run <code>podman run docker.io/library/python:3.12-slim</code> and it exits immediately with no output. Is something wrong?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>No. The main process is the Python interpreter. Without <code>-it</code> it gets no terminal, so it treats its empty input as a script, has nothing to run and exits with code 0. The container stops with it.</p></div></details>
+        <details class="q" data-seg="q6"><summary><span class="qn">Q6</span><span>Will <code>python:3.12-slim</code> pulled next month be byte-for-byte the same as today's? How do you guarantee an exact image?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Probably not, because tags move when the image is rebuilt. Reference the image by digest (<code>python@sha256:…</code>) to get exactly the same image every time.</p></div></details>
+        <details class="q" data-seg="q7"><summary><span class="qn">Q7</span><span>You start 10 containers from the same 1 GB image. Roughly how much disk do they use?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>About 1 GB plus whatever each container writes. The read-only layers are shared; only the writable layers are per container.</p></div></details>
+        <details class="q" data-seg="q8"><summary><span class="qn">Q8</span><span>A container stopped with exit code 137 while loading a model, and nobody ran <code>podman stop</code>. What's the most likely cause?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>The OOM killer. 137 means the process received <code>SIGKILL</code>. Without a stop command, the usual source is exceeding a memory limit: the container's own <code>--memory</code> limit, or on a Mac, the memory of the Podman VM.</p></div></details>
+      </div>
+    </section>
+
+    <section id="lab">
+      <h2><span class="n">11</span>See it for real</h2>
+      <p data-seg="lab-0">You don't need to understand every command yet. The goal is to see the ideas above with your own eyes. Run these in your Mac's terminal.</p>
+
+      <div class="step" data-seg="lab-1">
+        <h3>Make sure the Linux VM is running</h3>
+        <div class="cmd"><pre><code>podman machine list</code></pre></div>
+        <p>If the list is empty, create a machine first with <code>podman machine init</code>. If it shows one that isn't running, start it:</p>
+        <div class="cmd"><pre><code>podman machine start</code></pre></div>
+      </div>
+
+      <div class="step" data-seg="lab-2">
+        <h3>Containers run on a Linux kernel, not macOS</h3>
+        <div class="cmd"><pre><code>uname -s   <span class="c"># on your Mac: Darwin</span>
+podman run --rm docker.io/library/python:3.12-slim uname -srm</code></pre></div>
+        <p>The second command prints <code>Linux</code> with a kernel version and your VM's architecture (<code>aarch64</code> on Apple silicon). That kernel belongs to the VM; the image didn't bring one. <code>--rm</code> removes the container when it exits.</p>
+      </div>
+
+      <div class="step" data-seg="lab-3">
+        <h3>An image is a stack of layers</h3>
+        <div class="cmd"><pre><code>podman history docker.io/library/python:3.12-slim
+podman image inspect docker.io/library/python:3.12-slim --format '{{.Os}}/{{.Architecture}}, {{len .RootFS.Layers}} layers'</code></pre></div>
+        <p><code>history</code> lists the build steps that created each layer, newest first, with their sizes. <code>inspect</code> shows the platform that was pulled for your machine.</p>
+      </div>
+
+      <div class="step" data-seg="lab-4">
+        <h3>Namespaces, and the disposable writable layer</h3>
+        <div class="cmd"><pre><code>podman run -it --rm docker.io/library/python:3.12-slim bash</code></pre></div>
+        <p>You now have a shell inside a container. Run:</p>
+        <div class="cmd"><pre><code>echo $$            <span class="c"># 1: bash is PID 1 in its own PID namespace</span>
+cat /etc/hostname  <span class="c"># the container ID, not your Mac's name</span>
+touch /i-was-here && ls /i-was-here
+exit</code></pre></div>
+        <p>Then start a fresh container from the same image and look for the file:</p>
+        <div class="cmd"><pre><code>podman run --rm docker.io/library/python:3.12-slim ls /i-was-here</code></pre></div>
+        <p>It isn't there. The file lived in the first container's writable layer, which was deleted with it.</p>
+      </div>
+
+      <div class="step" data-seg="lab-mainproc">
+        <h3>A container lives as long as its main process</h3>
+        <p style="margin-bottom:0">This container runs a 5-second job and stops by itself:</p>
+        <div class="cmd"><pre><code>podman run --rm docker.io/library/python:3.12-slim python -c "import time; print('working...'); time.sleep(5); print('done')"</code></pre></div>
+        <p style="margin-bottom:0">This one starts <code>sleep 60</code> in the background, and the main shell exits straight away:</p>
+        <div class="cmd"><pre><code>podman run --name bg docker.io/library/python:3.12-slim sh -c 'sleep 60 &amp; echo "started sleep in the background"'
+podman ps -a --filter name=bg
+podman rm bg</code></pre></div>
+        <p><code>podman ps -a</code> shows <code>Exited (0)</code> almost immediately, not after 60 seconds. The background <code>sleep</code> was killed when the main process ended, which is exactly what happens to a web server that sends itself to the background.</p>
+      </div>
+
+      <div class="step" data-seg="lab-5">
+        <h3>The lifecycle and the stop signal</h3>
+        <div class="cmd"><pre><code>podman run -d --name sleeper docker.io/library/python:3.12-slim sleep 600
+podman ps
+podman stop sleeper
+podman ps -a
+podman rm sleeper</code></pre></div>
+        <p><code>-d</code> runs the container in the background. Notice that <code>podman stop</code> takes about 10 seconds and the status afterwards is <code>Exited (137)</code>. <code>sleep</code> doesn't handle <code>SIGTERM</code>, and the kernel ignores unhandled signals sent to PID 1, so Podman waits out the grace period and sends <code>SIGKILL</code>. You've just watched the two-step stop from section 6. Your own services should handle <code>SIGTERM</code> so they stop cleanly.</p>
+      </div>
+
+      <div class="next" data-seg="lab-6">
+        <p class="eyebrow">Next · Lesson 2</p>
+        <h3 style="margin-top:0">Building images</h3>
+        <p>Containerfile instructions, the build context and <code>.containerignore</code>, how the layer cache works and how to order instructions to use it, and your first image for a small FastAPI service.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  // copy buttons on lab commands
+  document.querySelectorAll('.cmd').forEach(function(box){
+    var pre = box.querySelector('pre');
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var clone = pre.cloneNode(true);
+      clone.querySelectorAll('.c').forEach(function(c){ c.remove(); });
+      var text = clone.textContent.split('\n').map(function(l){ return l.replace(/\s+$/,''); }).join('\n').trim();
+      var done = function(){ btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1400); };
+      var fallback = function(){
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Press ⌘C';
+      };
+      try {
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } catch (e) { fallback(); }
+    });
+    box.appendChild(btn);
+  });
+
+  // highlight the current section in the table of contents
+  var links = {};
+  document.querySelectorAll('.toc a').forEach(function(a){ links[a.getAttribute('href').slice(1)] = a; });
+  if (!('IntersectionObserver' in window)) return;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting) {
+        Object.keys(links).forEach(function(k){ links[k].classList.remove('on'); });
+        if (links[e.target.id]) links[e.target.id].classList.add('on');
+      }
+    });
+  }, {rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('main section[id]').forEach(function(s){ obs.observe(s); });
+})();
+
+</script>
+</body>
+</html>

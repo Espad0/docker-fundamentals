@@ -1,0 +1,87 @@
+# Build hello-ai on every push, publish it to Amazon ECR from the default
+# branch, and deploy it to AWS or Cloudflare when someone presses "play".
+stages: [test, build, release, deploy]
+
+variables:
+  IMAGE_TAG: $CI_COMMIT_SHORT_SHA   # every image is named after the commit it came from
+  # Set these as CI/CD variables in GitLab (Settings > CI/CD > Variables):
+  #   AWS_REGION, AWS_ROLE_ARN, ECR_REGISTRY, ECS_SERVICE_ARN,
+  #   CLOUDFLARE_API_TOKEN (masked), CLOUDFLARE_ACCOUNT_ID
+
+test:
+  stage: test
+  image: docker.io/library/python:3.12-slim
+  script:
+    - pip install --no-cache-dir -r requirements.txt
+    - python -c "import main; print('app imports fine')"
+
+build:
+  stage: build
+  image: quay.io/buildah/stable
+  variables:
+    STORAGE_DRIVER: vfs       # works inside a CI container without special storage
+    BUILDAH_FORMAT: docker    # keeps HEALTHCHECK (Lesson 3)
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - buildah build --platform linux/amd64 -t "$CI_REGISTRY_IMAGE:$IMAGE_TAG" .
+    - buildah push "$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+
+# Log in to AWS with a short-lived token instead of stored keys (OIDC).
+.aws-login:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com   # your GitLab address, as registered in AWS IAM
+  before_script:
+    - command -v aws >/dev/null || dnf install -y -q awscli2
+    - >
+      aws_sts_output=$(aws sts assume-role-with-web-identity
+      --role-arn "$AWS_ROLE_ARN"
+      --role-session-name "gitlab-$CI_PROJECT_ID-$CI_PIPELINE_ID"
+      --web-identity-token "$GITLAB_OIDC_TOKEN"
+      --duration-seconds 3600
+      --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]'
+      --output text)
+    - export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s" $aws_sts_output)
+
+push-to-ecr:
+  stage: release
+  extends: .aws-login
+  image: quay.io/buildah/stable
+  variables:
+    STORAGE_DRIVER: vfs
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $AWS_ROLE_ARN   # only once AWS is set up
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - aws ecr get-login-password --region "$AWS_REGION" | buildah login -u AWS --password-stdin "$ECR_REGISTRY"
+    - buildah pull "$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+    - buildah tag "$CI_REGISTRY_IMAGE:$IMAGE_TAG" "$ECR_REGISTRY/hello-ai:$IMAGE_TAG"
+    - buildah push "$ECR_REGISTRY/hello-ai:$IMAGE_TAG"
+
+deploy-aws:
+  stage: deploy
+  extends: .aws-login
+  image:
+    name: public.ecr.aws/aws-cli/aws-cli:latest
+    entrypoint: [""]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $ECS_SERVICE_ARN
+      when: manual              # a person decides when production changes
+  script:
+    - >
+      aws ecs update-express-gateway-service
+      --region "$AWS_REGION"
+      --service-arn "$ECS_SERVICE_ARN"
+      --primary-container "{\"image\":\"$ECR_REGISTRY/hello-ai:$IMAGE_TAG\",\"containerPort\":8000}"
+
+deploy-cloudflare:
+  stage: deploy
+  image: docker.io/library/node:22-slim
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CLOUDFLARE_API_TOKEN
+      when: manual
+  script:
+    - cd cloudflare
+    - npm ci
+    - sed -i "s|/hello-ai:[^\"]*\"|/hello-ai:$IMAGE_TAG\"|" wrangler.jsonc   # point at this commit's image
+    - npx wrangler deploy

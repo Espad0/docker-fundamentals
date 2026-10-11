@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lesson 4: Volumes, Networks and Compose · Docker Fundamentals</title>
+<meta name="description" content="Lesson 4 of Docker Fundamentals, a free hands-on course: Volumes, Networks and Compose.">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --bg:#F2F4F7;
+  --surface:#FFFFFF;
+  --ink:#141D27;
+  --muted:#556375;
+  --line:#D4DBE4;
+  --accent:#1B5BA3;
+  --accent-soft:#E2EBF6;
+  --amber:#8F5B00;
+  --amber-soft:#FAEFD8;
+  --code-bg:#E8EDF3;
+  --ok:#23734A;
+  --ok-soft:#DFF1E6;
+  --bad:#B3261E;
+  --bad-soft:#FBE3E1;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+    --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+    --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+  --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+  --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16.5px/1.65 var(--sans);padding-inline:20px;padding-block:0 72px}
+.shell{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:40px}
+@media (min-width:1000px){.shell{grid-template-columns:210px minmax(0,1fr)}}
+button{font-family:var(--sans)}
+
+/* table of contents */
+.toc{padding-top:40px}
+.toc nav{display:flex;flex-direction:column;gap:2px}
+@media (min-width:1000px){.toc nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px)}}
+.toc .label{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.toc a{display:grid;grid-template-columns:22px 1fr;color:var(--muted);text-decoration:none;font-size:14px;line-height:1.35;padding:5px 0}
+.toc a span{font:500 12px/1.6 var(--mono);color:var(--muted)}
+.toc a:hover,.toc a.on{color:var(--ink)}
+.toc a.on span{color:var(--accent)}
+@media (max-width:999px){
+  .toc{padding-top:24px}
+  .toc nav{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));column-gap:16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:12px}
+  .toc .label{grid-column:1/-1}
+}
+
+main{max-width:720px;min-width:0}
+header{padding-top:48px;padding-bottom:8px}
+.eyebrow{font:500 12.5px/1 var(--mono);color:var(--accent);letter-spacing:.02em;margin:0 0 18px}
+h1{font-family:var(--display);font-stretch:78%;font-weight:760;font-size:clamp(34px,6vw,50px);line-height:1.02;letter-spacing:-.01em;margin:0 0 18px;text-wrap:balance}
+.lede{font-size:19px;line-height:1.55;margin:0 0 22px;max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13.5px;color:var(--muted);margin:0 0 8px}
+.meta b{color:var(--ink);font-weight:600}
+
+section{padding-top:44px;scroll-margin-top:16px}
+h2{font-family:var(--display);font-stretch:82%;font-weight:720;font-size:27px;line-height:1.15;margin:0 0 14px;text-wrap:balance;display:flex;gap:14px;align-items:baseline}
+h2 .n{font:500 14px/1 var(--mono);color:var(--accent);flex:none}
+h3{font:600 17px/1.3 var(--sans);margin:28px 0 8px}
+p{margin:0 0 14px;max-width:66ch}
+ul,ol{margin:0 0 16px;padding-left:22px;max-width:64ch}
+li{margin-bottom:6px}
+strong{font-weight:600}
+a{color:var(--accent)}
+code{font:400 .88em var(--mono);background:var(--code-bg);padding:.1em .35em;border-radius:3px}
+pre{margin:0;font:400 13.5px/1.6 var(--mono);white-space:pre;overflow-x:auto;padding:14px 16px;background:var(--code-bg);border-radius:4px;color:var(--ink)}
+pre code{background:none;padding:0;font-size:inherit}
+pre .c{color:var(--muted)}
+pre .hit{color:var(--ok)}
+pre .miss{color:var(--amber)}
+
+.goals{list-style:none;padding:0;display:grid;gap:8px;margin-top:6px}
+.goals li{display:grid;grid-template-columns:18px 1fr;gap:10px;margin:0}
+.goals li::before{content:"";width:10px;height:10px;border:1.5px solid var(--accent);margin-top:8px}
+
+/* callouts */
+.aside{background:var(--amber-soft);padding:14px 18px 4px;margin:18px 0 20px;border-radius:2px}
+.aside.key{background:var(--accent-soft)}
+.chip{display:inline-block;font:600 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px 4px;margin-bottom:8px;border:1px solid var(--amber);color:var(--amber)}
+.aside.key .chip{border-color:var(--accent);color:var(--accent)}
+.aside p{max-width:none}
+
+/* diagrams */
+figure{margin:22px 0 24px}
+.diagram{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px}
+.diagram svg{display:block;width:100%;min-width:600px;height:auto}
+figcaption{font-size:13.5px;color:var(--muted);margin-top:8px;max-width:66ch}
+.d-box{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.d-frame{fill:none;stroke:var(--muted);stroke-width:1.2}
+.d-app{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.2}
+.d-kernel{fill:var(--amber-soft);stroke:var(--amber);stroke-width:1.2}
+.d-hw{fill:var(--code-bg);stroke:var(--line);stroke-width:1.2}
+.d-write{fill:var(--surface);stroke:var(--accent);stroke-width:1.4;stroke-dasharray:5 4}
+.d-okbox{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.2}
+.d-badbox{fill:var(--bad-soft);stroke:var(--bad);stroke-width:1.2}
+.d-band1{fill:var(--amber-soft)}
+.d-band2{fill:var(--accent-soft)}
+.d-t{fill:var(--ink);font:500 13px var(--sans)}
+.d-tb{fill:var(--ink);font:600 13px var(--sans)}
+.d-m{fill:var(--muted);font:400 12.5px var(--sans)}
+.d-h{fill:var(--muted);font:600 11px var(--sans);letter-spacing:.09em}
+.d-ha{fill:var(--amber);font:600 11px var(--sans);letter-spacing:.09em}
+.d-hb{fill:var(--accent);font:600 11px var(--sans);letter-spacing:.09em}
+.d-code{fill:var(--ink);font:400 12px var(--mono)}
+.d-lab{fill:var(--muted);font:500 12px var(--mono)}
+.d-ok{fill:var(--ok);font:600 12.5px var(--sans)}
+.d-bad{fill:var(--bad);font:600 12.5px var(--sans)}
+.d-line{stroke:var(--muted);stroke-width:1.2;fill:none}
+.d-okline{stroke:var(--ok);stroke-width:1.4;fill:none}
+.d-badline{stroke:var(--bad);stroke-width:1.4;fill:none;stroke-dasharray:4 4}
+.d-head{fill:var(--muted)}
+.d-head-ok{fill:var(--ok)}
+.d-head-bad{fill:var(--bad)}
+
+/* annotated Containerfile */
+.anno{background:var(--surface);border:1px solid var(--line);border-radius:4px;margin:18px 0 22px;overflow:hidden}
+.anno .head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);font:500 12px/1 var(--mono);color:var(--muted);background:var(--bg)}
+.anno .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-bottom:1px solid var(--line)}
+.anno .row:last-child{border-bottom:0}
+.anno .row > code{display:block;background:var(--code-bg);border-radius:0;padding:12px 16px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.anno .row > p{margin:0;padding:11px 16px 12px;font-size:14.5px;line-height:1.55}
+.tag{display:inline-block;font:600 10px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px 3px;border-radius:2px;margin-right:6px;vertical-align:1px}
+.tag.layer{background:var(--accent-soft);color:var(--accent)}
+.tag.config{background:var(--amber-soft);color:var(--amber)}
+@media (max-width:640px){.anno .row{grid-template-columns:1fr}}
+
+/* tables */
+.table{overflow-x:auto;margin:16px 0 20px;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+th{font:600 11.5px/1.3 var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+td:first-child{font-weight:600;white-space:nowrap}
+.cmds td:first-child{font:500 13px var(--mono);white-space:normal;min-width:15em}
+.decide td:first-child{white-space:normal;min-width:12em}
+.decide td:nth-child(2){white-space:nowrap}
+.out{margin:10px 0 14px}
+.out .olabel{font:600 10.5px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.out pre{background:var(--surface);border:1px solid var(--line)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* cache comparison */
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 10px}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:4px;display:flex;flex-direction:column}
+.col h4{margin:0;padding:12px 16px 10px;font:600 14.5px/1.3 var(--sans);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.col h4 small{font:500 12px var(--sans);color:var(--muted)}
+.steps{list-style:none;margin:0;padding:6px 0;max-width:none}
+.steps li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:7px 16px;margin:0;font:400 13px/1.4 var(--mono)}
+.st{flex:none;font:600 10.5px/1 var(--sans);letter-spacing:.07em;text-transform:uppercase;padding:4px 7px 3px;border-radius:2px}
+.st.hit{background:var(--ok-soft);color:var(--ok)}
+.st.miss{background:var(--amber-soft);color:var(--amber)}
+.st.slow{background:var(--bad-soft);color:var(--bad)}
+.col .foot{margin-top:auto;padding:10px 16px 12px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:10px}
+.col .foot b{font:700 24px/1 var(--display);font-stretch:85%;font-variant-numeric:tabular-nums}
+.col .foot span{font-size:13px;color:var(--muted)}
+
+/* experiment result pair */
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 20px}
+.res{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+.res .lbl{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px}
+.res.good .lbl{color:var(--ok)}
+.res.poor .lbl{color:var(--bad)}
+.res code.big{display:block;font-size:13px;padding:8px 10px;margin:0 0 10px;white-space:pre-wrap;word-break:break-word}
+.res dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+.res dt{color:var(--muted)}
+.res dd{margin:0;font-variant-numeric:tabular-nums}
+
+/* quiz */
+.quiz{display:grid;gap:10px;margin-top:10px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:4px}
+details.q summary{cursor:pointer;list-style:none;padding:14px 16px;display:grid;grid-template-columns:28px 1fr auto;gap:8px;font-weight:500}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary .qn{font:500 13px/1.7 var(--mono);color:var(--accent)}
+details.q summary .rv{font:500 12px/1.9 var(--sans);color:var(--muted)}
+details.q[open] summary .rv{visibility:hidden}
+details.q summary:focus-visible,details.sol summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.q .ans{padding:0 16px 14px 52px}
+details.q .ans p:last-child{margin-bottom:0}
+
+/* lab */
+.step{margin:26px 0 0;display:grid;grid-template-columns:34px minmax(0,1fr);gap:0 12px}
+.step .sn{font:600 13px/1 var(--mono);color:var(--accent);border:1.5px solid var(--accent);border-radius:50%;width:30px;height:30px;display:grid;place-items:center;margin-top:-4px}
+.step h3{margin-top:0}
+.cmd{position:relative;margin:10px 0 12px}
+.cmd pre{padding-right:72px}
+.copy{position:absolute;top:8px;right:8px;font:500 12px/1 var(--sans);color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:6px 9px;cursor:pointer}
+.copy:hover{color:var(--ink)}
+.copy:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.task{list-style:none;padding:0;margin:8px 0 14px;display:grid;gap:6px}
+.task li{display:grid;grid-template-columns:18px 1fr;gap:8px;margin:0}
+.task li::before{content:"";width:9px;height:9px;border:1.5px solid var(--muted);border-radius:2px;margin-top:8px}
+details.sol{border:1px dashed var(--line);border-radius:4px;margin:10px 0 14px;background:var(--surface)}
+details.sol summary{cursor:pointer;padding:10px 14px;font:500 14px var(--sans);color:var(--accent)}
+details.sol[open] summary{border-bottom:1px dashed var(--line)}
+details.sol .inner{padding:12px 14px 4px}
+
+.next{margin-top:48px;padding-top:22px;border-top:1px solid var(--line)}
+.next .eyebrow{margin-bottom:10px}
+.next p{color:var(--muted)}
+
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+/* image reference anatomy */
+.ref{display:flex;flex-wrap:wrap;align-items:flex-start;gap:0 2px;font:500 clamp(15px,3.6vw,20px)/1.2 var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:18px 18px 14px;margin:18px 0 8px}
+.ref .part{display:flex;flex-direction:column;gap:6px}
+.ref .part b{font-weight:500;padding-bottom:6px;border-bottom:2px solid var(--line)}
+.ref .part small{font:500 11px/1.2 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ref .p1 b{border-color:var(--amber)} .ref .p2 b{border-color:var(--muted)} .ref .p3 b{border-color:var(--accent)} .ref .p4 b{border-color:var(--ink)}
+.ref .sep{color:var(--muted)}
+
+
+/* course navigation: a link home, then links to every lesson */
+.course{max-width:1100px;margin:0 auto;padding-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.course .home{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-decoration:none;margin-right:6px;padding:6px 0}
+.course .home:hover{color:var(--ink)}
+.course .lesson,.course .here{display:inline-flex;align-items:baseline;gap:7px;padding:6px 10px 6px 8px;font:500 13px/1.2 var(--sans);color:var(--muted);text-decoration:none;background:var(--surface);border:1px solid var(--line);border-radius:3px}
+.course b{font:500 12px/1 var(--mono);color:var(--accent)}
+.course .lesson:hover{color:var(--ink);border-color:var(--muted)}
+.course a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.course .here{color:var(--ink);background:var(--accent-soft);border-color:var(--accent)}
+.meta a{color:inherit}
+@media (max-width:640px){.course .home{flex-basis:100%}}
+</style>
+</head>
+<body>
+<nav class="course" aria-label="All lessons in this course">
+  <a class="home" href="../">Docker Fundamentals</a>
+  <a class="lesson" href="../lesson-01/" title="Lesson 1: What a Container Is"><b>1</b>Containers</a>
+  <a class="lesson" href="../lesson-02/" title="Lesson 2: Building Container Images"><b>2</b>Building images</a>
+  <a class="lesson" href="../lesson-03/" title="Lesson 3: Production-Ready Images"><b>3</b>Production images</a>
+  <span class="here" aria-current="page" title="Volumes, Networks and Compose"><b>4</b>Volumes and Compose</span>
+  <a class="lesson" href="../lesson-05/" title="Lesson 5: Serving a Real Model"><b>5</b>A real model</a>
+  <a class="lesson" href="../lesson-06/" title="Lesson 6: Shipping to AWS and Cloudflare"><b>6</b>AWS and Cloudflare</a>
+  <a class="lesson" href="../lesson-07/" title="Lesson 7: Kubernetes, the Big Picture"><b>7</b>Kubernetes</a>
+</nav>
+
+<div class="shell">
+  <aside class="toc" aria-label="Lesson sections">
+    <nav>
+      <div class="label">Lesson 4</div>
+      <a href="#forget"><span>1</span>Containers forget</a>
+      <a href="#volumes"><span>2</span>Named volumes</a>
+      <a href="#bind"><span>3</span>Bind mounts</a>
+      <a href="#network"><span>4</span>Networks</a>
+      <a href="#compose"><span>5</span>Compose</a>
+      <a href="#order"><span>6</span>Start order and health</a>
+      <a href="#commands"><span>7</span>Everyday commands</a>
+      <a href="#production"><span>8</span>In production</a>
+      <a href="#lab"><span>9</span>Lab: hello-ai + Postgres</a>
+      <a href="#check"><span>10</span>Check yourself</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header>
+      <p class="eyebrow">Docker Fundamentals · Lesson 4 · Volumes, networking and Compose</p>
+      <h1>Running several containers together</h1>
+      <p class="lede">Real AI apps are rarely one container. There's an API, a database, maybe a vector store or a cache, and data that must survive when containers are replaced. This lesson gives hello-ai a Postgres database, connects the two, and starts the whole thing with one command.</p>
+      <div class="meta"><span><b>Reading</b> about 40 min</span><span><b>Lab</b> about 40 min</span><span><b>Starts from</b> your Lesson 3 image</span><span><b>Outputs</b> from <a href="../#tested">the test Mac</a>, autumn 2026</span></div>
+      <section style="padding-top:26px" aria-label="Goals">
+        <h3 style="margin-top:0">By the end you should be able to</h3>
+        <ul class="goals" style="margin-bottom:0">
+          <li><span>keep data when containers are removed, using named volumes</span></li>
+          <li><span>share a folder from your Mac with a container, and know when that's the right tool</span></li>
+          <li><span>let containers find each other by name on a network</span></li>
+          <li><span>describe a multi-container app in <code>compose.yaml</code> and start it with one command</span></li>
+          <li><span>make services wait until the ones they depend on are actually ready</span></li>
+          <li><span>tell which Compose commands keep your data and which delete it</span></li>
+        </ul>
+      </section>
+    </header>
+
+    <section id="forget">
+      <h2><span class="n">01</span>Containers forget</h2>
+      <p>Lesson 1's key rule: when a container is removed, its writable layer goes with it. A new deployment replaces your containers, so anything they wrote is gone. For an AI app that includes things you really want to keep:</p>
+      <ul>
+        <li>the database: users, conversations, predictions,</li>
+        <li>documents users uploaded for a RAG system, and the vector index built from them,</li>
+        <li>model weights you downloaded once and don't want to download on every start.</li>
+      </ul>
+      <p>Podman offers two ways to keep data outside the container:</p>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 720 214" role="img" aria-labelledby="f1t">
+            <title id="f1t">A container folder mapped to a named volume stored by Podman in the VM, and another folder mapped to a folder on the Mac</title>
+            <defs>
+              <marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker>
+            </defs>
+            <rect class="d-box" x="10" y="16" width="250" height="186" rx="3"/>
+            <text class="d-tb" x="26" y="40">Container</text>
+            <rect class="d-app" x="26" y="56" width="218" height="40" rx="2"/><text class="d-code" x="38" y="81">/var/lib/postgresql/data</text>
+            <rect class="d-app" x="26" y="116" width="218" height="40" rx="2"/><text class="d-code" x="38" y="141">/app</text>
+            <text class="d-m" x="26" y="182">Everything else: deleted with it</text>
+
+            <path class="d-line" d="M244,76 L330,70" marker-end="url(#ah1)"/>
+            <path class="d-line" d="M244,136 L330,162" marker-end="url(#ah1)"/>
+
+            <rect class="d-frame" x="320" y="16" width="390" height="94" rx="4"/>
+            <text class="d-h" x="334" y="34">PODMAN VM</text>
+            <rect class="d-okbox" x="334" y="44" width="362" height="54" rx="2"/>
+            <text class="d-tb" x="346" y="65">Named volume "pgdata"</text>
+            <text class="d-code" x="346" y="86">/var/lib/containers/storage/volumes/…</text>
+
+            <rect class="d-frame" x="320" y="122" width="390" height="80" rx="4"/>
+            <text class="d-h" x="334" y="140">YOUR MAC</text>
+            <rect class="d-kernel" x="334" y="148" width="362" height="44" rx="2"/>
+            <text class="d-tb" x="346" y="166">Bind mount</text>
+            <text class="d-code" x="346" y="184">~/practice/hello-ai</text>
+          </svg>
+        </div>
+        <figcaption>Either way, a folder inside the container is really stored somewhere else, so it survives when the container is removed.</figcaption>
+      </figure>
+      <ul>
+        <li><strong>Named volume:</strong> storage that Podman creates and manages. You refer to it by name. Use it for data the app owns, like a database.</li>
+        <li><strong>Bind mount:</strong> a folder from your Mac, made visible inside the container. Use it when you want to see or edit the files yourself, like your code during development.</li>
+      </ul>
+    </section>
+
+    <section id="volumes">
+      <h2><span class="n">02</span>Named volumes</h2>
+      <div class="aside key">
+        <span class="chip">What a volume is</span>
+        <p>A volume is a folder that Podman keeps <strong>outside of every container</strong> and gives a name. You can attach it to any container, and whatever is written there stays after the container is deleted.</p>
+        <p>It works like a USB stick. The container is a computer that gets wiped when it is removed. The volume is the stick you plug in to keep your files.</p>
+      </div>
+
+      <h3>Step 1: first, see the problem</h3>
+      <p style="margin-bottom:0">Write a file in a container, with no volume:</p>
+      <div class="cmd"><pre><code>podman run --rm docker.io/library/python:3.12-slim sh -c "mkdir /notes &amp;&amp; echo remember-me &gt; /notes/a.txt &amp;&amp; ls /notes"</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>a.txt</code></pre></div>
+      <p style="margin-bottom:0">Now look for it in a second, brand-new container:</p>
+      <div class="cmd"><pre><code>podman run --rm docker.io/library/python:3.12-slim sh -c "ls /notes"</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>ls: cannot access '/notes': No such file or directory</code></pre></div>
+      <p>The first container wrote the file into its own writable layer (Lesson 1). <code>--rm</code> deleted that container, and the layer went with it. The second container started fresh from the image, which never had <code>/notes</code>.</p>
+      <p>The part after the image name, <code>sh -c "…"</code>, runs that whole line in a shell inside the container. <a href="#sh-c">The end of this section</a> explains why it is needed.</p>
+
+      <h3>Step 2: create a volume</h3>
+      <div class="cmd"><pre><code>podman volume create notes</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>notes</code></pre></div>
+      <p>This command does two things:</p>
+      <ol>
+        <li>It creates an <strong>empty folder</strong> inside the Podman VM.</li>
+        <li>It records the name <code>notes</code> for that folder, so you never have to type its path.</li>
+      </ol>
+      <p>No container starts and nothing is downloaded. Right after creation, the folder was empty.</p>
+
+      <h3>Step 3: plug it in with <code>-v</code></h3>
+      <p><code>-v NAME:PATH</code> attaches a volume to a container. The left side is the volume's name. The right side is the folder where it appears inside the container.</p>
+      <div class="cmd"><pre><code>podman run --rm -v notes:/notes docker.io/library/python:3.12-slim sh -c "echo remember-me &gt; /notes/a.txt &amp;&amp; ls /notes"</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>a.txt</code></pre></div>
+      <p style="margin-bottom:0">That container is now deleted. Start another one with the same volume:</p>
+      <div class="cmd"><pre><code>podman run --rm -v notes:/notes docker.io/library/python:3.12-slim sh -c "cat /notes/a.txt"</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>remember-me      <span class="c">← the second container found the first one's file</span></code></pre></div>
+      <p>The file survived because it was never inside the container. Writes to <code>/notes</code> went straight to the volume's folder in the VM.</p>
+      <p>If the volume doesn't exist yet, <code>-v</code> creates it, so <code>podman volume create</code> is optional. Step 2 ran it separately only to make that step visible.</p>
+
+      <h3>Step 4: the name and the path are independent</h3>
+      <p style="margin-bottom:0">The commands above use <code>notes</code> on both sides of the colon, which hides this. The same volume can appear at any path:</p>
+      <div class="cmd"><pre><code>podman run --rm -v notes:/anywhere docker.io/library/python:3.12-slim sh -c "cat /anywhere/a.txt"</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>remember-me</code></pre></div>
+
+      <h3>Step 5: where it actually lives</h3>
+      <div class="cmd"><pre><code>podman volume inspect notes --format '{{.Mountpoint}}'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>/var/lib/containers/storage/volumes/notes/_data</code></pre></div>
+      <p>That path is inside the Podman VM, not on your Mac, so you won't find it in Finder. That's the point: Podman manages it, and you work with it through commands. After step 3, <code>a.txt</code> was in that folder. The path shown is from the test Mac, whose Podman machine is rootful. On a default, rootless machine the path is in the VM user's home folder instead, under <code>.local/share/containers</code>.</p>
+      <div class="table">
+        <table class="cmds">
+          <tbody>
+            <tr><td>podman volume ls</td><td>List volumes</td></tr>
+            <tr><td>podman volume inspect NAME</td><td>Details, including where it's stored</td></tr>
+            <tr><td>podman volume rm NAME</td><td>Delete a volume and <strong>all its data</strong></td></tr>
+            <tr><td>podman volume prune</td><td>Delete every volume no container uses, after asking</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Step 6: who may write to a volume</h3>
+      <p>This step is about who is allowed to write into the volume's folder. It rests on two facts:</p>
+      <ul>
+        <li>Every folder has an owner, and normally only the owner may create files in it.</li>
+        <li>A production image does not run as root. In Lesson 3 (section 2) the image gets a user called <code>app</code>, which Linux knows as user number 1000. That number is called the <strong>uid</strong>.</li>
+      </ul>
+      <p>The commands below use <code>--user 1000:1000</code>. It makes a container run as user 1000 without needing a special image, which is what the <code>USER app</code> line does inside your image.</p>
+
+      <p style="margin-bottom:0"><strong>A non-root user can't write into a folder root owns.</strong></p>
+      <div class="cmd"><pre><code>podman run --rm --user 1000:1000 docker.io/library/python:3.12-slim sh -c 'ls -ld /opt; touch /opt/x'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>drwxr-xr-x. 2 root root 6 Sep 18 00:00 /opt
+touch: cannot touch '/opt/x': Permission denied</code></pre></div>
+      <p><code>root root</code> is the folder's owner and group. In <code>rwx r-x r-x</code>, the first three letters are what the owner may do, and only they contain <code>w</code> (write). User 1000 is not the owner, so the write is refused.</p>
+
+      <p style="margin-bottom:0"><strong>A new volume starts as root's folder, and Podman hands it over.</strong></p>
+      <div class="cmd"><pre><code>podman run --rm --user 1000:1000 -v data:/data docker.io/library/python:3.12-slim sh -c 'ls -ld /data; touch /data/x &amp;&amp; echo "write ok"'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>drwxr-xr-x. 2 1000 1000 6 Oct  3 23:25 /data
+write ok</code></pre></div>
+      <p>The owner is 1000, so the write works. On the test Mac, the volume's folder in the VM belonged to root before this command and to 1000 after it. Podman changes the owner of a new volume to the container's user, as long as the volume is still empty. <strong>Docker doesn't do this.</strong></p>
+
+      <p style="margin-bottom:0"><strong>When the volume stays root's, the write fails.</strong> On a Docker server the new volume would still belong to root. The test Mac has no Docker, so the same situation was produced in Podman by letting a root container use a new volume first:</p>
+      <div class="cmd"><pre><code>podman run --rm -v rootdata:/data docker.io/library/python:3.12-slim sh -c 'touch /data/made-by-root; ls -ld /data'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>drwxr-xr-x. 2 root root 26 Oct  3 23:25 /data</code></pre></div>
+      <p style="margin-bottom:0">Then user 1000 tries the same volume:</p>
+      <div class="cmd"><pre><code>podman run --rm --user 1000:1000 -v rootdata:/data docker.io/library/python:3.12-slim sh -c 'ls -ld /data; touch /data/x'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>drwxr-xr-x. 2 root root 26 Oct  3 23:25 /data
+touch: cannot touch '/data/x': Permission denied</code></pre></div>
+      <p>This is the error you would get on a Docker server, there on the very first run.</p>
+
+      <p style="margin-bottom:0"><strong>The fix: create the folder in the image.</strong> To make your image work on both, create the folder in the Containerfile and give it to the user:</p>
+      <div class="anno">
+        <div class="head"><span>Containerfile</span><span>3 lines</span></div>
+        <div class="row"><code>RUN useradd --create-home --uid 1000 app</code><p>Create an ordinary user named <code>app</code>, with user number 1000 and a home folder <code>/home/app</code>. The base image has no such user. Lesson 3, section 2 covers this line.</p></div>
+        <div class="row"><code>RUN mkdir /data &amp;&amp; chown app:app /data</code><p>Create the folder inside the image and make <code>app</code> its owner. <code>chown</code> means "change owner".</p></div>
+        <div class="row"><code>USER app</code><p>Switch to that user. Every instruction after this line, and the container itself when it starts, runs as <code>app</code> instead of root.</p></div>
+      </div>
+      <p>In an image built this way, <code>ls -ld /data</code> shows <code>app app</code>.</p>
+      <p>This helps on Docker because of one Docker rule: when a new, empty volume is attached at a path that already exists in the image, Docker copies that folder's owner into the volume. The volume then starts out owned by <code>app</code>, and the write works. If the image has no <code>/data</code>, there is nothing to copy, and the volume belongs to root. This rule was not tested for the course, because the test Mac has Podman only. It is Docker's known behaviour.</p>
+      <p>Two details of the middle line matter:</p>
+      <ul>
+        <li><strong>It must come before <code>USER app</code>.</strong> Each <code>RUN</code> runs as the current user, and only root may create a folder at the top level. With the line after <code>USER app</code>, the build failed with <code>mkdir: cannot create directory '/data': Permission denied</code>.</li>
+        <li><strong><code>mkdir</code> alone is not enough.</strong> Without the <code>chown</code>, the folder in the image belongs to root, and <code>app</code> got <code>Permission denied</code> when writing to it.</li>
+      </ul>
+
+      <h3>Step 7: the same volume in another container</h3>
+      <p style="margin-bottom:0">A volume keeps its files and its owner. Removing a container changes nothing inside the volume, so what the next container can do depends only on which user it runs as. First, user 1000 writes a file:</p>
+      <div class="cmd"><pre><code>podman run --rm --user 1000:1000 -v shared:/data docker.io/library/python:3.12-slim sh -c 'echo hello &gt; /data/a.txt; ls -ld /data'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>drwxr-xr-x. 2 1000 1000 19 Oct  3 23:33 /data</code></pre></div>
+
+      <p style="margin-bottom:0"><strong>A new container with the same user: everything works.</strong> This is the normal case when you deploy a new version of your app. The new container runs as the same user number, so it can read and write the old data.</p>
+      <div class="cmd"><pre><code>podman run --rm --user 1000:1000 -v shared:/data docker.io/library/python:3.12-slim sh -c 'cat /data/a.txt; touch /data/b.txt &amp;&amp; echo "write ok"'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>hello
+write ok</code></pre></div>
+
+      <p style="margin-bottom:0"><strong>A new container with a different user: read only.</strong></p>
+      <div class="cmd"><pre><code>podman run --rm --user 2000:2000 -v shared:/data docker.io/library/python:3.12-slim sh -c 'ls -ld /data; cat /data/a.txt; touch /data/c.txt'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>drwxr-xr-x. 2 1000 1000 32 Oct  3 23:33 /data
+hello
+touch: cannot touch '/data/c.txt': Permission denied</code></pre></div>
+      <p>The folder still belongs to 1000, because Podman does not hand over a volume that already has files in it. User 2000 can read the file but cannot write.</p>
+
+      <p style="margin-bottom:0"><strong>A new container running as root: everything works.</strong></p>
+      <div class="cmd"><pre><code>podman run --rm -v shared:/data docker.io/library/python:3.12-slim sh -c 'touch /data/by-root.txt &amp;&amp; echo "write ok"; ls -ld /data'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>write ok
+drwxr-xr-x. 2 1000 1000 51 Oct  3 23:33 /data</code></pre></div>
+      <p>Root may write anywhere. The folder stays owned by 1000, but the new file <code>by-root.txt</code> belongs to root.</p>
+
+      <p style="margin-bottom:0"><strong>Handing over a volume that already has data.</strong> Podman has an option for that: add <code>:U</code> after the path. It changes the owner of the folder and of every file in it to the current container's user:</p>
+      <div class="cmd"><pre><code>podman run --rm --user 2000:2000 -v shared:/data:U docker.io/library/python:3.12-slim sh -c 'ls -ld /data; touch /data/c.txt &amp;&amp; echo "write ok"'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>drwxr-xr-x. 2 2000 2000 51 Oct  3 23:33 /data
+write ok</code></pre></div>
+      <p>After this, user 1000 is the one who can no longer write. <code>:U</code> is Podman-only; Docker does not have it.</p>
+
+      <h3>Step 8: watch out for nameless volumes</h3>
+      <p>An image can declare that a folder should always be a volume. The official Postgres image does:</p>
+      <div class="cmd"><pre><code>podman image inspect docker.io/library/postgres:17 --format '{{.Config.Volumes}}'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>map[/var/lib/postgresql/data:{}]</code></pre></div>
+      <p>If you run such an image without mounting a named volume there, Podman creates an <strong>anonymous</strong> volume with a long random name, one per container. <code>podman rm</code> leaves it behind. On the test Mac, two of them were left over from test databases. <code>podman rm -v</code> removes a container together with its anonymous volumes, but the real fix is to always give data you care about a name: <code>-v pgdata:/var/lib/postgresql/data</code>.</p>
+
+      <h3 id="sh-c" style="scroll-margin-top:16px">A closer look: what <code>sh -c "…"</code> does</h3>
+      <p>Everything after the image name is the command the container runs instead of the image's default (for this image, <code>python3</code>). In <code>sh -c "ls /notes"</code>, that command has three parts:</p>
+      <div class="table">
+        <table class="cmds">
+          <tbody>
+            <tr><td>sh</td><td>The shell program inside the container, the same kind of program as zsh on your Mac</td></tr>
+            <tr><td>-c</td><td>"The command is the next argument" (c for command)</td></tr>
+            <tr><td>"ls /notes"</td><td>The command line, passed as one piece of text</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="margin-bottom:0"><strong>For a single program, you don't need it.</strong> Podman can start <code>ls</code> directly, and the result is the same:</p>
+      <div class="cmd"><pre><code>podman run --rm -v notes:/notes docker.io/library/python:3.12-slim ls /notes</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>a.txt</code></pre></div>
+
+      <p><strong>You need it for shell features.</strong> <code>&amp;&amp;</code>, <code>&gt;</code>, <code>|</code> and <code>$(…)</code> are not programs. A shell has to interpret them. Without <code>sh -c</code>, the shell that does it is zsh <strong>on your Mac</strong>, before Podman starts.</p>
+      <p style="margin-bottom:0">Without <code>sh -c</code>:</p>
+      <div class="cmd"><pre><code>podman run --rm docker.io/library/python:3.12-slim echo inside &amp;&amp; hostname</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>inside
+your-mac.local      <span class="c">← hostname ran on your Mac</span></code></pre></div>
+      <p style="margin-bottom:0">zsh split the line at <code>&amp;&amp;</code>, so only <code>echo inside</code> ran in the container. With <code>sh -c</code>:</p>
+      <div class="cmd"><pre><code>podman run --rm docker.io/library/python:3.12-slim sh -c "echo inside &amp;&amp; hostname"</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>inside
+9cfcf488f0ac                   <span class="c">← the container's ID: both commands ran inside</span></code></pre></div>
+      <p style="margin-bottom:0">Step 1 needed <code>sh -c</code> for the same reason. Without it, the <code>&gt;</code> is handled by your Mac:</p>
+      <div class="cmd"><pre><code>podman run --rm docker.io/library/python:3.12-slim echo hi &gt; /notes/a.txt</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>zsh: no such file or directory: /notes/a.txt</code></pre></div>
+      <p>zsh tried to create <code>/notes/a.txt</code> on your Mac, where no <code>/notes</code> folder exists. Podman never started.</p>
+
+      <p style="margin-bottom:0"><strong>The quotes matter.</strong> <code>-c</code> takes exactly one argument as the command. Without quotes, only <code>ls</code> is the command, and <code>/notes</code> is not passed to it:</p>
+      <div class="cmd"><pre><code>podman run --rm -v notes:/notes docker.io/library/python:3.12-slim sh -c ls /notes</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>bin
+boot
+dev
+…                <span class="c">← the container's top-level folders, not a.txt</span></code></pre></div>
+      <p style="margin-bottom:0">The kind of quote matters too. With double quotes, your Mac fills in <code>$…</code> first:</p>
+      <div class="cmd"><pre><code>podman run --rm docker.io/library/python:3.12-slim sh -c "echo $HOME"</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>/Users/you    <span class="c">← your Mac's home folder</span></code></pre></div>
+      <p style="margin-bottom:0">With single quotes, the text reaches the container untouched:</p>
+      <div class="cmd"><pre><code>podman run --rm docker.io/library/python:3.12-slim sh -c 'echo $HOME'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>/root            <span class="c">← the container's home folder</span></code></pre></div>
+
+      <p style="margin-bottom:0"><strong>Now a longer one.</strong> Each run of this command starts a new container, adds the current time to a file in the volume, and counts the file's lines:</p>
+      <div class="cmd"><pre><code>podman run --rm -v notes:/notes docker.io/library/python:3.12-slim \
+  sh -c 'date &gt;&gt; /notes/log.txt; echo "run: $(wc -l &lt; /notes/log.txt) line(s)"'</code></pre></div>
+      <div class="out"><p class="olabel">Output of running it twice</p><pre><code>run: 1 line(s)
+run: 2 line(s)      <span class="c">← the second container found the first one's line</span></code></pre></div>
+      <div class="anno">
+        <div class="head"><span>the part after the image name</span><span>4 pieces</span></div>
+        <div class="row"><code>sh -c '…'</code><p>Single quotes, so your Mac leaves <code>$(…)</code> alone and the container's shell runs it.</p></div>
+        <div class="row"><code>date &gt;&gt; /notes/log.txt</code><p>Add the current time as a new line at the end of the file. <code>&gt;&gt;</code> adds to a file; <code>&gt;</code> would replace it.</p></div>
+        <div class="row"><code>;</code><p>Then run the next command, whether or not the first one worked. <code>&amp;&amp;</code> runs it only if the first one worked.</p></div>
+        <div class="row"><code>$(wc -l &lt; /notes/log.txt)</code><p>Count the lines in the file and put the number into the text that <code>echo</code> prints.</p></div>
+      </div>
+      <p>You have met <code>sh -c</code> before. In Lesson 3, the shell form <code>CMD uvicorn main:app …</code> is run as <code>/bin/sh -c "uvicorn main:app …"</code>. That is why the shell became PID 1 there, and the container took 10 seconds to stop.</p>
+    </section>
+
+    <section id="bind">
+      <h2><span class="n">03</span>Bind mounts: a folder from your Mac</h2>
+      <h3>Step 1: share a folder</h3>
+      <p style="margin-bottom:0">With a folder called <code>shared</code> containing <code>from-mac.txt</code>:</p>
+      <div class="cmd"><pre><code>podman run --rm -v ./shared:/shared docker.io/library/python:3.12-slim \
+  sh -c 'cat /shared/from-mac.txt; echo "written by the container" > /shared/from-container.txt'
+ls -l shared/</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>hello from the Mac                       <span class="c">← the container reads your file</span>
+-rw-r--r--  1 you  wheel  19  from-mac.txt
+-rw-r--r--  1 you  wheel  26  from-container.txt   <span class="c">← and its file appears on your Mac</span></code></pre></div>
+      <p>The syntax is the same as for volumes, but the left side is a path. A path starting with <code>./</code> or <code>/</code> means a bind mount; a plain name means a volume. On a Mac, this works because Podman shares your home folder into its VM; that's why your files are reachable at all.</p>
+
+      <h3>Step 2: permissions are relaxed on a Mac, not on Linux</h3>
+      <p>On the test Mac, any user in the container could write to the shared folder, including <code>app</code> (uid 1000), and the files always showed up on the Mac as the Mac user's own. On a Linux server there's no VM in between. The numeric user ID is checked directly, so uid 1000 in the container can only write where uid 1000 on the server may write. Keep that in mind when a setup that works on your Mac fails with <code>Permission denied</code> on a server.</p>
+
+      <h3>Step 3: read-only mounts</h3>
+      <p style="margin-bottom:0">Add <code>:ro</code> and the container can read but not change anything. Use it for configuration and model files:</p>
+      <div class="cmd"><pre><code>podman run --rm -v ./shared:/shared:ro docker.io/library/python:3.12-slim touch /shared/nope</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>touch: cannot touch '/shared/nope': Read-only file system</code></pre></div>
+
+      <h3>Step 4: live code reload during development</h3>
+      <p style="margin-bottom:0">The most useful bind mount: mount your code over <code>/app</code> and tell uvicorn to watch for changes. You edit on your Mac and the app inside restarts, with no rebuild:</p>
+      <div class="cmd"><pre><code>podman run -d --name dev -p 8000:8000 -v ./:/app:ro hello-ai:1.0 \
+  uvicorn main:app --host 0.0.0.0 --port 8000 --reload</code></pre></div>
+      <p style="margin-bottom:0">After changing the model name in <code>main.py</code> and saving, the logs showed:</p>
+      <div class="out"><p class="olabel">podman logs dev</p><pre><code>INFO:     Started reloader process [1] using StatReload
+WARNING:  StatReload detected changes in 'main.py'. Reloading...</code></pre></div>
+      <p>and <code>/health</code> reported the new name a few seconds later. This is for development only. In production you run the built image, so what runs is exactly what you tested.</p>
+
+      <div class="table">
+        <table>
+          <thead><tr><th></th><th>Named volume</th><th>Bind mount</th></tr></thead>
+          <tbody>
+            <tr><td>Written as</td><td><code>-v pgdata:/path</code></td><td><code>-v ./folder:/path</code></td></tr>
+            <tr><td>Stored</td><td>Where Podman decides (in the VM on a Mac)</td><td>Where you say, on your machine</td></tr>
+            <tr><td>Created by</td><td>Podman, automatically</td><td>You: the folder must exist</td></tr>
+            <tr><td>Use for</td><td>Databases, caches, app data</td><td>Code during development, config and model files (with <code>:ro</code>)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="network">
+      <h2><span class="n">04</span>Networks: containers finding each other</h2>
+      <p>Each container has its own network namespace, with its own IP address. For hello-ai to use Postgres, it needs to find the database container. The address goes into a <strong>connection string</strong>:</p>
+      <div class="ref" aria-label="Connection string anatomy">
+        <span class="part p2"><b>postgresql://</b><small>Protocol</small></span>
+        <span class="part p1"><b>hello:hello-dev-password</b><small>User : password</small></span><span class="sep">@</span>
+        <span class="part p3"><b>db</b><small>Host</small></span><span class="sep">:</span>
+        <span class="part p4"><b>5432</b><small>Port</small></span><span class="sep">/</span>
+        <span class="part p2"><b>hello</b><small>Database</small></span>
+      </div>
+      <p>The host is <code>db</code>, the name of the database container. Whether that name works depends on the network.</p>
+
+      <h3>Step 1: on the default network, names don't work</h3>
+      <div class="cmd"><pre><code>podman run -d --name db -e POSTGRES_USER=hello -e POSTGRES_PASSWORD=hello-dev-password \
+  -e POSTGRES_DB=hello docker.io/library/postgres:17
+podman run -d --name api -p 8000:8000 \
+  -e DATABASE_URL=postgresql://hello:hello-dev-password@db:5432/hello hello-ai:2.0
+podman logs api</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>psycopg.OperationalError: failed to resolve host 'db': [Errno -2] Name or service not known
+ERROR:    Application startup failed. Exiting.</code></pre></div>
+      <p>Containers started without <code>--network</code> join Podman's default network, which has no name lookup (DNS): <code>podman network inspect podman</code> shows <code>dns_enabled=false</code>.</p>
+
+      <h3>Step 2: create a network, and names work</h3>
+      <div class="cmd"><pre><code>podman network create hello-net
+podman run -d --name db --network hello-net -e POSTGRES_USER=hello \
+  -e POSTGRES_PASSWORD=hello-dev-password -e POSTGRES_DB=hello docker.io/library/postgres:17
+podman run -d --name api --network hello-net -p 8000:8000 \
+  -e DATABASE_URL=postgresql://hello:hello-dev-password@db:5432/hello hello-ai:2.0
+curl localhost:8000/health</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>{"status":"ok","model":"keyword-sentiment-v1","api_key_configured":false,"database":"connected"}</code></pre></div>
+      <p>A network you create has DNS switched on (<code>dns_enabled=true</code>). Inside it, every container's name resolves to its address; on the test Mac, <code>db</code> resolved to <code>10.89.0.2</code>. Predictions posted to the API were stored and came back from <code>/history</code>.</p>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 720 214" role="img" aria-labelledby="f2t">
+            <title id="f2t">The Mac reaches the api container through a published port; api reaches db by name inside the network; db's port is not published; db stores data in a volume</title>
+            <defs>
+              <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker>
+            </defs>
+            <rect class="d-box" x="10" y="64" width="150" height="72" rx="3"/>
+            <text class="d-tb" x="24" y="88">Your Mac</text>
+            <text class="d-code" x="24" y="112">curl :8000</text>
+            <path class="d-line" d="M160,100 L252,100" marker-end="url(#ah2)"/>
+            <text class="d-lab" x="206" y="90" text-anchor="middle">-p 8000:8000</text>
+
+            <rect class="d-frame" x="236" y="10" width="474" height="156" rx="4" style="stroke-dasharray:5 4"/>
+            <text class="d-h" x="250" y="30">NETWORK hello-net · NAMES RESOLVE (DNS)</text>
+            <rect class="d-app" x="256" y="52" width="170" height="96" rx="3"/>
+            <text class="d-tb" x="270" y="74">api</text>
+            <text class="d-code" x="270" y="96">port 8000</text>
+            <text class="d-m" x="270" y="118">connects to</text>
+            <text class="d-code" x="270" y="136">db:5432</text>
+            <path class="d-line" d="M426,100 L518,100" marker-end="url(#ah2)"/>
+            <text class="d-m" x="472" y="90" text-anchor="middle">db → 10.89.0.2</text>
+            <rect class="d-box" x="522" y="52" width="170" height="96" rx="3"/>
+            <text class="d-tb" x="536" y="74">db (postgres:17)</text>
+            <text class="d-code" x="536" y="96">port 5432</text>
+            <text class="d-bad" x="536" y="122">not published</text>
+            <path class="d-line" d="M607,148 L607,176" marker-end="url(#ah2)"/>
+            <rect class="d-okbox" x="522" y="180" width="170" height="28" rx="2"/>
+            <text class="d-t" x="536" y="199">volume pgdata</text>
+          </svg>
+        </div>
+      </figure>
+
+      <h3>Step 3: only publish what users need</h3>
+      <div class="cmd"><pre><code>nc -z -w 2 localhost 5432 &amp;&amp; echo reachable || echo "not reachable"</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>not reachable</code></pre></div>
+      <p>The database has no <code>-p</code>, so nothing outside the network can reach it: not your Mac, and on a server, not the internet. Only the API is published. That's the pattern to keep: containers talk to each other inside a private network, and only the entry point is exposed.</p>
+    </section>
+
+    <section id="compose">
+      <h2><span class="n">05</span>Compose: the whole app in one file</h2>
+      <p>Section 4 took a network, two long <code>podman run</code> commands, a volume, and the right order. <strong>Compose</strong> lets you describe all of that once, in a file called <code>compose.yaml</code>, and start everything with <code>podman compose up</code>. <code>podman compose</code> doesn't do the work itself. It hands it to a Compose program on your Mac. The <a href="../#setup">setup step</a> installs Docker Compose (the test Mac has v5.5.1), which prints a line saying so each time:</p>
+      <div class="out"><p class="olabel">Output</p><pre><code>&gt;&gt;&gt;&gt; Executing external compose provider "/usr/local/bin/docker-compose". &lt;&lt;&lt;&lt;</code></pre></div>
+      <p style="margin-bottom:0">Here's the file for hello-ai and Postgres, line by line:</p>
+
+      <div class="anno">
+        <div class="head"><span>hello-ai/compose.yaml</span><span>2 services</span></div>
+        <div class="row"><code>services:</code><p>Each entry under <code>services</code> becomes one container. The entry's name is also the name other containers use to reach it.</p></div>
+        <div class="row"><code>  api:
+    build:
+      context: .
+      dockerfile: Containerfile</code><p>Build this service's image from the current folder. Compose looks for a file named <code>Dockerfile</code> by default; without the <code>dockerfile</code> line, the build failed on the test Mac with <code>lstat …/Dockerfile: no such file or directory</code>.</p></div>
+        <div class="row"><code>    ports:
+      - "8000:8000"</code><p>Publish the API, like <code>-p 8000:8000</code>.</p></div>
+        <div class="row"><code>    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://hello:hello-dev-password@db:5432/hello</code><p>Settings at run time, as in Lesson 3: <code>API_KEY</code> from <code>.env</code>, plus the connection string. The host is <code>db</code>, the other service's name.</p></div>
+        <div class="row"><code>    depends_on:
+      db:
+        condition: service_healthy</code><p>Start the API only after the database reports healthy. Section 6 shows why the short form isn't enough.</p></div>
+        <div class="row"><code>  db:
+    image: docker.io/library/postgres:17</code><p>This service uses a ready-made image instead of building one.</p></div>
+        <div class="row"><code>    environment:
+      POSTGRES_USER: hello
+      POSTGRES_PASSWORD: hello-dev-password
+      POSTGRES_DB: hello</code><p>The Postgres image reads these on first start to create the user and database. This password is fine for a local setup; production passwords come from a secret store.</p></div>
+        <div class="row"><code>    volumes:
+      - pgdata:/var/lib/postgresql/data</code><p>A named volume where Postgres keeps its files, so data survives containers being replaced.</p></div>
+        <div class="row"><code>    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hello -d hello"]
+      interval: 2s
+      timeout: 3s
+      retries: 15</code><p><code>pg_isready</code> is a tool in the Postgres image that answers "is the database accepting connections?". This is what <code>condition: service_healthy</code> waits for.</p></div>
+        <div class="row"><code>volumes:
+  pgdata:</code><p>Declare the named volume. Compose creates it on first <code>up</code>.</p></div>
+      </div>
+
+      <h3>What <code>podman compose up</code> creates</h3>
+      <p>Compose prefixes everything with a <strong>project name</strong>, which defaults to the folder's name. In <code>~/practice/hello-ai</code> you get:</p>
+      <ul>
+        <li>a network <code>hello-ai_default</code>, with DNS switched on, so <code>db</code> resolves. You didn't have to write it.</li>
+        <li>a volume <code>hello-ai_pgdata</code>,</li>
+        <li>containers <code>hello-ai-api-1</code> and <code>hello-ai-db-1</code>,</li>
+        <li>and the built image, named after the project and service.</li>
+      </ul>
+    </section>
+
+    <section id="order">
+      <h2><span class="n">06</span>Start order and health</h2>
+      <h3>Step 1: the short <code>depends_on</code> isn't enough</h3>
+      <p style="margin-bottom:0">A common first version lists the dependency without a condition:</p>
+      <div class="cmd"><pre><code>    depends_on:
+      - db</code></pre></div>
+      <p style="margin-bottom:0">Started on the test Mac with a fresh, empty database volume:</p>
+      <div class="out"><p class="olabel">podman ps and podman logs, 6 seconds later</p><pre><code>db-1    Up 6 seconds
+api-1   Exited (3) 5 seconds ago
+psycopg.OperationalError: connection failed: connection to server at "10.89.0.2", port 5432 failed: Connection refused</code></pre></div>
+      <ol>
+        <li>Compose started the <code>db</code> container, then the <code>api</code> container right after.</li>
+        <li>The short <code>depends_on</code> only waits for the database <em>container</em> to start, not for Postgres inside it to be ready. On first start, Postgres spends a few seconds creating its files.</li>
+        <li>The API tried to connect during those seconds, was refused, and exited.</li>
+      </ol>
+
+      <h3>Step 2: wait for healthy</h3>
+      <p style="margin-bottom:0">With the <code>healthcheck</code> on <code>db</code> and <code>condition: service_healthy</code> on <code>api</code>, Compose waits:</p>
+      <div class="out"><p class="olabel">podman compose up -d</p><pre><code>Container db-1   Started
+Container db-1   Waiting
+Container db-1   Healthy       <span class="c">← pg_isready succeeded</span>
+Container api-1  Starting
+Container api-1  Started</code></pre></div>
+      <p>Repeated three times from an empty volume, the API came up every time.</p>
+
+      <h3>Step 3: the app's health reflects the database too</h3>
+      <p style="margin-bottom:0">Databases can also disappear later, during a restart or a network problem. The Lesson 4 version of <code>/health</code> checks the database and returns HTTP 503 when it can't reach it. With the database stopped while the API kept running:</p>
+      <div class="out"><p class="olabel">curl localhost:8000/health</p><pre><code>{"status":"error",…,"database":"unreachable: OperationalError"}  HTTP 503
+<span class="c"># after podman compose start db:</span>
+{"status":"ok",…,"database":"connected"}  HTTP 200</code></pre></div>
+      <p>The container health check from Lesson 3 calls <code>/health</code>, so the container turns <code>(unhealthy)</code> while the database is gone, and a platform can react.</p>
+    </section>
+
+    <section id="commands">
+      <h2><span class="n">07</span>Everyday Compose commands</h2>
+      <p>Run these in the folder that contains <code>compose.yaml</code>. The last column is what matters most:</p>
+      <div class="table">
+        <table class="cmds">
+          <thead><tr><th>Command</th><th>What it does</th><th>Your data</th></tr></thead>
+          <tbody>
+            <tr><td>podman compose up -d --build</td><td>Build what's needed, create everything, start in the background</td><td>Kept</td></tr>
+            <tr><td>podman compose ps</td><td>Status of this project's containers</td><td>—</td></tr>
+            <tr><td>podman compose logs -f api</td><td>Follow one service's logs (Ctrl+C stops following)</td><td>—</td></tr>
+            <tr><td>podman compose exec db psql -U hello</td><td>Run a command in a running service, here a database shell</td><td>—</td></tr>
+            <tr><td>podman compose stop · start</td><td>Stop and start containers without removing them</td><td>Kept</td></tr>
+            <tr><td>podman compose down</td><td>Remove containers and the network</td><td><strong>Kept</strong> in the volume</td></tr>
+            <tr><td>podman compose down -v</td><td>Also remove the volumes</td><td><strong>Deleted</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-bottom:0">On the test Mac: a prediction saved, then <code>down</code> and <code>up</code>:</p>
+      <div class="out"><p class="olabel">curl localhost:8000/history after down + up</p><pre><code>[{"id":1,"text":"this data should survive","label":"neutral",…}]</code></pre></div>
+      <p>After <code>down -v</code>, the output included <code>Volume …_pgdata Removed</code>, and the history started empty. Treat <code>-v</code> like <code>rm -rf</code> on your database.</p>
+
+      <h3>Development overrides</h3>
+      <p style="margin-bottom:0">Compose automatically merges a second file, <code>compose.override.yaml</code>, if it exists. It's the standard place for development-only settings, such as the live reload from section 3:</p>
+      <div class="cmd"><pre><code>services:
+  api:
+    volumes:
+      - ./:/app:ro
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]</code></pre></div>
+      <p>With this file next to <code>compose.yaml</code>, editing <code>main.py</code> on the test Mac reloaded the API inside Compose within a few seconds. <code>compose.yaml</code> stays clean and production-like; the override adds conveniences on your machine only.</p>
+    </section>
+
+    <section id="production">
+      <h2><span class="n">08</span>What changes in production</h2>
+      <p>Compose is mainly a tool for your machine and for testing. In production on AWS or Cloudflare, each piece of <code>compose.yaml</code> usually becomes a managed service. Lesson 6 covers deploying.</p>
+      <div class="table">
+        <table>
+          <thead><tr><th>In compose.yaml</th><th>On AWS</th><th>On Cloudflare</th></tr></thead>
+          <tbody>
+            <tr><td>The <code>api</code> service</td><td>An ECS service on Fargate (or Kubernetes on EKS)</td><td>A Cloudflare Container, started by a Worker</td></tr>
+            <tr><td>The <code>db</code> container</td><td>Amazon RDS for PostgreSQL: backups, patching and failover handled for you</td><td>An external Postgres, reached through Hyperdrive, or Cloudflare's own D1 database</td></tr>
+            <tr><td>Named volumes</td><td>EBS or EFS disks, or S3 for files</td><td>R2 object storage; container disks don't persist between restarts</td></tr>
+            <tr><td>The network</td><td>A VPC with security groups deciding who can reach what</td><td>Workers and bindings; containers aren't exposed directly</td></tr>
+            <tr><td><code>environment</code> and <code>.env</code></td><td>Task definition settings, with secrets from Secrets Manager</td><td>Worker variables and secrets, passed to the container</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Don't run your production database in a container on a single machine unless someone owns backups and recovery. For a new project, a managed database is almost always the right call.</p>
+
+      <h3>A volume is never part of the image</h3>
+      <p>Volumes are not special to Podman or to your Mac. But when you hand an image to another team, no volume travels with it. An image holds only what the build put into it. The rest comes from whoever runs the container:</p>
+      <div class="table">
+        <table class="decide">
+          <thead><tr><th>What</th><th>Where it comes from</th></tr></thead>
+          <tbody>
+            <tr><td>Your code and dependencies</td><td>The image</td></tr>
+            <tr><td>The default command and user</td><td>The image</td></tr>
+            <tr><td>Volumes and the data in them</td><td>Whoever runs it</td></tr>
+            <tr><td>Values of environment variables and secrets</td><td>Whoever runs it</td></tr>
+            <tr><td>Published ports, networks, CPU and memory limits</td><td>Whoever runs it</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-bottom:0">An image can declare that a path should be a volume, as Postgres does (section 2, step 8). That is only a note, and no data comes with it. Your own image, the <code>hello-ai:2.0</code> you build in the lab below, declares nothing:</p>
+      <div class="cmd"><pre><code>podman image inspect hello-ai:2.0 --format '{{.Config.Volumes}}'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>map[]</code></pre></div>
+
+      <h3>Every platform has its own kind of volume</h3>
+      <div class="table">
+        <table>
+          <thead><tr><th>Platform</th><th>What a volume is called</th></tr></thead>
+          <tbody>
+            <tr><td>Podman, Docker</td><td>Named volume</td></tr>
+            <tr><td>Compose</td><td><code>volumes:</code> in <code>compose.yaml</code></td></tr>
+            <tr><td>Kubernetes</td><td>PersistentVolumeClaim (Lesson 7)</td></tr>
+            <tr><td>AWS ECS</td><td>An EFS or EBS volume in the task definition</td></tr>
+            <tr><td>Cloudflare Containers</td><td>None: the disk is wiped on restart, so data goes to a service such as R2 or D1</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>What you tell the team that deploys your image</h3>
+      <p><strong>1. Most often, the app container needs no volume.</strong> The app keeps nothing important on its own disk and sends data to a service built for it: a managed database such as Amazon RDS, or file storage such as S3. The deploy team only passes connection settings as environment variables.</p>
+      <p>Your hello-ai already works this way. It stores predictions in Postgres through <code>DATABASE_URL</code>. On your Mac, Postgres is a container with the <code>pgdata</code> volume. In production the database would usually be RDS, and hello-ai would get a different <code>DATABASE_URL</code>. The volume is only part of your local setup.</p>
+      <p><strong>2. When a volume is needed, it is written into the deployment config.</strong> Examples are a database you run yourself, a vector index on disk, or a cache of model weights. The volume is declared in the Compose file, the Kubernetes manifest or the Terraform code. That file lives in git and gets reviewed like code, so nobody has to remember to create a volume by hand.</p>
+      <p style="margin-bottom:0"><strong>3. You hand over a short contract, usually in the README.</strong> For hello-ai it looks like this:</p>
+      <div class="out"><p class="olabel">README: what this container needs</p><pre><code>Port:       8000
+Env vars:   MODEL_NAME     optional
+            API_KEY        optional, secret
+            DATABASE_URL   optional; if set, predictions are saved to Postgres
+Health:     GET /health    returns 503 if the database is unreachable
+Storage:    none, the container is stateless
+Resources:  0.25 CPU and 256 MB RAM are enough</code></pre></div>
+      <p>The <code>Storage</code> line answers the question "do they need to create a volume?". If it said <code>/data must persist</code>, the deploy team would attach their platform's kind of volume at that path. Run with those limits (<code>--cpus 0.25 --memory 256m</code>), hello-ai used about 42 MB.</p>
+    </section>
+
+    <section id="lab">
+      <h2><span class="n">09</span>Lab: hello-ai + Postgres with Compose</h2>
+      <p>Work in <code>~/practice/hello-ai</code>, starting from your Lesson 3 Containerfile. The first step that uses the <code>postgres:17</code> image downloads it.</p>
+
+      <div class="step">
+        <span class="sn">1</span>
+        <div>
+          <h3>Update the app</h3>
+          <p style="margin-bottom:0">Replace <code>main.py</code> with this version. It's the same app, plus: if <code>DATABASE_URL</code> is set, it saves each prediction and serves <code>GET /history</code>, and <code>/health</code> checks the database.</p>
+          <details class="sol"><summary>Show the new main.py</summary><div class="inner">
+            <div class="cmd"><pre><code>&quot;&quot;&quot;hello-ai: a tiny stand-in for an AI service.
+
+The &quot;model&quot; is a keyword counter. If DATABASE_URL is set, every prediction
+is also saved to Postgres, and GET /history returns the latest ones.
+&quot;&quot;&quot;
+import os
+import re
+from contextlib import asynccontextmanager
+
+import psycopg
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+MODEL_NAME = os.getenv(&quot;MODEL_NAME&quot;, &quot;keyword-sentiment-v1&quot;)
+API_KEY = os.getenv(&quot;API_KEY&quot;)  # comes from outside the image at run time
+DATABASE_URL = os.getenv(&quot;DATABASE_URL&quot;)  # e.g. postgresql://user:pass@db:5432/hello
+POSITIVE = {&quot;good&quot;, &quot;great&quot;, &quot;love&quot;, &quot;excellent&quot;, &quot;happy&quot;, &quot;fast&quot;, &quot;works&quot;}
+NEGATIVE = {&quot;bad&quot;, &quot;terrible&quot;, &quot;hate&quot;, &quot;slow&quot;, &quot;broken&quot;, &quot;sad&quot;, &quot;crash&quot;}
+
+
+def db():
+    return psycopg.connect(DATABASE_URL, connect_timeout=3)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    if DATABASE_URL:
+        with db() as conn:
+            conn.execute(
+                &quot;&quot;&quot;CREATE TABLE IF NOT EXISTS predictions (
+                       id SERIAL PRIMARY KEY,
+                       text TEXT NOT NULL,
+                       label TEXT NOT NULL,
+                       score INTEGER NOT NULL,
+                       created_at TIMESTAMPTZ NOT NULL DEFAULT now())&quot;&quot;&quot;
+            )
+    yield
+
+
+app = FastAPI(title=&quot;hello-ai&quot;, lifespan=lifespan)
+
+
+class PredictRequest(BaseModel):
+    text: str
+
+
+@app.get(&quot;/health&quot;)
+def health():
+    body = {&quot;status&quot;: &quot;ok&quot;, &quot;model&quot;: MODEL_NAME, &quot;api_key_configured&quot;: API_KEY is not None}
+    if not DATABASE_URL:
+        body[&quot;database&quot;] = &quot;not configured&quot;
+        return body
+    try:
+        with db() as conn:
+            conn.execute(&quot;SELECT 1&quot;)
+        body[&quot;database&quot;] = &quot;connected&quot;
+        return body
+    except psycopg.Error as e:
+        body.update(status=&quot;error&quot;, database=f&quot;unreachable: {e.__class__.__name__}&quot;)
+        return JSONResponse(body, status_code=503)
+
+
+@app.post(&quot;/predict&quot;)
+def predict(req: PredictRequest):
+    words = re.findall(r&quot;[a-z&#x27;]+&quot;, req.text.lower())
+    score = sum(w in POSITIVE for w in words) - sum(w in NEGATIVE for w in words)
+    label = &quot;positive&quot; if score &gt; 0 else &quot;negative&quot; if score &lt; 0 else &quot;neutral&quot;
+    if DATABASE_URL:
+        with db() as conn:
+            conn.execute(
+                &quot;INSERT INTO predictions (text, label, score) VALUES (%s, %s, %s)&quot;,
+                (req.text, label, score),
+            )
+    return {&quot;label&quot;: label, &quot;score&quot;: score, &quot;model&quot;: MODEL_NAME}
+
+
+@app.get(&quot;/history&quot;)
+def history(limit: int = 10):
+    if not DATABASE_URL:
+        return JSONResponse({&quot;error&quot;: &quot;no database configured&quot;}, status_code=404)
+    with db() as conn:
+        rows = conn.execute(
+            &quot;SELECT id, text, label, score, created_at FROM predictions ORDER BY id DESC LIMIT %s&quot;,
+            (limit,),
+        ).fetchall()
+    return [
+        {&quot;id&quot;: r[0], &quot;text&quot;: r[1], &quot;label&quot;: r[2], &quot;score&quot;: r[3], &quot;created_at&quot;: r[4].isoformat()}
+        for r in rows
+    ]</code></pre></div>
+          </div></details>
+          <p style="margin-bottom:0">Add the Postgres driver to <code>requirements.txt</code>, so it reads:</p>
+          <div class="cmd"><pre><code>fastapi==0.141.1
+uvicorn==0.54.0
+psycopg[binary]==3.3.6</code></pre></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">2</span>
+        <div>
+          <h3>Build it and run it alone</h3>
+          <div class="cmd"><pre><code>podman build --format docker -t hello-ai:2.0 .
+podman run -d --name api -p 8000:8000 hello-ai:2.0
+sleep 2
+curl localhost:8000/health
+curl localhost:8000/history
+podman rm -f api</code></pre></div>
+          <p>Without a database it still works: <code>"database":"not configured"</code>, and <code>/history</code> answers <code>{"error":"no database configured"}</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">3</span>
+        <div>
+          <h3>Connect two containers by hand</h3>
+          <p>Follow section 4: first try without a network and read the <code>failed to resolve host 'db'</code> error in <code>podman logs api</code>. Then create <code>hello-net</code> and start both containers on it. Post a prediction, read <code>/history</code>, and confirm port 5432 isn't reachable from your Mac.</p>
+          <div class="cmd"><pre><code>curl -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{"text": "containers talking to each other works"}'
+curl localhost:8000/history
+podman exec api python -c "import socket; print(socket.gethostbyname('db'))"</code></pre></div>
+          <p style="margin-bottom:0">Clean up, including the database's anonymous volume (<code>-v</code>):</p>
+          <div class="cmd"><pre><code>podman rm -f -v api db
+podman network rm hello-net</code></pre></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">4</span>
+        <div>
+          <h3>Write compose.yaml</h3>
+          <p style="margin-bottom:4px">Create <code>~/practice/hello-ai/compose.yaml</code> with two services:</p>
+          <ul class="task">
+            <li><span><code>api</code>: built from your Containerfile, port 8000 published, <code>API_KEY</code> from <code>.env</code>, and <code>DATABASE_URL</code> pointing at <code>db</code></span></li>
+            <li><span><code>db</code>: <code>postgres:17</code> with user, password and database <code>hello</code>, and data in a named volume</span></li>
+            <li><span>a health check on <code>db</code>, and <code>api</code> waiting for it to be healthy</span></li>
+          </ul>
+          <details class="sol"><summary>Show solution</summary><div class="inner">
+            <div class="cmd"><pre><code>services:
+  api:
+    build:
+      context: .
+      dockerfile: Containerfile
+    ports:
+      - &quot;8000:8000&quot;
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://hello:hello-dev-password@db:5432/hello
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: docker.io/library/postgres:17
+    environment:
+      POSTGRES_USER: hello
+      POSTGRES_PASSWORD: hello-dev-password
+      POSTGRES_DB: hello
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [&quot;CMD-SHELL&quot;, &quot;pg_isready -U hello -d hello&quot;]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  pgdata:</code></pre></div>
+          </div></details>
+          <p>Also add <code>compose.yaml</code> and <code>compose.override.yaml</code> to <code>.containerignore</code>: the running app doesn't need them.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">5</span>
+        <div>
+          <h3>Start everything</h3>
+          <div class="cmd"><pre><code>podman compose up -d --build
+podman compose ps
+curl localhost:8000/health
+curl -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{"text": "compose is great"}'
+curl localhost:8000/history</code></pre></div>
+          <p>Watch the <code>Waiting</code> and <code>Healthy</code> lines during <code>up</code>. Then look at what Compose created: <code>podman network ls</code>, <code>podman volume ls</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">6</span>
+        <div>
+          <h3>Prove the data survives, then delete it</h3>
+          <div class="cmd"><pre><code>podman compose down
+podman compose up -d
+sleep 3
+curl localhost:8000/history     <span class="c"># your predictions are still there</span>
+podman compose down -v
+podman compose up -d
+sleep 3
+curl localhost:8000/history     <span class="c"># []</span></code></pre></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">7</span>
+        <div>
+          <h3>Reproduce the start-order race</h3>
+          <p>Change <code>depends_on</code> to the short form (<code>- db</code>), then run <code>podman compose down -v</code> and <code>podman compose up -d</code>. The empty volume makes Postgres initialize, which is when the race happens. <code>podman compose ps -a</code> should show the API exited, and <code>podman compose logs api</code> shows <code>Connection refused</code>. Put the condition back.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">8</span>
+        <div>
+          <h3>Add a development override</h3>
+          <p>Create <code>compose.override.yaml</code> from section 7 and run <code>podman compose up -d</code>. Change <code>MODEL_NAME</code>'s default in <code>main.py</code>, save, wait a few seconds, and check <code>/health</code>. Delete or rename the override when you want production-like behaviour again.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">9</span>
+        <div>
+          <h3>Clean up</h3>
+          <div class="cmd"><pre><code>podman compose down -v
+podman volume rm notes data rootdata shared 2&gt;/dev/null
+podman volume ls</code></pre></div>
+          <p>Keep <code>hello-ai:2.0</code>, <code>compose.yaml</code> and the <code>postgres:17</code> image. Lessons 6 and 7 use them.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="check">
+      <h2><span class="n">10</span>Check yourself</h2>
+      <p>Try answering each question out loud before opening it.</p>
+      <div class="quiz">
+        <details class="q"><summary><span class="qn">Q1</span><span>What's the difference between <code>-v pgdata:/var/lib/postgresql/data</code> and <code>-v ./pgdata:/var/lib/postgresql/data</code>?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>The first is a named volume that Podman creates and manages. The second, because it starts with <code>./</code>, is a bind mount of a folder called <code>pgdata</code> in your current directory on your machine.</p></div></details>
+        <details class="q"><summary><span class="qn">Q2</span><span>You ran Postgres several times without a volume. Now <code>podman volume ls</code> shows volumes with long random names. Where did they come from?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>The Postgres image declares <code>/var/lib/postgresql/data</code> as a volume, so Podman created an anonymous volume for each container. <code>podman rm</code> leaves them behind; <code>podman rm -v</code> would have removed them. Always name volumes for data you care about.</p></div></details>
+        <details class="q"><summary><span class="qn">Q3</span><span>Your image runs as uid 1000 and writes to a new named volume. It works with Podman but fails with <code>Permission denied</code> on a Docker server. Why, and how do you fix the image?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Podman hands a new, empty volume to the container's user; Docker leaves it owned by root. Create the folder in the image and give it to the user before <code>USER</code>, with <code>RUN mkdir /data &amp;&amp; chown app:app /data</code>. Docker copies that ownership into new volumes.</p></div></details>
+        <details class="q"><summary><span class="qn">Q4</span><span>The API logs <code>failed to resolve host 'db'</code>, although a container named <code>db</code> is running. What's the likely cause?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>The containers are on Podman's default network, which has no DNS, or on different networks. Put both on the same network you created, or run them with Compose, which creates one for you.</p></div></details>
+        <details class="q"><summary><span class="qn">Q5</span><span>Should the database service in <code>compose.yaml</code> have <code>ports: - "5432:5432"</code>?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Not for the app: the API reaches it over the Compose network by name. Publishing it only makes sense if you want to connect from your Mac with a database tool, and even then only locally. On a server it would expose the database to the network.</p></div></details>
+        <details class="q"><summary><span class="qn">Q6</span><span>With <code>depends_on: [db]</code>, the API sometimes exits with <code>Connection refused</code> on a fresh setup. Why doesn't <code>depends_on</code> prevent it?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>The short form only waits for the database container to start, not for Postgres to accept connections. Add a <code>healthcheck</code> to <code>db</code> (for example <code>pg_isready</code>) and use <code>condition: service_healthy</code>.</p></div></details>
+        <details class="q"><summary><span class="qn">Q7</span><span>A teammate says "I ran <code>podman compose down</code> and lost the database". What did they probably actually run?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p><code>podman compose down -v</code>, which also deletes the volumes. Plain <code>down</code> removes containers and the network but keeps named volumes.</p></div></details>
+        <details class="q"><summary><span class="qn">Q8</span><span>Why put the live-reload settings in <code>compose.override.yaml</code> instead of <code>compose.yaml</code>?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>So <code>compose.yaml</code> stays close to production: it runs the built image, exactly as tested. The override, merged automatically on your machine, adds development conveniences like mounting your code and <code>--reload</code>.</p></div></details>
+      </div>
+
+      <div class="next">
+        <p class="eyebrow">Next · Lesson 5</p>
+        <h3 style="margin-top:0">Serving a real model</h3>
+        <p>A real sentiment model inside a container: image size, loading time and readiness, memory limits, streaming responses, and what changes with GPUs.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('.cmd').forEach(function(box){
+    var pre = box.querySelector('pre');
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var clone = pre.cloneNode(true);
+      clone.querySelectorAll('.c').forEach(function(c){ c.remove(); });
+      var text = clone.textContent.split('\n').map(function(l){ return l.replace(/\s+$/,''); }).join('\n').trim();
+      var done = function(){ btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1400); };
+      var fallback = function(){
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Press ⌘C';
+      };
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+    });
+    box.appendChild(btn);
+  });
+
+  var links = {};
+  document.querySelectorAll('.toc a').forEach(function(a){ links[a.getAttribute('href').slice(1)] = a; });
+  if (!('IntersectionObserver' in window)) return;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting) {
+        Object.keys(links).forEach(function(k){ links[k].classList.remove('on'); });
+        if (links[e.target.id]) links[e.target.id].classList.add('on');
+      }
+    });
+  }, {rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('main section[id]').forEach(function(s){ obs.observe(s); });
+})();
+</script>
+</body>
+</html>

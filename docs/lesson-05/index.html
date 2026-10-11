@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lesson 5: Serving a Real Model · Docker Fundamentals</title>
+<meta name="description" content="Lesson 5 of Docker Fundamentals, a free hands-on course: Serving a Real Model.">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --bg:#F2F4F7;
+  --surface:#FFFFFF;
+  --ink:#141D27;
+  --muted:#556375;
+  --line:#D4DBE4;
+  --accent:#1B5BA3;
+  --accent-soft:#E2EBF6;
+  --amber:#8F5B00;
+  --amber-soft:#FAEFD8;
+  --code-bg:#E8EDF3;
+  --ok:#23734A;
+  --ok-soft:#DFF1E6;
+  --bad:#B3261E;
+  --bad-soft:#FBE3E1;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+    --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+    --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D131A;--surface:#141C25;--ink:#E3E9F0;--muted:#94A1B0;--line:#28333F;
+  --accent:#7BB0EA;--accent-soft:#16283C;--amber:#E3AF4D;--amber-soft:#2A2213;--code-bg:#18222D;
+  --ok:#6CC291;--ok-soft:#14291E;--bad:#F2867E;--bad-soft:#331816;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16.5px/1.65 var(--sans);padding-inline:20px;padding-block:0 72px}
+.shell{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:40px}
+@media (min-width:1000px){.shell{grid-template-columns:210px minmax(0,1fr)}}
+button{font-family:var(--sans)}
+
+/* table of contents */
+.toc{padding-top:40px}
+.toc nav{display:flex;flex-direction:column;gap:2px}
+@media (min-width:1000px){.toc nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px)}}
+.toc .label{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.toc a{display:grid;grid-template-columns:22px 1fr;color:var(--muted);text-decoration:none;font-size:14px;line-height:1.35;padding:5px 0}
+.toc a span{font:500 12px/1.6 var(--mono);color:var(--muted)}
+.toc a:hover,.toc a.on{color:var(--ink)}
+.toc a.on span{color:var(--accent)}
+@media (max-width:999px){
+  .toc{padding-top:24px}
+  .toc nav{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));column-gap:16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:12px}
+  .toc .label{grid-column:1/-1}
+}
+
+main{max-width:720px;min-width:0}
+header{padding-top:48px;padding-bottom:8px}
+.eyebrow{font:500 12.5px/1 var(--mono);color:var(--accent);letter-spacing:.02em;margin:0 0 18px}
+h1{font-family:var(--display);font-stretch:78%;font-weight:760;font-size:clamp(34px,6vw,50px);line-height:1.02;letter-spacing:-.01em;margin:0 0 18px;text-wrap:balance}
+.lede{font-size:19px;line-height:1.55;margin:0 0 22px;max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13.5px;color:var(--muted);margin:0 0 8px}
+.meta b{color:var(--ink);font-weight:600}
+
+section{padding-top:44px;scroll-margin-top:16px}
+h2{font-family:var(--display);font-stretch:82%;font-weight:720;font-size:27px;line-height:1.15;margin:0 0 14px;text-wrap:balance;display:flex;gap:14px;align-items:baseline}
+h2 .n{font:500 14px/1 var(--mono);color:var(--accent);flex:none}
+h3{font:600 17px/1.3 var(--sans);margin:28px 0 8px}
+p{margin:0 0 14px;max-width:66ch}
+ul,ol{margin:0 0 16px;padding-left:22px;max-width:64ch}
+li{margin-bottom:6px}
+strong{font-weight:600}
+a{color:var(--accent)}
+code{font:400 .88em var(--mono);background:var(--code-bg);padding:.1em .35em;border-radius:3px}
+pre{margin:0;font:400 13.5px/1.6 var(--mono);white-space:pre;overflow-x:auto;padding:14px 16px;background:var(--code-bg);border-radius:4px;color:var(--ink)}
+pre code{background:none;padding:0;font-size:inherit}
+pre .c{color:var(--muted)}
+pre .hit{color:var(--ok)}
+pre .miss{color:var(--amber)}
+
+.goals{list-style:none;padding:0;display:grid;gap:8px;margin-top:6px}
+.goals li{display:grid;grid-template-columns:18px 1fr;gap:10px;margin:0}
+.goals li::before{content:"";width:10px;height:10px;border:1.5px solid var(--accent);margin-top:8px}
+
+/* callouts */
+.aside{background:var(--amber-soft);padding:14px 18px 4px;margin:18px 0 20px;border-radius:2px}
+.aside.key{background:var(--accent-soft)}
+.chip{display:inline-block;font:600 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px 4px;margin-bottom:8px;border:1px solid var(--amber);color:var(--amber)}
+.aside.key .chip{border-color:var(--accent);color:var(--accent)}
+.aside p{max-width:none}
+
+/* diagrams */
+figure{margin:22px 0 24px}
+.diagram{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px}
+.diagram svg{display:block;width:100%;min-width:600px;height:auto}
+figcaption{font-size:13.5px;color:var(--muted);margin-top:8px;max-width:66ch}
+.d-box{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.d-frame{fill:none;stroke:var(--muted);stroke-width:1.2}
+.d-app{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.2}
+.d-kernel{fill:var(--amber-soft);stroke:var(--amber);stroke-width:1.2}
+.d-hw{fill:var(--code-bg);stroke:var(--line);stroke-width:1.2}
+.d-write{fill:var(--surface);stroke:var(--accent);stroke-width:1.4;stroke-dasharray:5 4}
+.d-okbox{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.2}
+.d-badbox{fill:var(--bad-soft);stroke:var(--bad);stroke-width:1.2}
+.d-band1{fill:var(--amber-soft)}
+.d-band2{fill:var(--accent-soft)}
+.d-t{fill:var(--ink);font:500 13px var(--sans)}
+.d-tb{fill:var(--ink);font:600 13px var(--sans)}
+.d-m{fill:var(--muted);font:400 12.5px var(--sans)}
+.d-h{fill:var(--muted);font:600 11px var(--sans);letter-spacing:.09em}
+.d-ha{fill:var(--amber);font:600 11px var(--sans);letter-spacing:.09em}
+.d-hb{fill:var(--accent);font:600 11px var(--sans);letter-spacing:.09em}
+.d-code{fill:var(--ink);font:400 12px var(--mono)}
+.d-lab{fill:var(--muted);font:500 12px var(--mono)}
+.d-ok{fill:var(--ok);font:600 12.5px var(--sans)}
+.d-bad{fill:var(--bad);font:600 12.5px var(--sans)}
+.d-line{stroke:var(--muted);stroke-width:1.2;fill:none}
+.d-okline{stroke:var(--ok);stroke-width:1.4;fill:none}
+.d-badline{stroke:var(--bad);stroke-width:1.4;fill:none;stroke-dasharray:4 4}
+.d-head{fill:var(--muted)}
+.d-head-ok{fill:var(--ok)}
+.d-head-bad{fill:var(--bad)}
+
+/* annotated Containerfile */
+.anno{background:var(--surface);border:1px solid var(--line);border-radius:4px;margin:18px 0 22px;overflow:hidden}
+.anno .head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);font:500 12px/1 var(--mono);color:var(--muted);background:var(--bg)}
+.anno .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-bottom:1px solid var(--line)}
+.anno .row:last-child{border-bottom:0}
+.anno .row > code{display:block;background:var(--code-bg);border-radius:0;padding:12px 16px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.anno .row > p{margin:0;padding:11px 16px 12px;font-size:14.5px;line-height:1.55}
+.tag{display:inline-block;font:600 10px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px 3px;border-radius:2px;margin-right:6px;vertical-align:1px}
+.tag.layer{background:var(--accent-soft);color:var(--accent)}
+.tag.config{background:var(--amber-soft);color:var(--amber)}
+@media (max-width:640px){.anno .row{grid-template-columns:1fr}}
+
+/* tables */
+.table{overflow-x:auto;margin:16px 0 20px;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+th{font:600 11.5px/1.3 var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+td:first-child{font-weight:600;white-space:nowrap}
+.cmds td:first-child{font:500 13px var(--mono);white-space:normal;min-width:15em}
+.decide td:first-child{white-space:normal;min-width:12em}
+.decide td:nth-child(2){white-space:nowrap}
+.out{margin:10px 0 14px}
+.out .olabel{font:600 10.5px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.out pre{background:var(--surface);border:1px solid var(--line)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* cache comparison */
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 10px}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:4px;display:flex;flex-direction:column}
+.col h4{margin:0;padding:12px 16px 10px;font:600 14.5px/1.3 var(--sans);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.col h4 small{font:500 12px var(--sans);color:var(--muted)}
+.steps{list-style:none;margin:0;padding:6px 0;max-width:none}
+.steps li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:7px 16px;margin:0;font:400 13px/1.4 var(--mono)}
+.st{flex:none;font:600 10.5px/1 var(--sans);letter-spacing:.07em;text-transform:uppercase;padding:4px 7px 3px;border-radius:2px}
+.st.hit{background:var(--ok-soft);color:var(--ok)}
+.st.miss{background:var(--amber-soft);color:var(--amber)}
+.st.slow{background:var(--bad-soft);color:var(--bad)}
+.col .foot{margin-top:auto;padding:10px 16px 12px;border-top:1px solid var(--line);display:flex;align-items:baseline;gap:10px}
+.col .foot b{font:700 24px/1 var(--display);font-stretch:85%;font-variant-numeric:tabular-nums}
+.col .foot span{font-size:13px;color:var(--muted)}
+
+/* experiment result pair */
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0 20px}
+.res{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+.res .lbl{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px}
+.res.good .lbl{color:var(--ok)}
+.res.poor .lbl{color:var(--bad)}
+.res code.big{display:block;font-size:13px;padding:8px 10px;margin:0 0 10px;white-space:pre-wrap;word-break:break-word}
+.res dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+.res dt{color:var(--muted)}
+.res dd{margin:0;font-variant-numeric:tabular-nums}
+
+/* quiz */
+.quiz{display:grid;gap:10px;margin-top:10px}
+details.q{background:var(--surface);border:1px solid var(--line);border-radius:4px}
+details.q summary{cursor:pointer;list-style:none;padding:14px 16px;display:grid;grid-template-columns:28px 1fr auto;gap:8px;font-weight:500}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary .qn{font:500 13px/1.7 var(--mono);color:var(--accent)}
+details.q summary .rv{font:500 12px/1.9 var(--sans);color:var(--muted)}
+details.q[open] summary .rv{visibility:hidden}
+details.q summary:focus-visible,details.sol summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.q .ans{padding:0 16px 14px 52px}
+details.q .ans p:last-child{margin-bottom:0}
+
+/* lab */
+.step{margin:26px 0 0;display:grid;grid-template-columns:34px minmax(0,1fr);gap:0 12px}
+.step .sn{font:600 13px/1 var(--mono);color:var(--accent);border:1.5px solid var(--accent);border-radius:50%;width:30px;height:30px;display:grid;place-items:center;margin-top:-4px}
+.step h3{margin-top:0}
+.cmd{position:relative;margin:10px 0 12px}
+.cmd pre{padding-right:72px}
+.copy{position:absolute;top:8px;right:8px;font:500 12px/1 var(--sans);color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:6px 9px;cursor:pointer}
+.copy:hover{color:var(--ink)}
+.copy:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.task{list-style:none;padding:0;margin:8px 0 14px;display:grid;gap:6px}
+.task li{display:grid;grid-template-columns:18px 1fr;gap:8px;margin:0}
+.task li::before{content:"";width:9px;height:9px;border:1.5px solid var(--muted);border-radius:2px;margin-top:8px}
+details.sol{border:1px dashed var(--line);border-radius:4px;margin:10px 0 14px;background:var(--surface)}
+details.sol summary{cursor:pointer;padding:10px 14px;font:500 14px var(--sans);color:var(--accent)}
+details.sol[open] summary{border-bottom:1px dashed var(--line)}
+details.sol .inner{padding:12px 14px 4px}
+
+.next{margin-top:48px;padding-top:22px;border-top:1px solid var(--line)}
+.next .eyebrow{margin-bottom:10px}
+.next p{color:var(--muted)}
+
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+
+/* course navigation: a link home, then links to every lesson */
+.course{max-width:1100px;margin:0 auto;padding-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.course .home{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-decoration:none;margin-right:6px;padding:6px 0}
+.course .home:hover{color:var(--ink)}
+.course .lesson,.course .here{display:inline-flex;align-items:baseline;gap:7px;padding:6px 10px 6px 8px;font:500 13px/1.2 var(--sans);color:var(--muted);text-decoration:none;background:var(--surface);border:1px solid var(--line);border-radius:3px}
+.course b{font:500 12px/1 var(--mono);color:var(--accent)}
+.course .lesson:hover{color:var(--ink);border-color:var(--muted)}
+.course a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.course .here{color:var(--ink);background:var(--accent-soft);border-color:var(--accent)}
+.meta a{color:inherit}
+@media (max-width:640px){.course .home{flex-basis:100%}}
+</style>
+</head>
+<body>
+<nav class="course" aria-label="All lessons in this course">
+  <a class="home" href="../">Docker Fundamentals</a>
+  <a class="lesson" href="../lesson-01/" title="Lesson 1: What a Container Is"><b>1</b>Containers</a>
+  <a class="lesson" href="../lesson-02/" title="Lesson 2: Building Container Images"><b>2</b>Building images</a>
+  <a class="lesson" href="../lesson-03/" title="Lesson 3: Production-Ready Images"><b>3</b>Production images</a>
+  <a class="lesson" href="../lesson-04/" title="Lesson 4: Volumes, Networks and Compose"><b>4</b>Volumes and Compose</a>
+  <span class="here" aria-current="page" title="Serving a Real Model"><b>5</b>A real model</span>
+  <a class="lesson" href="../lesson-06/" title="Lesson 6: Shipping to AWS and Cloudflare"><b>6</b>AWS and Cloudflare</a>
+  <a class="lesson" href="../lesson-07/" title="Lesson 7: Kubernetes, the Big Picture"><b>7</b>Kubernetes</a>
+</nav>
+
+<div class="shell">
+  <aside class="toc" aria-label="Lesson sections">
+    <nav>
+      <div class="label">Lesson 5</div>
+      <a href="#app"><span>1</span>The practice app</a>
+      <a href="#torch"><span>2</span>Installing PyTorch</a>
+      <a href="#image"><span>3</span>The Containerfile</a>
+      <a href="#ready"><span>4</span>Alive vs ready</a>
+      <a href="#memory"><span>5</span>Memory</a>
+      <a href="#cpu"><span>6</span>CPU and threads</a>
+      <a href="#stream"><span>7</span>Streaming responses</a>
+      <a href="#where"><span>8</span>Baked in or downloaded</a>
+      <a href="#gpu"><span>9</span>GPUs</a>
+      <a href="#lab"><span>10</span>Lab: containerize hello-model</a>
+      <a href="#check"><span>11</span>Check yourself</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header>
+      <p class="eyebrow">Docker Fundamentals · Lesson 5 · Serving a real model</p>
+      <h1>Putting a real model in a container</h1>
+      <p class="lede">hello-ai's "model" was a keyword counter. This lesson swaps in a real transformer model and shows, with measurements from the test Mac, what changes: image size, start-up time, memory, CPU use and response streaming. It ends with what's different when a model needs a GPU.</p>
+      <div class="meta"><span><b>Reading</b> about 40 min</span><span><b>Lab</b> about 45 min</span><span><b>Practice app</b> <code>~/practice/hello-model</code></span><span><b>Outputs</b> from <a href="../#tested">the test Mac</a>, autumn 2026</span></div>
+      <section style="padding-top:26px" aria-label="Goals">
+        <h3 style="margin-top:0">By the end you should be able to</h3>
+        <ul class="goals" style="margin-bottom:0">
+          <li><span>install PyTorch without gigabytes of GPU libraries you don't use</span></li>
+          <li><span>bake a pinned model into an image, and know when to download it instead</span></li>
+          <li><span>separate "the process is alive" from "the model is ready" so no request arrives too early</span></li>
+          <li><span>set a memory limit from measurements, and recognise when a container was killed for exceeding it</span></li>
+          <li><span>stop PyTorch from fighting a CPU limit</span></li>
+          <li><span>stream a response through a container</span></li>
+          <li><span>explain what a GPU container needs, and where GPUs are available on AWS and Cloudflare</span></li>
+        </ul>
+      </section>
+    </header>
+
+    <section id="app">
+      <h2><span class="n">01</span>The practice app: hello-model</h2>
+      <p>The second practice app is in <code>~/practice/hello-model</code>, where the <a href="../#setup">setup step</a> put it. It runs <strong>DistilBERT SST-2</strong>, a widely used sentiment model (Apache-2.0 licence, 268&nbsp;MB), on the CPU:</p>
+      <div class="table">
+        <table>
+          <thead><tr><th>Endpoint</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><code>POST /predict</code></td><td>Returns <code>positive</code> or <code>negative</code>, a confidence score, and how long the model took</td></tr>
+            <tr><td><code>GET /health/live</code></td><td>Answers as soon as the server is running</td></tr>
+            <tr><td><code>GET /health/ready</code></td><td>Returns HTTP 503 until the model is loaded, then 200</td></tr>
+            <tr><td><code>GET /stream</code></td><td>Sends a reply word by word, the way LLM APIs stream tokens</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Three files matter: <code>main.py</code> (the API), <code>download_model.py</code> (fetches one pinned revision of the model files) and <code>requirements.txt</code>. A <code>.containerignore</code> is included. The Containerfile is yours to write in the lab.</p>
+    </section>
+
+    <section id="torch">
+      <h2><span class="n">02</span>Installing PyTorch the right way</h2>
+      <h3>Step 1: see what a plain install brings</h3>
+      <p>PyTorch is published in several builds. The one you get from a plain <code>pip install torch</code> on a Linux x86-64 server is built for NVIDIA GPUs. These are PyPI's numbers for version 2.14.0, checked in September 2026:</p>
+      <div class="table">
+        <table>
+          <thead><tr><th>What <code>pip</code> downloads for Linux x86-64</th><th class="num">Size</th></tr></thead>
+          <tbody>
+            <tr><td>Default build: the torch package</td><td class="num">555 MB</td></tr>
+            <tr><td>Default build: 16 NVIDIA CUDA packages it depends on</td><td class="num">1.4 GB</td></tr>
+            <tr><td><strong>Default build, total</strong></td><td class="num"><strong>about 2.0 GB</strong></td></tr>
+            <tr><td><strong>CPU-only build</strong> (arm64: 159 MB)</td><td class="num"><strong>196 MB</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>If your service runs on CPUs, those 1.8 GB are pure cost: slower builds, bigger images, slower deploys.</p>
+
+      <h3>Step 2: ask for the CPU build</h3>
+      <p style="margin-bottom:0">The CPU build lives on PyTorch's own package server. <code>requirements.txt</code> in hello-model points pip there:</p>
+      <div class="anno">
+        <div class="head"><span>hello-model/requirements.txt</span><span>pinned</span></div>
+        <div class="row"><code>--extra-index-url https://download.pytorch.org/whl/cpu</code><p>Also look for packages on PyTorch's CPU package server, as well as the normal one (PyPI).</p></div>
+        <div class="row"><code>torch==2.14.0+cpu</code><p>The <code>+cpu</code> version only exists on that server, so pip takes it from there. Everything else comes from PyPI.</p></div>
+        <div class="row"><code>transformers==5.17.0
+huggingface_hub==1.33.0
+fastapi==0.141.1
+uvicorn==0.54.0</code><p>Hugging Face's model library, its download client, and the web server, all pinned (Lesson 2).</p></div>
+      </div>
+      <p>Installed, all of this still takes <strong>1.02&nbsp;GB</strong>: PyTorch unpacks to several hundred MB, plus transformers and numpy. Images with PyTorch are big; the goal is to avoid the unnecessary part, not to reach 200&nbsp;MB.</p>
+
+      <h3>Step 3: download only the files you need</h3>
+      <p>Model repositories often hold the same weights in several formats. This one has five copies (PyTorch, safetensors, TensorFlow, ONNX, Rust), about 1.3&nbsp;GB together. <code>download_model.py</code> asks for exactly four files, 268&nbsp;MB, and pins the revision so a rebuild next month gets identical weights:</p>
+      <div class="cmd"><pre><code>MODEL_REVISION = os.getenv("MODEL_REVISION", "714eb0fa89d2f80546fda750413ed43d93601a13")
+FILES = ["config.json", "model.safetensors", "tokenizer_config.json", "vocab.txt"]
+snapshot_download(MODEL_ID, revision=MODEL_REVISION, local_dir=target, allow_patterns=FILES)</code></pre></div>
+      <p>It takes only the <code>.safetensors</code> weights, which can't run code when loaded (Lesson 3, section 8).</p>
+    </section>
+
+    <section id="image">
+      <h2><span class="n">03</span>The Containerfile</h2>
+      <p>It is the Lesson 3 Containerfile with two additions: a setting that tells the app where the model is, and a step that downloads the model during the build.</p>
+      <div class="anno">
+        <div class="head"><span>hello-model/Containerfile</span><span>1.44 GB</span></div>
+        <div class="row"><code>FROM docker.io/library/python:3.12-slim@sha256:f77ac9…e51f
+ENV PYTHONUNBUFFERED=1
+ENV MODEL_DIR=/models/sst2
+RUN useradd --create-home --uid 1000 app</code><p>Pinned base, unbuffered output and the <code>app</code> user, as in Lesson 3. <code>MODEL_DIR</code> tells the app where the model is. Write the full digest.</p></div>
+        <div class="row"><code>WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt</code><p>The packages. This step reruns only when <code>requirements.txt</code> changes.</p></div>
+        <div class="row"><code>COPY download_model.py .
+RUN python download_model.py /models/sst2</code><p>Copy the download script alone, then run it. The download reruns only if <code>download_model.py</code> or a line above it changes, never because you edited <code>main.py</code>.</p></div>
+        <div class="row"><code>COPY . .
+USER app</code><p>Packages, then model, then code: from least to most often changed, so editing code rebuilds a 5&nbsp;kB layer, not 1.3&nbsp;GB.</p></div>
+        <div class="row"><code>EXPOSE 8000
+HEALTHCHECK --interval=15s --timeout=3s --start-period=60s --retries=3 \
+  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=2)"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]</code><p>The health check calls <code>/health/ready</code>, with a longer start period because models take time to load.</p></div>
+      </div>
+      <p style="margin-bottom:0">Built on the test Mac in 43 seconds. <code>podman history</code> shows where the size comes from:</p>
+      <div class="out"><p class="olabel">Output (largest layers)</p><pre><code>1.02GB   RUN pip install …                   <span class="c">← Python packages, mostly PyTorch</span>
+269MB    RUN python download_model.py …      <span class="c">← the model weights</span>
+5.12kB   COPY . .                            <span class="c">← your code</span>
+         + 149 MB python:3.12-slim           <span class="c">= 1.44 GB</span></code></pre></div>
+      <p>After a changed comment in <code>main.py</code> and a rebuild, every step up to and including the download printed <code>Using cache</code>, and the build took 1.6 seconds.</p>
+    </section>
+
+    <section id="ready">
+      <h2><span class="n">04</span>Alive vs ready</h2>
+      <p>A model has to be loaded into memory before it can answer. That took 1.9 seconds here; a large language model can take minutes. If requests arrive during that time, they fail. The app answers two different questions:</p>
+      <ul>
+        <li><strong><code>/health/live</code>: is the process running and responsive?</strong> If not, the platform should restart it.</li>
+        <li><strong><code>/health/ready</code>: can it serve requests right now?</strong> If not, the platform should send traffic elsewhere and wait. It shouldn't restart anything.</li>
+      </ul>
+      <p style="margin-bottom:0">To make that possible, <code>main.py</code> loads the model in a background thread, so the server can answer health checks during loading:</p>
+      <div class="cmd"><pre><code>@asynccontextmanager
+async def lifespan(app):
+    threading.Thread(target=load_model, daemon=True).start()   <span class="c"># don't block start-up</span>
+    yield
+
+@app.get("/health/ready")
+def ready():
+    ...
+    if state["status"] != "ready":
+        return JSONResponse(body | {"error": state["error"]}, status_code=503)
+    return body</code></pre></div>
+      <p style="margin-bottom:0">The container was started, and <code>/health/ready</code> was asked every quarter second:</p>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 720 168" role="img" aria-labelledby="f1t">
+            <title id="f1t">Timeline: no answer for 0.6 seconds, then /health/ready returns 503 until 2.5 seconds and 200 afterwards; /health/live returns 200 from 0.6 seconds</title>
+            <text class="d-code" x="10" y="45">/health/ready</text>
+            <rect class="d-hw" x="130" y="26" width="112" height="30" rx="2"/><text class="d-m" x="186" y="46" text-anchor="middle">no answer</text>
+            <rect class="d-kernel" x="242" y="26" width="355" height="30" rx="2"/><text class="d-t" x="419" y="46" text-anchor="middle">503 · loading the model</text>
+            <rect class="d-okbox" x="597" y="26" width="93" height="30" rx="2"/><text class="d-t" x="643" y="46" text-anchor="middle">200 · ready</text>
+
+            <text class="d-code" x="10" y="95">/health/live</text>
+            <rect class="d-hw" x="130" y="76" width="112" height="30" rx="2"/><text class="d-m" x="186" y="96" text-anchor="middle">no answer</text>
+            <rect class="d-okbox" x="242" y="76" width="448" height="30" rx="2"/><text class="d-t" x="466" y="96" text-anchor="middle">200 · alive</text>
+
+            <path class="d-line" d="M130,124 L690,124"/>
+            <path class="d-line" d="M130,120 L130,128 M317,120 L317,128 M503,120 L503,128 M690,120 L690,128"/>
+            <text class="d-lab" x="130" y="146" text-anchor="middle">0 s</text>
+            <text class="d-lab" x="317" y="146" text-anchor="middle">1 s</text>
+            <text class="d-lab" x="503" y="146" text-anchor="middle">2 s</text>
+            <text class="d-lab" x="690" y="146" text-anchor="middle">3 s</text>
+            <text class="d-m" x="242" y="164" text-anchor="middle">server up</text>
+            <text class="d-m" x="597" y="164" text-anchor="middle">model loaded</text>
+          </svg>
+        </div>
+      </figure>
+      <div class="out"><p class="olabel">Measured on the test Mac</p><pre><code>  0.0s  HTTP 000                                    <span class="c">← nothing listening yet</span>
+  0.6s  HTTP 503 {"status":"loading","load_seconds":null,…}
+  2.5s  HTTP 200 {"status":"ready","load_seconds":1.9,"torch_threads":5}</code></pre></div>
+      <ul>
+        <li><strong>Liveness must not depend on the model.</strong> If <code>/health/live</code> waited for the model and loading took longer than the platform's patience, the platform would restart the container mid-load, again and again: a restart loop.</li>
+        <li><strong>Readiness is what load balancers should check.</strong> On AWS ECS Express Mode, that's the health-check path you set (Lesson 6). Kubernetes uses both separately (Lesson 7).</li>
+        <li>The container's <code>HEALTHCHECK</code> uses <code>/health/ready</code> with <code>--start-period=60s</code>, so slow loading isn't counted as failure. <code>podman ps</code> showed <code>(healthy)</code> after the first check.</li>
+      </ul>
+    </section>
+
+    <section id="memory">
+      <h2><span class="n">05</span>Memory</h2>
+      <h3>Step 1: measure</h3>
+      <div class="cmd"><pre><code>podman stats --no-stream</code></pre></div>
+      <div class="out"><p class="olabel">Output, model loaded</p><pre><code>NAME   MEM USAGE / LIMIT
+api    382.1MB / 3.784GB      <span class="c">← the limit is the whole Podman VM</span></code></pre></div>
+      <p>Most of that is the model's weights in memory: 66 million numbers at 4 bytes each is about 265&nbsp;MB, plus Python and PyTorch.</p>
+
+      <h3>Step 2: find what happens below it</h3>
+      <p style="margin-bottom:0"><code>--memory</code> sets a hard limit, enforced by a cgroup (Lesson 1). Several were tried:</p>
+      <div class="out"><p class="olabel">Measured on the test Mac</p><pre><code>--memory 600m   ready, 314 MB used
+--memory 300m   ready
+--memory 250m   Exited (137)   OOMKilled=true      <span class="c">← killed while loading</span></code></pre></div>
+      <p>Exit code 137 is SIGKILL (Lesson 1), and <code>podman inspect CONTAINER --format '{{.State.OOMKilled}}'</code> confirms who sent it: the kernel's out-of-memory killer. The logs show nothing useful, because the process never got a chance to write anything. On AWS the same event appears as a stopped task with the reason <code>OutOfMemoryError</code>.</p>
+      <p><strong>Rule:</strong> measure peak memory, then set the limit with headroom, often 1.5 to 2 times. For this model that's around 768&nbsp;MB. Memory use also rises with longer inputs and bigger batches, so measure with realistic requests.</p>
+
+      <h3>Step 3: every worker is a full copy</h3>
+      <p style="margin-bottom:0">uvicorn can run several worker processes for more throughput. Each one loads its own model:</p>
+      <div class="out"><p class="olabel">uvicorn … --workers 2</p><pre><code>model ready in 2.2 s          <span class="c">← printed twice: two copies</span>
+MEM USAGE  638.5MB            <span class="c">← vs 382 MB with one worker</span></code></pre></div>
+      <p>For small models that's fine. For large models the usual pattern is one worker per container and more containers, or a dedicated model server (like vLLM or Triton) that shares one copy across many requests.</p>
+    </section>
+
+    <section id="cpu">
+      <h2><span class="n">06</span>CPU and threads</h2>
+      <p>PyTorch splits each prediction across several threads, one per CPU it can see. Inside a container with a CPU limit, it still sees all of them:</p>
+      <div class="cmd"><pre><code>podman run -d --name api --cpus 1 -p 8000:8000 hello-model:1.0
+podman exec api nproc
+curl localhost:8000/health/ready</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>5                                                  <span class="c">← all of the VM's CPUs</span>
+{"status":"ready","load_seconds":1.6,"torch_threads":5}</code></pre></div>
+      <ol>
+        <li><code>--cpus 1</code> doesn't hide CPUs. It limits how much CPU <em>time</em> the container gets: one CPU's worth.</li>
+        <li>PyTorch sees 5 CPUs and starts 5 threads.</li>
+        <li>The 5 threads compete for one CPU's worth of time. The kernel pauses and resumes them constantly, and they wait on each other.</li>
+      </ol>
+      <p style="margin-bottom:0">Setting <code>OMP_NUM_THREADS</code> tells PyTorch how many threads to use. Thirty requests each way, same limit:</p>
+      <div class="table">
+        <table>
+          <thead><tr><th>With <code>--cpus 1</code></th><th>Threads</th><th class="num">Median time</th><th class="num">90th percentile</th></tr></thead>
+          <tbody>
+            <tr><td>Default</td><td>5</td><td class="num">64.6 ms</td><td class="num">85.7 ms</td></tr>
+            <tr><td><code>-e OMP_NUM_THREADS=1</code></td><td>1</td><td class="num"><strong>30.8 ms</strong></td><td class="num"><strong>35.0 ms</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Twice as fast with one setting.</strong> Rule: set <code>OMP_NUM_THREADS</code> to the number of CPUs the container is allowed. On AWS you choose CPU per task (for example 1 vCPU), so pass <code>OMP_NUM_THREADS=1</code> as an environment variable in the same place. Without a limit, all 5 threads were useful: the median was 12&nbsp;ms.</p>
+    </section>
+
+    <section id="stream">
+      <h2><span class="n">07</span>Streaming responses</h2>
+      <p>LLM APIs don't wait until the whole answer is written; they send it piece by piece, so users see text appear. hello-model's <code>/stream</code> endpoint imitates that with <strong>Server-Sent Events</strong>: one HTTP response that stays open and sends <code>data: …</code> lines as they're ready.</p>
+      <div class="cmd"><pre><code>curl -N "localhost:8000/stream?text=hello"</code></pre></div>
+      <div class="out"><p class="olabel">Output, with the time each line arrived</p><pre><code>58.59  data: {"token": "You"}
+58.90  data: {"token": "wrote:"}
+59.21  data: {"token": "hello."}
+59.51  data: {"token": "Streaming"}
+59.82  data: {"token": "sends"}
+…      data: [DONE]</code></pre></div>
+      <p>Each piece arrived 0.3 seconds after the previous one, straight through the container and the published port. <code>-N</code> stops curl from saving output up before printing it: the same buffering problem as Lesson 3's <code>PYTHONUNBUFFERED</code>. Streaming breaks when something in between buffers or times out:</p>
+      <ul>
+        <li><strong>Reverse proxies</strong> such as nginx buffer responses by default. The header <code>X-Accel-Buffering: no</code> turns that off for nginx.</li>
+        <li><strong>Load balancers</strong> close connections that are quiet for too long. An AWS Application Load Balancer's default is 60 seconds of no data. Long generations should keep sending something.</li>
+        <li><strong>Test streaming through the real path</strong> (load balancer, Worker, proxy), not only against the container directly.</li>
+      </ul>
+    </section>
+
+    <section id="where">
+      <h2><span class="n">08</span>Baked in or downloaded at start</h2>
+      <p>Lesson 3 listed three places for model weights. hello-model supports two with the same image: if <code>MODEL_DIR</code> has no model, the app downloads it there first. Point <code>MODEL_DIR</code> at a volume and the download happens once:</p>
+      <div class="cmd"><pre><code>podman run -d --name api -p 8000:8000 -e MODEL_DIR=/cache/sst2 -v models:/cache hello-model:1.0</code></pre></div>
+      <div class="out"><p class="olabel">Measured on the test Mac</p><pre><code>first start:   0.6s downloading
+first start:   4.5s loading
+first start:   6.4s ready          <span class="c">← 268 MB downloaded into the volume</span>
+second start:  0.6s loading
+second start:  1.9s ready          <span class="c">← found in the volume, no download</span></code></pre></div>
+      <div class="table">
+        <table>
+          <thead><tr><th></th><th>Baked into the image</th><th>Downloaded at start</th></tr></thead>
+          <tbody>
+            <tr><td>Image size</td><td>1.44 GB</td><td>1.17 GB, and it doesn't grow with bigger models</td></tr>
+            <tr><td>Ready after</td><td>about 2 s, every time</td><td>6.4 s first time here, much longer for big models or slow networks</td></tr>
+            <tr><td>Needs at start</td><td>Nothing</td><td>Network access to Hugging Face (or your S3 bucket) and somewhere writable</td></tr>
+            <tr><td>Updating the model</td><td>New image</td><td>Change <code>MODEL_REVISION</code>, restart</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>On Cloudflare, container disks are wiped when a container sleeps, so a downloading container downloads again on every wake-up. That's a strong reason to bake models in there. When a model is baked in, set <code>HF_HUB_OFFLINE=1</code> so Hugging Face libraries never try to contact the internet.</p>
+    </section>
+
+    <section id="gpu">
+      <h2><span class="n">09</span>GPUs</h2>
+      <p>This model answers in 12&nbsp;ms on CPU, so it doesn't need a GPU. Large language models and image models usually do. You can't try this part on your Mac: CUDA needs an NVIDIA GPU, and Macs don't have one. The idea is short, though.</p>
+      <h3>What a GPU container needs, and where each part lives</h3>
+      <div class="table">
+        <table>
+          <thead><tr><th>Part</th><th>Where it lives</th></tr></thead>
+          <tbody>
+            <tr><td>NVIDIA kernel driver</td><td>The host. It's part of the kernel, and containers share the host's kernel (Lesson 1).</td></tr>
+            <tr><td>NVIDIA Container Toolkit</td><td>The host. It lets the container engine hand GPU devices to a container.</td></tr>
+            <tr><td>CUDA and cuDNN libraries</td><td>The image: the 1.4 GB of NVIDIA packages from section 2, or an <code>nvidia/cuda</code> base image</td></tr>
+            <tr><td>Your code and model</td><td>The image</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li><strong>Starting one:</strong> with Podman, <code>podman run --device nvidia.com/gpu=all …</code>, after the toolkit has described the GPUs with <code>nvidia-ctk cdi generate</code>. With Docker, <code>docker run --gpus all …</code>.</li>
+        <li><strong>The compatibility rule:</strong> the host's driver must be new enough for the CUDA version in your image. Newer drivers run older CUDA; the reverse fails even though the image is fine.</li>
+        <li><strong>On AWS:</strong> Fargate, which ECS Express Mode uses, has no GPUs. GPU containers run on EC2 GPU instances (the g5 or g6 families, for example), managed by ECS or by EKS (Kubernetes), or behind a SageMaker endpoint.</li>
+        <li><strong>On Cloudflare:</strong> Containers offer CPU and memory sizes only. For GPU inference, Cloudflare's product is <strong>Workers AI</strong>, which runs hosted models for you, without containers.</li>
+        <li><strong>Cost:</strong> GPU instances cost many times more than CPU ones. Measure first: small models like this one are often fast enough on CPU.</li>
+      </ul>
+    </section>
+
+    <section id="lab">
+      <h2><span class="n">10</span>Lab: containerize hello-model</h2>
+      <p>Work in <code>~/practice/hello-model</code>. The first build downloads about 450&nbsp;MB (PyTorch and the model).</p>
+
+      <div class="step">
+        <span class="sn">1</span>
+        <div>
+          <h3>Read the app</h3>
+          <div class="cmd"><pre><code>cd ~/practice/hello-model
+cat requirements.txt download_model.py
+less main.py</code></pre></div>
+          <p>Find where the model loads in a background thread, and what <code>/health/ready</code> returns before it's done.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">2</span>
+        <div>
+          <h3>Write the Containerfile</h3>
+          <p style="margin-bottom:4px">Start from your Lesson 3 Containerfile and change it so that it:</p>
+          <ul class="task">
+            <li><span>sets <code>MODEL_DIR=/models/sst2</code></span></li>
+            <li><span>copies <code>download_model.py</code> alone and runs <code>python download_model.py /models/sst2</code>, after <code>pip install</code> and before the rest of the code is copied</span></li>
+            <li><span>has its health check on <code>/health/ready</code>, with a 15-second interval and a 60-second start period</span></li>
+          </ul>
+          <details class="sol"><summary>Show solution</summary><div class="inner">
+            <div class="cmd"><pre><code>FROM docker.io/library/python:3.12-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f
+ENV PYTHONUNBUFFERED=1
+ENV MODEL_DIR=/models/sst2
+RUN useradd --create-home --uid 1000 app
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY download_model.py .
+RUN python download_model.py /models/sst2
+COPY . .
+USER app
+EXPOSE 8000
+HEALTHCHECK --interval=15s --timeout=3s --start-period=60s --retries=3 \
+  CMD [&quot;python&quot;, &quot;-c&quot;, &quot;import urllib.request; urllib.request.urlopen(&#x27;http://127.0.0.1:8000/health/ready&#x27;, timeout=2)&quot;]
+CMD [&quot;uvicorn&quot;, &quot;main:app&quot;, &quot;--host&quot;, &quot;0.0.0.0&quot;, &quot;--port&quot;, &quot;8000&quot;]</code></pre></div>
+          </div></details>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">3</span>
+        <div>
+          <h3>Build and inspect</h3>
+          <div class="cmd"><pre><code>podman build --format docker -t hello-model:1.0 .
+podman images hello-model
+podman history hello-model:1.0 | head -12</code></pre></div>
+          <p>Expect about 1.4&nbsp;GB. The two big layers are the packages and the model. Then change a comment in <code>main.py</code> and rebuild: every step up to the download says <code>Using cache</code>, and the build takes a second or two.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">4</span>
+        <div>
+          <h3>Watch it become ready</h3>
+          <div class="cmd"><pre><code>podman run -d --name api -p 8000:8000 hello-model:1.0
+for i in $(seq 1 12); do curl -s -w "   HTTP %{http_code}\n" localhost:8000/health/ready; sleep 0.5; done</code></pre></div>
+          <p>You'll see empty lines with <code>HTTP 000</code>, then <code>503</code> with <code>"loading"</code>, then <code>200</code> with <code>"ready"</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">5</span>
+        <div>
+          <h3>Ask the model</h3>
+          <div class="cmd"><pre><code>curl -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{"text": "I love how fast this container starts"}'
+curl -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{"text": "The build broke again and I am annoyed"}'
+curl -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{"text": "It is a container"}'</code></pre></div>
+          <p>On the test Mac: positive 0.999, negative 0.999, and positive 0.893 for the neutral sentence. SST-2 was trained with only two labels, so it can't say "neutral"; it picks one, confidently. Knowing what a model was trained for matters as much as serving it well.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">6</span>
+        <div>
+          <h3>Memory: measure, then break it</h3>
+          <div class="cmd"><pre><code>podman stats --no-stream
+podman rm -f api
+podman run -d --name small --memory 250m hello-model:1.0
+sleep 10
+podman ps -a --filter name=small
+podman inspect small --format 'OOMKilled={{.State.OOMKilled}} exit={{.State.ExitCode}}'
+podman rm small</code></pre></div>
+          <p>Then try <code>--memory 768m</code> and confirm it's ready.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">7</span>
+        <div>
+          <h3>Threads under a CPU limit</h3>
+          <div class="cmd"><pre><code>podman run -d --name api --cpus 1 -p 8000:8000 hello-model:1.0
+sleep 5
+for i in $(seq 1 15); do curl -s -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{"text": "the deployment went smoothly and everyone is happy"}'; echo; done
+podman rm -f api</code></pre></div>
+          <p>Note the <code>"ms"</code> values. Repeat with <code>-e OMP_NUM_THREADS=1</code> added to <code>podman run</code>, and compare.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">8</span>
+        <div>
+          <h3>Streaming</h3>
+          <div class="cmd"><pre><code>podman run -d --name api -p 8000:8000 hello-model:1.0
+sleep 3
+curl -N "localhost:8000/stream?text=streaming works"</code></pre></div>
+          <p>Words should appear one by one. Try it once without <code>-N</code> too.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">9</span>
+        <div>
+          <h3>Download at start instead</h3>
+          <div class="cmd"><pre><code>podman rm -f api
+podman run -d --name api -p 8000:8000 -e MODEL_DIR=/cache/sst2 -v models:/cache hello-model:1.0
+for i in $(seq 1 30); do curl -s localhost:8000/health/ready; echo; sleep 0.5; done</code></pre></div>
+          <p>Watch <code>"downloading"</code>, then <code>"loading"</code>, then <code>"ready"</code>. Remove the container, start it again with the same command, and it skips straight to loading.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">10</span>
+        <div>
+          <h3>Clean up</h3>
+          <div class="cmd"><pre><code>podman rm -f api
+podman volume rm models</code></pre></div>
+          <p>Keep <code>hello-model:1.0</code> if you have the disk space: Lesson 7 uses its health endpoints.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="check">
+      <h2><span class="n">11</span>Check yourself</h2>
+      <p>Try answering each question out loud before opening it.</p>
+      <div class="quiz">
+        <details class="q"><summary><span class="qn">Q1</span><span>A teammate's CPU-only model service has a 7&nbsp;GB image. Where would you look first?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>At which PyTorch build was installed. A plain <code>pip install torch</code> on Linux x86-64 brings about 2&nbsp;GB of downloads, mostly NVIDIA libraries (several GB installed). The CPU build from <code>download.pytorch.org/whl/cpu</code> is about 200&nbsp;MB. Then check whether the model repository was downloaded in every format.</p></div></details>
+        <details class="q"><summary><span class="qn">Q2</span><span>Why is <code>download_model.py</code> copied and run before <code>COPY . .</code>, and not after it?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Caching. After <code>COPY . .</code>, every code change would invalidate the download step and fetch 268&nbsp;MB again. Placed before it, with only <code>download_model.py</code> copied first, the download reruns only when that file or a line above it changes.</p></div></details>
+        <details class="q"><summary><span class="qn">Q3</span><span>A model takes 3 minutes to load. The platform's liveness check calls <code>/health/ready</code> and gives up after 60 seconds. What happens?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>A restart loop: the platform restarts the container before the model finishes loading, every time. Liveness should check <code>/health/live</code>, which answers as soon as the server runs. Readiness should check <code>/health/ready</code>, which only controls whether traffic is sent.</p></div></details>
+        <details class="q"><summary><span class="qn">Q4</span><span>A container exits with code 137 a few seconds after starting, and its logs end in the middle of loading. What do you check, and what's the fix?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p><code>podman inspect … --format '{{.State.OOMKilled}}'</code>. If it's true, the memory limit is below what the model needs. Measure real usage with <code>podman stats</code> and set the limit with headroom (1.5 to 2 times).</p></div></details>
+        <details class="q"><summary><span class="qn">Q5</span><span>You run the model with 4 uvicorn workers to handle more traffic, and memory jumps from 400&nbsp;MB to 1.6&nbsp;GB. Why?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Each worker is a separate process that loads its own copy of the model. For large models, prefer one worker per container and more containers, or a model server that shares one copy.</p></div></details>
+        <details class="q"><summary><span class="qn">Q6</span><span>Your model runs twice as slow on a 1-vCPU AWS task as on your laptop, even for single requests. What setting would you try first?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p><code>OMP_NUM_THREADS=1</code> (matching the CPU allowance). PyTorch sees all the host's CPUs and starts one thread per CPU, and those threads fight over one CPU's worth of time. On the test Mac this halved the response time.</p></div></details>
+        <details class="q"><summary><span class="qn">Q7</span><span>Streaming works with <code>curl</code> against the container, but through the company's nginx proxy the whole answer arrives at once at the end. Why?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>nginx buffers responses by default. Disable buffering for that route, for example by sending the <code>X-Accel-Buffering: no</code> header from the app. Always test streaming through the real path.</p></div></details>
+        <details class="q"><summary><span class="qn">Q8</span><span>Your team wants to move a 7B-parameter LLM from a GPU server into ECS Express Mode. What's the problem?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>ECS Express Mode runs on Fargate, which has no GPUs. It needs ECS or EKS on EC2 GPU instances (or SageMaker), with a host driver new enough for the image's CUDA version.</p></div></details>
+      </div>
+
+      <div class="next">
+        <p class="eyebrow">Next · Lesson 6</p>
+        <h3 style="margin-top:0">Shipping it</h3>
+        <p>Registries, building for amd64 from your Mac, a GitLab CI pipeline that builds with Buildah and logs in to AWS without stored keys, and deploying to ECS Express Mode and Cloudflare Containers.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('.cmd').forEach(function(box){
+    var pre = box.querySelector('pre');
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var clone = pre.cloneNode(true);
+      clone.querySelectorAll('.c').forEach(function(c){ c.remove(); });
+      var text = clone.textContent.split('\n').map(function(l){ return l.replace(/\s+$/,''); }).join('\n').trim();
+      var done = function(){ btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1400); };
+      var fallback = function(){
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Press ⌘C';
+      };
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+    });
+    box.appendChild(btn);
+  });
+
+  var links = {};
+  document.querySelectorAll('.toc a').forEach(function(a){ links[a.getAttribute('href').slice(1)] = a; });
+  if (!('IntersectionObserver' in window)) return;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting) {
+        Object.keys(links).forEach(function(k){ links[k].classList.remove('on'); });
+        if (links[e.target.id]) links[e.target.id].classList.add('on');
+      }
+    });
+  }, {rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('main section[id]').forEach(function(s){ obs.observe(s); });
+})();
+</script>
+</body>
+</html>

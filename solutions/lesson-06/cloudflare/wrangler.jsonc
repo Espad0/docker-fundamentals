@@ -1,0 +1,22 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "hello-ai",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-10-08",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": { "enabled": true },
+	"vars": { "MODEL_NAME": "keyword-sentiment-v1" },
+	"containers": [
+		{
+			"class_name": "HelloAi",
+			// A prebuilt linux/amd64 image in Amazon ECR (built by GitLab CI)
+			"image": "123456789012.dkr.ecr.eu-west-1.amazonaws.com/hello-ai:1.0",
+			"instance_type": "basic",
+			"max_instances": 3
+		}
+	],
+	"durable_objects": {
+		"bindings": [{ "class_name": "HelloAi", "name": "HELLO_AI" }]
+	},
+	"migrations": [{ "new_sqlite_classes": ["HelloAi"], "tag": "v1" }]
+}
