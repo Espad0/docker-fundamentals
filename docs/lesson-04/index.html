@@ -274,7 +274,7 @@ details.sol .inner{padding:12px 14px 4px}
   <main>
     <header>
       <p class="eyebrow">Docker Fundamentals · Lesson 4 · Volumes, networking and Compose</p>
-      <h1>Running several containers together</h1>
+      <h1>Keeping data and connecting containers</h1>
       <p class="lede">Real AI apps are rarely one container. There's an API, a database, maybe a vector store or a cache, and data that must survive when containers are replaced. This lesson gives hello-ai a Postgres database, connects the two, and starts the whole thing with one command.</p>
       <div class="meta"><span><b>Reading</b> about 40 min</span><span><b>Lab</b> about 40 min</span><span><b>Starts from</b> your Lesson 3 image</span><span><b>Outputs</b> from <a href="../#tested">the test Mac</a>, autumn 2026</span></div>
       <section style="padding-top:26px" aria-label="Goals">
@@ -298,7 +298,12 @@ details.sol .inner{padding:12px 14px 4px}
         <li>documents users uploaded for a RAG system, and the vector index built from them,</li>
         <li>model weights you downloaded once and don't want to download on every start.</li>
       </ul>
-      <p>Podman offers two ways to keep data outside the container:</p>
+      <p>So this data has to be kept outside the container. There are two kinds of answer:</p>
+      <ol>
+        <li><strong>Keep a folder outside the container.</strong> Podman stores the contents of one folder somewhere else and shows that folder inside the container. The app reads and writes ordinary files and notices no difference.</li>
+        <li><strong>Send the data to another service.</strong> The app sends the data over the network to a program that stores it: a database, or file storage such as Amazon S3. Podman takes no part in this, and the app's container keeps nothing.</li>
+      </ol>
+      <p>For the first kind, Podman offers two ways:</p>
 
       <figure>
         <div class="diagram">
@@ -334,6 +339,11 @@ details.sol .inner{padding:12px 14px 4px}
       <ul>
         <li><strong>Named volume:</strong> storage that Podman creates and manages. You refer to it by name. Use it for data the app owns, like a database.</li>
         <li><strong>Bind mount:</strong> a folder from your Mac, made visible inside the container. Use it when you want to see or edit the files yourself, like your code during development.</li>
+      </ul>
+      <p>This lesson uses both kinds:</p>
+      <ul>
+        <li>Postgres keeps its files in a named volume, which is the first kind. Sections 2 and 3 cover volumes and bind mounts.</li>
+        <li>hello-ai keeps its predictions by sending them to Postgres, which is the second kind. It has no volume of its own. <a href="#send">Section 4, step 4</a> shows this running, and section 8 explains why it is the usual choice in production.</li>
       </ul>
     </section>
 
@@ -643,6 +653,40 @@ curl localhost:8000/health</code></pre></div>
       <div class="cmd"><pre><code>nc -z -w 2 localhost 5432 &amp;&amp; echo reachable || echo "not reachable"</code></pre></div>
       <div class="out"><p class="olabel">Output</p><pre><code>not reachable</code></pre></div>
       <p>The database has no <code>-p</code>, so nothing outside the network can reach it: not your Mac, and on a server, not the internet. Only the API is published. That's the pattern to keep: containers talk to each other inside a private network, and only the entry point is exposed.</p>
+
+      <h3 id="send" style="scroll-margin-top:16px">Step 4: keep data by sending it to another container</h3>
+      <p>Section 1 named a second kind of answer: send the data to a service that stores it. <code>api</code> already does this. It was started without <code>-v</code>, and its predictions are stored by <code>db</code>.</p>
+      <p style="margin-bottom:0">Two short commands show the same thing with nothing else in the way. The first starts a container on <code>hello-net</code>, with no volume. It writes one row into the database, and then <code>--rm</code> removes it:</p>
+      <div class="cmd"><pre><code>podman run --rm --network hello-net -e PGPASSWORD=hello-dev-password \
+  docker.io/library/postgres:17 psql -h db -U hello -d hello \
+  -c "CREATE TABLE messages (body text)" \
+  -c "INSERT INTO messages VALUES ('written by container 1')"</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>CREATE TABLE
+INSERT 0 1</code></pre></div>
+      <p style="margin-bottom:0">The second command starts a brand-new container, again with no volume, and asks for the row:</p>
+      <div class="cmd"><pre><code>podman run --rm --network hello-net -e PGPASSWORD=hello-dev-password \
+  docker.io/library/postgres:17 psql -h db -U hello -d hello \
+  -c "SELECT * FROM messages"</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>          body
+------------------------
+ written by container 1
+(1 row)</code></pre></div>
+      <p>The row survived because it was never stored in the first container. It travelled over the network to <code>db</code>. Compare section 2, step 1: there the first container kept its file inside itself, and the second container found nothing.</p>
+      <p>The parts of these commands that are new:</p>
+      <ul>
+        <li><code>psql</code> is Postgres's command-line client, and the <code>postgres:17</code> image contains it. A command after the image name runs in place of the image's default command (Lesson 2), so these two containers run the client and never start a database server.</li>
+        <li><code>-h db</code> is the host to connect to: the name of the database container, found through the network's DNS.</li>
+        <li><code>-U hello</code> and <code>-d hello</code> are the user and the database that <code>db</code> was created with in step 2.</li>
+        <li><code>-e PGPASSWORD=…</code> sets the variable that <code>psql</code> reads the password from.</li>
+        <li><code>-c "…"</code> runs one SQL statement.</li>
+      </ul>
+      <p style="margin-bottom:0">Without <code>--network hello-net</code>, the second command has nowhere to send its question:</p>
+      <div class="cmd"><pre><code>podman run --rm -e PGPASSWORD=hello-dev-password \
+  docker.io/library/postgres:17 psql -h db -U hello -d hello \
+  -c "SELECT * FROM messages"</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>psql: error: could not translate host name "db" to address: Name or service not known</code></pre></div>
+      <p>This container joined the default network, where the name <code>db</code> means nothing, as in step 1.</p>
+      <p>One thing to notice: the service still has to keep the data on a disk of its own. <code>db</code> is a container too, so it needs the first kind of answer, a volume. Started as in step 2, without <code>-v</code>, it gets an anonymous one (section 2, step 8). The Compose file in the next section gives it a named volume, <code>pgdata</code>. With a service such as Amazon S3, the storage runs on the provider's machines, and that disk is the provider's job.</p>
     </section>
 
     <section id="compose">
@@ -807,7 +851,7 @@ Container api-1  Started</code></pre></div>
       </div>
 
       <h3>What you tell the team that deploys your image</h3>
-      <p><strong>1. Most often, the app container needs no volume.</strong> The app keeps nothing important on its own disk and sends data to a service built for it: a managed database such as Amazon RDS, or file storage such as S3. The deploy team only passes connection settings as environment variables.</p>
+      <p><strong>1. Most often, the app container needs no volume.</strong> The app keeps nothing important on its own disk and sends data to a service built for it: a managed database such as Amazon RDS, or file storage such as S3. The deploy team only passes connection settings as environment variables. This is the second kind of answer from <a href="#forget">section 1</a>.</p>
       <p>Your hello-ai already works this way. It stores predictions in Postgres through <code>DATABASE_URL</code>. On your Mac, Postgres is a container with the <code>pgdata</code> volume. In production the database would usually be RDS, and hello-ai would get a different <code>DATABASE_URL</code>. The volume is only part of your local setup.</p>
       <p><strong>2. When a volume is needed, it is written into the deployment config.</strong> Examples are a database you run yourself, a vector index on disk, or a cache of model weights. The volume is declared in the Compose file, the Kubernetes manifest or the Terraform code. That file lives in git and gets reviewed like code, so nobody has to remember to create a volume by hand.</p>
       <p style="margin-bottom:0"><strong>3. You hand over a short contract, usually in the README.</strong> For hello-ai it looks like this:</p>
@@ -947,7 +991,7 @@ podman rm -f api</code></pre></div>
         <span class="sn">3</span>
         <div>
           <h3>Connect two containers by hand</h3>
-          <p>Follow section 4: first try without a network and read the <code>failed to resolve host 'db'</code> error in <code>podman logs api</code>. Then create <code>hello-net</code> and start both containers on it. Post a prediction, read <code>/history</code>, and confirm port 5432 isn't reachable from your Mac.</p>
+          <p>Follow section 4: first try without a network and read the <code>failed to resolve host 'db'</code> error in <code>podman logs api</code>. Then create <code>hello-net</code> and start both containers on it. Post a prediction, read <code>/history</code>, and confirm port 5432 isn't reachable from your Mac. Then run the two commands of step 4: one container writes a row, and a new container reads it.</p>
           <div class="cmd"><pre><code>curl -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{"text": "containers talking to each other works"}'
 curl localhost:8000/history
 podman exec api python -c "import socket; print(socket.gethostbyname('db'))"</code></pre></div>
