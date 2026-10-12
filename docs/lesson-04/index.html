@@ -620,7 +620,52 @@ INFO:     Application startup complete.</code></pre></div>
 
     <section id="network">
       <h2><span class="n">04</span>Networks: containers finding each other</h2>
-      <p>Each container has its own network namespace, with its own IP address. For hello-ai to use Postgres, it needs to find the database container. The address goes into a <strong>connection string</strong>:</p>
+      <p><strong>Why you need this.</strong> In the lab, hello-ai saves every prediction in a Postgres database. That makes two containers: one runs your code and one runs Postgres. Your code has to be told where the database is. This section shows what to write there, and how to read the two errors you get when it is wrong.</p>
+      <p style="margin-bottom:6px">Two words come first:</p>
+      <ul>
+        <li>An <strong>IP address</strong> is the number of one machine on a network, for example <code>10.88.0.51</code>.</li>
+        <li>A <strong>port</strong> is the number of one program on that machine. Postgres waits for connections on port <code>5432</code>, and hello-ai on port <code>8000</code>.</li>
+      </ul>
+      <p>You have used both already. In <code>curl localhost:8000/health</code>, <code>localhost</code> is a name that means "this same machine", and <code>8000</code> is the port.</p>
+
+      <h3>Step 1: every container has its own address</h3>
+      <div class="cmd"><pre><code>podman run --rm docker.io/library/postgres:17 hostname -i</code></pre></div>
+      <div class="out"><p class="olabel">Output of running it twice</p><pre><code>10.88.0.51
+10.88.0.52</code></pre></div>
+      <p><code>hostname -i</code> prints the address of the machine it runs on. Each run starts a new container, and each container gets its own address, as if it were a separate machine. Your numbers will differ.</p>
+      <p style="margin-bottom:0">So inside a container, <code>localhost</code> means that container itself. It does not mean your Mac, and it does not mean another container. To see this, start a database:</p>
+      <div class="cmd"><pre><code>podman run -d --name db -e POSTGRES_USER=hello -e POSTGRES_PASSWORD=hello-dev-password \
+  -e POSTGRES_DB=hello docker.io/library/postgres:17</code></pre></div>
+      <p style="margin-bottom:0">The three <code>-e</code> settings tell Postgres which user, password and database to create. Now start a second container, and ask from there whether a database answers at <code>localhost</code>:</p>
+      <div class="cmd"><pre><code>podman run --rm docker.io/library/postgres:17 \
+  pg_isready -h localhost</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>localhost:5432 - no response</code></pre></div>
+      <p style="margin-bottom:0"><code>pg_isready</code> is a small program in the Postgres image. It asks one question: is a database accepting connections at this host? <code>-h</code> names the host. The answer is no, because there is no database inside that second container. The same question asked inside the <code>db</code> container gets a yes:</p>
+      <div class="cmd"><pre><code>podman exec db pg_isready -h localhost</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>localhost:5432 - accepting connections</code></pre></div>
+      <p>This is why a setting such as <code>localhost:5432</code> stops working when an app moves into a container. It worked while the app and the database ran on one machine.</p>
+
+      <h3>Step 2: use the container's name, on a network you created</h3>
+      <p>The second container could use the database's address. But a new container gets a new address, and containers are replaced often, for example at every update. An address written into your settings would soon be wrong. A name stays the same. Something then has to turn the name into the current address, and that lookup is called <strong>DNS</strong>.</p>
+      <p style="margin-bottom:0">First, see it fail. Ask for the database by its container name:</p>
+      <div class="cmd"><pre><code>podman run --rm docker.io/library/postgres:17 \
+  pg_isready -h db</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>db:5432 - no response</code></pre></div>
+      <p>A container started without <code>--network</code> joins Podman's default network, and that network has no name lookup. Podman looks names up only on a network you created.</p>
+      <p style="margin-bottom:0">You choose a container's network when you start it, with <code>--network</code>. So remove the database, create a network, and start the database again on it:</p>
+      <div class="cmd"><pre><code>podman rm -f -v db
+podman network create hello-net
+podman run -d --name db --network hello-net -e POSTGRES_USER=hello \
+  -e POSTGRES_PASSWORD=hello-dev-password -e POSTGRES_DB=hello docker.io/library/postgres:17</code></pre></div>
+      <p style="margin-bottom:0">The <code>-v</code> on <code>podman rm</code> also removes the nameless volume that Postgres was given (section 2, step 4). Ask again, this time from a container on the same network:</p>
+      <div class="cmd"><pre><code>podman run --rm --network hello-net docker.io/library/postgres:17 \
+  pg_isready -h db</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>db:5432 - accepting connections</code></pre></div>
+      <p style="margin-bottom:0">If it says <code>no response</code>, the database is still starting. Wait a few seconds and run it again. You can also watch the lookup on its own. <code>getent hosts</code> asks for the address that belongs to a name:</p>
+      <div class="cmd"><pre><code>podman run --rm --network hello-net docker.io/library/postgres:17 \
+  getent hosts db</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>10.89.1.2       db.dns.podman</code></pre></div>
+      <p style="margin-bottom:0">Now the address that hello-ai is given in the lab is easy to read. It is called a <strong>connection string</strong>:</p>
       <div class="ref" aria-label="Connection string anatomy">
         <span class="part p2"><b>postgresql://</b><small>Protocol</small></span>
         <span class="part p1"><b>hello:hello-dev-password</b><small>User : password</small></span><span class="sep">@</span>
@@ -628,27 +673,25 @@ INFO:     Application startup complete.</code></pre></div>
         <span class="part p4"><b>5432</b><small>Port</small></span><span class="sep">/</span>
         <span class="part p2"><b>hello</b><small>Database</small></span>
       </div>
-      <p>The host is <code>db</code>, the name of the database container. Whether that name works depends on the network.</p>
+      <p>The host is <code>db</code>, the container's name, which the network turns into an address. <code>5432</code> is the port that Postgres waits on. The user, the password and the database are the ones from the <code>-e</code> settings above.</p>
+      <p style="margin-bottom:0">When a connection fails, the error tells you which part went wrong:</p>
+      <div class="table">
+        <table>
+          <thead><tr><th>The error says</th><th>What failed</th><th>Usual cause</th></tr></thead>
+          <tbody>
+            <tr><td><code>Name or service not known</code></td><td>Turning the name into an address</td><td>The two containers are not on the same network that you created, or the name is misspelt</td></tr>
+            <tr><td><code>Connection refused</code></td><td>The address was found, but no program waits on that port</td><td>A wrong port, <code>localhost</code> used as the host, or a database that has not finished starting (section 6)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>You will meet both in the lab. Day to day you rarely type <code>podman network create</code>: Compose, in the next section, creates the network for you, and you write the service's name as the host.</p>
 
-      <h3>Step 1: on the default network, names don't work</h3>
-      <div class="cmd"><pre><code>podman run -d --name db -e POSTGRES_USER=hello -e POSTGRES_PASSWORD=hello-dev-password \
-  -e POSTGRES_DB=hello docker.io/library/postgres:17
-podman run -d --name api -p 8000:8000 \
-  -e DATABASE_URL=postgresql://hello:hello-dev-password@db:5432/hello hello-ai:2.0
-podman logs api</code></pre></div>
-      <div class="out"><p class="olabel">Output</p><pre><code>psycopg.OperationalError: failed to resolve host 'db': [Errno -2] Name or service not known
-ERROR:    Application startup failed. Exiting.</code></pre></div>
-      <p>Containers started without <code>--network</code> join Podman's default network, which has no name lookup (DNS): <code>podman network inspect podman</code> shows <code>dns_enabled=false</code>.</p>
-
-      <h3>Step 2: create a network, and names work</h3>
-      <div class="cmd"><pre><code>podman network create hello-net
-podman run -d --name db --network hello-net -e POSTGRES_USER=hello \
-  -e POSTGRES_PASSWORD=hello-dev-password -e POSTGRES_DB=hello docker.io/library/postgres:17
-podman run -d --name api --network hello-net -p 8000:8000 \
-  -e DATABASE_URL=postgresql://hello:hello-dev-password@db:5432/hello hello-ai:2.0
-curl localhost:8000/health</code></pre></div>
-      <div class="out"><p class="olabel">Output</p><pre><code>{"status":"ok","model":"keyword-sentiment-v1","api_key_configured":false,"database":"connected"}</code></pre></div>
-      <p>A network you create has DNS switched on (<code>dns_enabled=true</code>). Inside it, every container's name resolves to its address; on the test Mac, <code>db</code> resolved to <code>10.89.0.2</code>. Predictions posted to the API were stored and came back from <code>/history</code>.</p>
+      <h3>Step 3: only publish what users need</h3>
+      <p style="margin-bottom:0"><code>-p</code> (Lesson 2) is a separate thing from the network. It opens a way in from outside: from your Mac, and on a server, from the internet. Containers on the same network reach each other without it. The database was started without <code>-p</code>, so your Mac cannot reach it:</p>
+      <div class="cmd"><pre><code>nc -z -w 2 localhost 5432 &amp;&amp; echo reachable || echo "not reachable"</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>not reachable</code></pre></div>
+      <p><code>nc -z</code> only tries to connect to a host and a port, and <code>-w 2</code> makes it give up after two seconds. Here <code>localhost</code> is your Mac, because the command runs on your Mac.</p>
+      <p>That is the pattern to keep: containers talk to each other inside a private network, and only the entry point is published. The lab builds this layout, with hello-ai as the only published container:</p>
 
       <figure>
         <div class="diagram">
@@ -671,7 +714,7 @@ curl localhost:8000/health</code></pre></div>
             <text class="d-m" x="270" y="118">connects to</text>
             <text class="d-code" x="270" y="136">db:5432</text>
             <path class="d-line" d="M426,100 L518,100" marker-end="url(#ah2)"/>
-            <text class="d-m" x="472" y="90" text-anchor="middle">db → 10.89.0.2</text>
+            <text class="d-m" x="472" y="90" text-anchor="middle">db → 10.89.1.2</text>
             <rect class="d-box" x="522" y="52" width="170" height="96" rx="3"/>
             <text class="d-tb" x="536" y="74">db (postgres:17)</text>
             <text class="d-code" x="536" y="96">port 5432</text>
@@ -683,13 +726,8 @@ curl localhost:8000/health</code></pre></div>
         </div>
       </figure>
 
-      <h3>Step 3: only publish what users need</h3>
-      <div class="cmd"><pre><code>nc -z -w 2 localhost 5432 &amp;&amp; echo reachable || echo "not reachable"</code></pre></div>
-      <div class="out"><p class="olabel">Output</p><pre><code>not reachable</code></pre></div>
-      <p>The database has no <code>-p</code>, so nothing outside the network can reach it: not your Mac, and on a server, not the internet. Only the API is published. That's the pattern to keep: containers talk to each other inside a private network, and only the entry point is exposed.</p>
-
       <h3 id="send" style="scroll-margin-top:16px">Step 4: keep data by sending it to another container</h3>
-      <p>Section 1 named a second kind of answer: send the data to a service that stores it. <code>api</code> already does this. It was started without <code>-v</code>, and its predictions are stored by <code>db</code>.</p>
+      <p>Section 1 named a second kind of answer: send the data to a service that stores it. hello-ai does this in the lab: it runs without <code>-v</code>, and its predictions are stored by <code>db</code>.</p>
       <p style="margin-bottom:0">Two short commands show the same thing with nothing else in the way. The first starts a container on <code>hello-net</code>, with no volume. It writes one row into the database, and then <code>--rm</code> removes it:</p>
       <div class="cmd"><pre><code>podman run --rm --network hello-net -e PGPASSWORD=hello-dev-password \
   docker.io/library/postgres:17 psql -h db -U hello -d hello \
@@ -719,13 +757,16 @@ INSERT 0 1</code></pre></div>
   docker.io/library/postgres:17 psql -h db -U hello -d hello \
   -c "SELECT * FROM messages"</code></pre></div>
       <div class="out"><p class="olabel">Output</p><pre><code>psql: error: could not translate host name "db" to address: Name or service not known</code></pre></div>
-      <p>This container joined the default network, where the name <code>db</code> means nothing, as in step 1.</p>
+      <p>This container joined the default network, where the name <code>db</code> means nothing, as at the start of step 2.</p>
       <p>One thing to notice: the service still has to keep the data on a disk of its own. <code>db</code> is a container too, so it needs the first kind of answer, a volume. Started as in step 2, without <code>-v</code>, it gets an anonymous one (section 2, step 4). The Compose file in the next section gives it a named volume, <code>pgdata</code>. With a service such as Amazon S3, the storage runs on the provider's machines, and that disk is the provider's job.</p>
+      <p style="margin-bottom:0"><strong>Clean up.</strong> The lab starts both again from nothing:</p>
+      <div class="cmd"><pre><code>podman rm -f -v db
+podman network rm hello-net</code></pre></div>
     </section>
 
     <section id="compose">
       <h2><span class="n">05</span>Compose: the whole app in one file</h2>
-      <p>Section 4 took a network, two long <code>podman run</code> commands, a volume, and the right order. <strong>Compose</strong> lets you describe all of that once, in a file called <code>compose.yaml</code>, and start everything with <code>podman compose up</code>. <code>podman compose</code> doesn't do the work itself. It hands it to a Compose program on your Mac. The <a href="../#setup">setup step</a> installs Docker Compose (the test Mac has v5.5.1), which prints a line saying so each time:</p>
+      <p>Running hello-ai and its database by hand takes a network, two long <code>podman run</code> commands, a volume, and the right order. You do that once in the lab. <strong>Compose</strong> lets you describe all of that once, in a file called <code>compose.yaml</code>, and start everything with <code>podman compose up</code>. <code>podman compose</code> doesn't do the work itself. It hands it to a Compose program on your Mac. The <a href="../#setup">setup step</a> installs Docker Compose (the test Mac has v5.5.1), which prints a line saying so each time:</p>
       <div class="out"><p class="olabel">Output</p><pre><code>&gt;&gt;&gt;&gt; Executing external compose provider "/usr/local/bin/docker-compose". &lt;&lt;&lt;&lt;</code></pre></div>
       <p style="margin-bottom:0">Here's the file for hello-ai and Postgres, line by line:</p>
 
@@ -1025,10 +1066,36 @@ podman rm -f api</code></pre></div>
         <span class="sn">3</span>
         <div>
           <h3>Connect two containers by hand</h3>
-          <p>Follow section 4: first try without a network and read the <code>failed to resolve host 'db'</code> error in <code>podman logs api</code>. Then create <code>hello-net</code> and start both containers on it. Post a prediction, read <code>/history</code>, and confirm port 5432 isn't reachable from your Mac. Then run the two commands of step 4: one container writes a row, and a new container reads it.</p>
+          <p style="margin-bottom:0">Section 4 reached the database from a test container. Now do it with your app. First try without a network: start the database and the API, and read the API's logs.</p>
+          <div class="cmd"><pre><code>podman run -d --name db -e POSTGRES_USER=hello -e POSTGRES_PASSWORD=hello-dev-password \
+  -e POSTGRES_DB=hello docker.io/library/postgres:17
+podman run -d --name api -p 8000:8000 \
+  -e DATABASE_URL=postgresql://hello:hello-dev-password@db:5432/hello hello-ai:2.0
+sleep 3
+podman logs api</code></pre></div>
+          <div class="out"><p class="olabel">Output, the last lines</p><pre><code>psycopg.OperationalError: failed to resolve host 'db': [Errno -2] Name or service not known
+
+ERROR:    Application startup failed. Exiting.</code></pre></div>
+          <p style="margin-bottom:0">This is the first row of the table in section 4: the name was not found, because the containers are not on a network you created. Remove both, create <code>hello-net</code>, and start the database on it:</p>
+          <div class="cmd"><pre><code>podman rm -f -v api db
+podman network create hello-net
+podman run -d --name db --network hello-net -e POSTGRES_USER=hello \
+  -e POSTGRES_PASSWORD=hello-dev-password -e POSTGRES_DB=hello docker.io/library/postgres:17</code></pre></div>
+          <p style="margin-bottom:0">Wait until the database answers. hello-ai connects to it once when it starts, and exits with <code>Connection refused</code> if the database is not ready yet. Section 6 is about that.</p>
+          <div class="cmd"><pre><code>podman run --rm --network hello-net docker.io/library/postgres:17 \
+  pg_isready -h db</code></pre></div>
+          <div class="out"><p class="olabel">Output</p><pre><code>db:5432 - accepting connections</code></pre></div>
+          <p style="margin-bottom:0">Then start the API on the same network:</p>
+          <div class="cmd"><pre><code>podman run -d --name api --network hello-net -p 8000:8000 \
+  -e DATABASE_URL=postgresql://hello:hello-dev-password@db:5432/hello hello-ai:2.0
+sleep 2
+curl localhost:8000/health</code></pre></div>
+          <div class="out"><p class="olabel">Output</p><pre><code>{"status":"ok","model":"keyword-sentiment-v1","api_key_configured":false,"database":"connected"}</code></pre></div>
+          <p style="margin-bottom:0">Post a prediction, read it back from <code>/history</code>, and print the address that <code>db</code> stands for:</p>
           <div class="cmd"><pre><code>curl -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{"text": "containers talking to each other works"}'
 curl localhost:8000/history
 podman exec api python -c "import socket; print(socket.gethostbyname('db'))"</code></pre></div>
+          <p>Confirm that port 5432 isn't reachable from your Mac (section 4, step 3). Then run the two commands of section 4, step 4: one container writes a row, and a new container reads it.</p>
           <p style="margin-bottom:0">Clean up, including the database's anonymous volume (<code>-v</code>):</p>
           <div class="cmd"><pre><code>podman rm -f -v api db
 podman network rm hello-net</code></pre></div>
