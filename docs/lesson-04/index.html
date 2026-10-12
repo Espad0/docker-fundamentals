@@ -276,7 +276,7 @@ details.sol .inner{padding:12px 14px 4px}
       <p class="eyebrow">Docker Fundamentals · Lesson 4 · Volumes, networking and Compose</p>
       <h1>Keeping data and connecting containers</h1>
       <p class="lede">Real AI apps are rarely one container. There's an API, a database, maybe a vector store or a cache, and data that must survive when containers are replaced. This lesson gives hello-ai a Postgres database, connects the two, and starts the whole thing with one command.</p>
-      <div class="meta"><span><b>Reading</b> about 40 min</span><span><b>Lab</b> about 40 min</span><span><b>Starts from</b> your Lesson 3 image</span><span><b>Outputs</b> from <a href="../#tested">the test Mac</a>, autumn 2026</span></div>
+      <div class="meta"><span><b>Reading</b> about 30 min</span><span><b>Lab</b> about 40 min</span><span><b>Starts from</b> your Lesson 3 image</span><span><b>Outputs</b> from <a href="../#tested">the test Mac</a>, autumn 2026</span></div>
       <section style="padding-top:26px" aria-label="Goals">
         <h3 style="margin-top:0">By the end you should be able to</h3>
         <ul class="goals" style="margin-bottom:0">
@@ -355,6 +355,8 @@ details.sol .inner{padding:12px 14px 4px}
         <p>It works like a USB stick. The container is a computer that gets wiped when it is removed. The volume is the stick you plug in to keep your files.</p>
       </div>
 
+      <p>You will use a named volume mostly for a database on your own machine, as in this lesson's lab. In production, a volume is needed only by a container that is itself the storage, such as a database that a team runs itself. The container with your app usually has none (section 8).</p>
+
       <h3>Step 1: first, see the problem</h3>
       <p style="margin-bottom:0">Write a file in a container, with no volume:</p>
       <div class="cmd"><pre><code>podman run --rm docker.io/library/python:3.12-slim sh -c "mkdir /notes &amp;&amp; echo remember-me &gt; /notes/a.txt &amp;&amp; ls /notes"</code></pre></div>
@@ -363,41 +365,27 @@ details.sol .inner{padding:12px 14px 4px}
       <div class="cmd"><pre><code>podman run --rm docker.io/library/python:3.12-slim sh -c "ls /notes"</code></pre></div>
       <div class="out"><p class="olabel">Output</p><pre><code>ls: cannot access '/notes': No such file or directory</code></pre></div>
       <p>The first container wrote the file into its own writable layer (Lesson 1). <code>--rm</code> deleted that container, and the layer went with it. The second container started fresh from the image, which never had <code>/notes</code>.</p>
-      <p>The part after the image name, <code>sh -c "…"</code>, runs that whole line in a shell inside the container. <a href="#sh-c">The end of this section</a> explains why it is needed.</p>
+      <p>The part after the image name, <code>sh -c "…"</code>, runs that whole line in a shell inside the container. <a href="#sh-c">The reference at the end of this section</a> explains why it is needed.</p>
 
-      <h3>Step 2: create a volume</h3>
-      <div class="cmd"><pre><code>podman volume create notes</code></pre></div>
-      <div class="out"><p class="olabel">Output</p><pre><code>notes</code></pre></div>
-      <p>This command does two things:</p>
-      <ol>
-        <li>It creates an <strong>empty folder</strong> inside the Podman VM.</li>
-        <li>It records the name <code>notes</code> for that folder, so you never have to type its path.</li>
-      </ol>
-      <p>No container starts and nothing is downloaded. Right after creation, the folder was empty.</p>
-
-      <h3>Step 3: plug it in with <code>-v</code></h3>
-      <p><code>-v NAME:PATH</code> attaches a volume to a container. The left side is the volume's name. The right side is the folder where it appears inside the container.</p>
+      <h3>Step 2: attach a volume with <code>-v</code></h3>
+      <p><code>-v NAME:PATH</code> attaches a volume to a container. The left side is the volume's name. The right side is the folder where it appears inside the container. If no volume with that name exists yet, Podman creates an empty one.</p>
       <div class="cmd"><pre><code>podman run --rm -v notes:/notes docker.io/library/python:3.12-slim sh -c "echo remember-me &gt; /notes/a.txt &amp;&amp; ls /notes"</code></pre></div>
       <div class="out"><p class="olabel">Output</p><pre><code>a.txt</code></pre></div>
       <p style="margin-bottom:0">That container is now deleted. Start another one with the same volume:</p>
       <div class="cmd"><pre><code>podman run --rm -v notes:/notes docker.io/library/python:3.12-slim sh -c "cat /notes/a.txt"</code></pre></div>
       <div class="out"><p class="olabel">Output</p><pre><code>remember-me      <span class="c">← the second container found the first one's file</span></code></pre></div>
-      <p>The file survived because it was never inside the container. Writes to <code>/notes</code> went straight to the volume's folder in the VM.</p>
-      <p>If the volume doesn't exist yet, <code>-v</code> creates it, so <code>podman volume create</code> is optional. Step 2 ran it separately only to make that step visible.</p>
+      <p>The file survived because it was never inside the container. Writes to <code>/notes</code> went straight to the volume's folder.</p>
+      <p>The name and the path are separate things. With <code>-v notes:/anywhere</code>, the same file appears at <code>/anywhere/a.txt</code>.</p>
 
-      <h3>Step 4: the name and the path are independent</h3>
-      <p style="margin-bottom:0">The commands above use <code>notes</code> on both sides of the colon, which hides this. The same volume can appear at any path:</p>
-      <div class="cmd"><pre><code>podman run --rm -v notes:/anywhere docker.io/library/python:3.12-slim sh -c "cat /anywhere/a.txt"</code></pre></div>
-      <div class="out"><p class="olabel">Output</p><pre><code>remember-me</code></pre></div>
-
-      <h3>Step 5: where it actually lives</h3>
+      <h3>Step 3: where the volume is, and the commands for it</h3>
       <div class="cmd"><pre><code>podman volume inspect notes --format '{{.Mountpoint}}'</code></pre></div>
       <div class="out"><p class="olabel">Output</p><pre><code>/var/lib/containers/storage/volumes/notes/_data</code></pre></div>
-      <p>That path is inside the Podman VM, not on your Mac, so you won't find it in Finder. That's the point: Podman manages it, and you work with it through commands. After step 3, <code>a.txt</code> was in that folder. The path shown is from the test Mac, whose Podman machine is rootful. On a default, rootless machine the path is in the VM user's home folder instead, under <code>.local/share/containers</code>.</p>
+      <p>That path is inside the Podman VM, not on your Mac, so you won't find it in Finder. That's the point: Podman manages it, and you work with it through commands. After step 2, <code>a.txt</code> was in that folder. The path shown is from the test Mac, whose Podman machine is rootful. On a default, rootless machine the path is in the VM user's home folder instead, under <code>.local/share/containers</code>.</p>
       <div class="table">
         <table class="cmds">
           <tbody>
             <tr><td>podman volume ls</td><td>List volumes</td></tr>
+            <tr><td>podman volume create NAME</td><td>Create an empty volume. Optional, because <code>-v</code> does it for you</td></tr>
             <tr><td>podman volume inspect NAME</td><td>Details, including where it's stored</td></tr>
             <tr><td>podman volume rm NAME</td><td>Delete a volume and <strong>all its data</strong></td></tr>
             <tr><td>podman volume prune</td><td>Delete every volume no container uses, after asking</td></tr>
@@ -405,8 +393,17 @@ details.sol .inner{padding:12px 14px 4px}
         </table>
       </div>
 
-      <h3>Step 6: who may write to a volume</h3>
-      <p>This step is about who is allowed to write into the volume's folder. It rests on two facts:</p>
+      <h3>Step 4: watch out for nameless volumes</h3>
+      <p>An image can declare that a folder should always be a volume. The official Postgres image does:</p>
+      <div class="cmd"><pre><code>podman image inspect docker.io/library/postgres:17 --format '{{.Config.Volumes}}'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>map[/var/lib/postgresql/data:{}]</code></pre></div>
+      <p>If you run such an image without mounting a named volume there, Podman creates an <strong>anonymous</strong> volume with a long random name, one per container. <code>podman rm</code> leaves it behind. On the test Mac, two of them were left over from test databases. <code>podman rm -v</code> removes a container together with its anonymous volumes, but the real fix is to always give data you care about a name: <code>-v pgdata:/var/lib/postgresql/data</code>.</p>
+
+      <h3>Reference: two things you can skip for now</h3>
+      <p>Neither block is needed for the lab. Open one when you meet the situation it names.</p>
+      <details class="sol" id="vol-owner" style="scroll-margin-top:16px"><summary>A container gets <code>Permission denied</code> when it writes to a volume</summary><div class="inner">
+      <h3 style="margin-top:6px">Who may write to a volume</h3>
+      <p>This part is about who is allowed to write into a volume's folder. It rests on two facts:</p>
       <ul>
         <li>Every folder has an owner, and normally only the owner may create files in it.</li>
         <li>A production image does not run as root. In Lesson 3 (section 2) the image gets a user called <code>app</code>, which Linux knows as user number 1000. That number is called the <strong>uid</strong>.</li>
@@ -449,7 +446,7 @@ touch: cannot touch '/data/x': Permission denied</code></pre></div>
         <li><strong><code>mkdir</code> alone is not enough.</strong> Without the <code>chown</code>, the folder in the image belongs to root, and <code>app</code> got <code>Permission denied</code> when writing to it.</li>
       </ul>
 
-      <h3>Step 7: the same volume in another container</h3>
+      <h3>The same volume in another container</h3>
       <p style="margin-bottom:0">A volume keeps its files and its owner. Removing a container changes nothing inside the volume, so what the next container can do depends only on which user it runs as. First, user 1000 writes a file:</p>
       <div class="cmd"><pre><code>podman run --rm --user 1000:1000 -v shared:/data docker.io/library/python:3.12-slim sh -c 'echo hello &gt; /data/a.txt; ls -ld /data'</code></pre></div>
       <div class="out"><p class="olabel">Output</p><pre><code>drwxr-xr-x. 2 1000 1000 19 Oct  3 23:33 /data</code></pre></div>
@@ -478,13 +475,10 @@ drwxr-xr-x. 2 1000 1000 51 Oct  3 23:33 /data</code></pre></div>
 write ok</code></pre></div>
       <p>After this, user 1000 is the one who can no longer write. <code>:U</code> is Podman-only; Docker does not have it.</p>
 
-      <h3>Step 8: watch out for nameless volumes</h3>
-      <p>An image can declare that a folder should always be a volume. The official Postgres image does:</p>
-      <div class="cmd"><pre><code>podman image inspect docker.io/library/postgres:17 --format '{{.Config.Volumes}}'</code></pre></div>
-      <div class="out"><p class="olabel">Output</p><pre><code>map[/var/lib/postgresql/data:{}]</code></pre></div>
-      <p>If you run such an image without mounting a named volume there, Podman creates an <strong>anonymous</strong> volume with a long random name, one per container. <code>podman rm</code> leaves it behind. On the test Mac, two of them were left over from test databases. <code>podman rm -v</code> removes a container together with its anonymous volumes, but the real fix is to always give data you care about a name: <code>-v pgdata:/var/lib/postgresql/data</code>.</p>
-
-      <h3 id="sh-c" style="scroll-margin-top:16px">A closer look: what <code>sh -c "…"</code> does</h3>
+      <h3>Bind mounts: relaxed on a Mac, strict on Linux</h3>
+      <p>On the test Mac, any user in the container could write to the shared folder, including <code>app</code> (uid 1000), and the files always showed up on the Mac as the Mac user's own. On a Linux server there's no VM in between. The numeric user ID is checked directly, so uid 1000 in the container can only write where uid 1000 on the server may write. Keep that in mind when a setup that works on your Mac fails with <code>Permission denied</code> on a server.</p>
+      </div></details>
+      <details class="sol" id="sh-c" style="scroll-margin-top:16px"><summary>What <code>sh -c "…"</code> does, and why the quotes matter</summary><div class="inner">
       <p>Everything after the image name is the command the container runs instead of the image's default (for this image, <code>python3</code>). In <code>sh -c "ls /notes"</code>, that command has three parts:</p>
       <div class="table">
         <table class="cmds">
@@ -540,10 +534,13 @@ run: 2 line(s)      <span class="c">← the second container found the first one
         <div class="row"><code>$(wc -l &lt; /notes/log.txt)</code><p>Count the lines in the file and put the number into the text that <code>echo</code> prints.</p></div>
       </div>
       <p>You have met <code>sh -c</code> before. In Lesson 3, the shell form <code>CMD uvicorn main:app …</code> is run as <code>/bin/sh -c "uvicorn main:app …"</code>. That is why the shell became PID 1 there, and the container took 10 seconds to stop.</p>
+      </div></details>
     </section>
 
     <section id="bind">
       <h2><span class="n">03</span>Bind mounts: a folder from your Mac</h2>
+      <p>A bind mount makes a folder from your Mac visible inside a container. It is a tool for your own machine, because it needs a folder on the computer that runs the container. Its main use is in step 3: you edit code on the Mac while the app runs in a container.</p>
+
       <h3>Step 1: share a folder</h3>
       <p style="margin-bottom:0">With a folder called <code>shared</code> containing <code>from-mac.txt</code>:</p>
       <div class="cmd"><pre><code>podman run --rm -v ./shared:/shared docker.io/library/python:3.12-slim \
@@ -554,15 +551,12 @@ ls -l shared/</code></pre></div>
 -rw-r--r--  1 you  wheel  26  from-container.txt   <span class="c">← and its file appears on your Mac</span></code></pre></div>
       <p>The syntax is the same as for volumes, but the left side is a path. A path starting with <code>./</code> or <code>/</code> means a bind mount; a plain name means a volume. On a Mac, this works because Podman shares your home folder into its VM; that's why your files are reachable at all.</p>
 
-      <h3>Step 2: permissions are relaxed on a Mac, not on Linux</h3>
-      <p>On the test Mac, any user in the container could write to the shared folder, including <code>app</code> (uid 1000), and the files always showed up on the Mac as the Mac user's own. On a Linux server there's no VM in between. The numeric user ID is checked directly, so uid 1000 in the container can only write where uid 1000 on the server may write. Keep that in mind when a setup that works on your Mac fails with <code>Permission denied</code> on a server.</p>
-
-      <h3>Step 3: read-only mounts</h3>
+      <h3>Step 2: read-only mounts</h3>
       <p style="margin-bottom:0">Add <code>:ro</code> and the container can read but not change anything. Use it for configuration and model files:</p>
       <div class="cmd"><pre><code>podman run --rm -v ./shared:/shared:ro docker.io/library/python:3.12-slim touch /shared/nope</code></pre></div>
       <div class="out"><p class="olabel">Output</p><pre><code>touch: cannot touch '/shared/nope': Read-only file system</code></pre></div>
 
-      <h3>Step 4: live code reload during development</h3>
+      <h3>Step 3: live code reload during development</h3>
       <p style="margin-bottom:0">The most useful bind mount: mount your code over <code>/app</code> and tell uvicorn to watch for changes. You edit on your Mac and the app inside restarts, with no rebuild:</p>
       <div class="cmd"><pre><code>podman run -d --name dev -p 8000:8000 -v ./:/app:ro hello-ai:1.0 \
   uvicorn main:app --host 0.0.0.0 --port 8000 --reload</code></pre></div>
@@ -578,7 +572,8 @@ WARNING:  StatReload detected changes in 'main.py'. Reloading...</code></pre></d
             <tr><td>Written as</td><td><code>-v pgdata:/path</code></td><td><code>-v ./folder:/path</code></td></tr>
             <tr><td>Stored</td><td>Where Podman decides (in the VM on a Mac)</td><td>Where you say, on your machine</td></tr>
             <tr><td>Created by</td><td>Podman, automatically</td><td>You: the folder must exist</td></tr>
-            <tr><td>Use for</td><td>Databases, caches, app data</td><td>Code during development, config and model files (with <code>:ro</code>)</td></tr>
+            <tr><td>Use for</td><td>A local database; a storage program you run yourself</td><td>Your code during development; files you already have (with <code>:ro</code>)</td></tr>
+            <tr><td>In production</td><td>Only for a container that is itself the storage</td><td>Rarely</td></tr>
           </tbody>
         </table>
       </div>
@@ -686,7 +681,7 @@ INSERT 0 1</code></pre></div>
   -c "SELECT * FROM messages"</code></pre></div>
       <div class="out"><p class="olabel">Output</p><pre><code>psql: error: could not translate host name "db" to address: Name or service not known</code></pre></div>
       <p>This container joined the default network, where the name <code>db</code> means nothing, as in step 1.</p>
-      <p>One thing to notice: the service still has to keep the data on a disk of its own. <code>db</code> is a container too, so it needs the first kind of answer, a volume. Started as in step 2, without <code>-v</code>, it gets an anonymous one (section 2, step 8). The Compose file in the next section gives it a named volume, <code>pgdata</code>. With a service such as Amazon S3, the storage runs on the provider's machines, and that disk is the provider's job.</p>
+      <p>One thing to notice: the service still has to keep the data on a disk of its own. <code>db</code> is a container too, so it needs the first kind of answer, a volume. Started as in step 2, without <code>-v</code>, it gets an anonymous one (section 2, step 4). The Compose file in the next section gives it a named volume, <code>pgdata</code>. With a service such as Amazon S3, the storage runs on the provider's machines, and that disk is the provider's job.</p>
     </section>
 
     <section id="compose">
@@ -832,7 +827,7 @@ Container api-1  Started</code></pre></div>
           </tbody>
         </table>
       </div>
-      <p style="margin-bottom:0">An image can declare that a path should be a volume, as Postgres does (section 2, step 8). That is only a note, and no data comes with it. Your own image, the <code>hello-ai:2.0</code> you build in the lab below, declares nothing:</p>
+      <p style="margin-bottom:0">An image can declare that a path should be a volume, as Postgres does (section 2, step 4). That is only a note, and no data comes with it. Your own image, the <code>hello-ai:2.0</code> you build in the lab below, declares nothing:</p>
       <div class="cmd"><pre><code>podman image inspect hello-ai:2.0 --format '{{.Config.Volumes}}'</code></pre></div>
       <div class="out"><p class="olabel">Output</p><pre><code>map[]</code></pre></div>
 
@@ -1111,8 +1106,8 @@ podman volume ls</code></pre></div>
           <div class="ans"><p>The first is a named volume that Podman creates and manages. The second, because it starts with <code>./</code>, is a bind mount of a folder called <code>pgdata</code> in your current directory on your machine.</p></div></details>
         <details class="q"><summary><span class="qn">Q2</span><span>You ran Postgres several times without a volume. Now <code>podman volume ls</code> shows volumes with long random names. Where did they come from?</span><span class="rv">Show</span></summary>
           <div class="ans"><p>The Postgres image declares <code>/var/lib/postgresql/data</code> as a volume, so Podman created an anonymous volume for each container. <code>podman rm</code> leaves them behind; <code>podman rm -v</code> would have removed them. Always name volumes for data you care about.</p></div></details>
-        <details class="q"><summary><span class="qn">Q3</span><span>Your image runs as uid 1000 and writes to a new named volume. It works with Podman but fails with <code>Permission denied</code> on a Docker server. Why, and how do you fix the image?</span><span class="rv">Show</span></summary>
-          <div class="ans"><p>Podman hands a new, empty volume to the container's user; Docker leaves it owned by root. Create the folder in the image and give it to the user before <code>USER</code>, with <code>RUN mkdir /data &amp;&amp; chown app:app /data</code>. Docker copies that ownership into new volumes.</p></div></details>
+        <details class="q"><summary><span class="qn">Q3</span><span>Your app saves uploaded files to <code>/app/uploads</code> inside its container. What happens to them at the next deployment, and what are the two kinds of fix?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>The deployment replaces the container, so the files are deleted with it. Either keep that folder outside the container, with a volume at <code>/app/uploads</code>, or send the files to a storage service such as Amazon S3. In production the second is the usual choice, and the app's container needs no volume.</p></div></details>
         <details class="q"><summary><span class="qn">Q4</span><span>The API logs <code>failed to resolve host 'db'</code>, although a container named <code>db</code> is running. What's the likely cause?</span><span class="rv">Show</span></summary>
           <div class="ans"><p>The containers are on Podman's default network, which has no DNS, or on different networks. Put both on the same network you created, or run them with Compose, which creates one for you.</p></div></details>
         <details class="q"><summary><span class="qn">Q5</span><span>Should the database service in <code>compose.yaml</code> have <code>ports: - "5432:5432"</code>?</span><span class="rv">Show</span></summary>
