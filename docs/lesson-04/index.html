@@ -340,6 +340,7 @@ details.sol .inner{padding:12px 14px 4px}
         <li><strong>Named volume:</strong> storage that Podman creates and manages. You refer to it by name. Use it for data the app owns, like a database.</li>
         <li><strong>Bind mount:</strong> a folder from your Mac, made visible inside the container. Use it when you want to see or edit the files yourself, like your code during development.</li>
       </ul>
+      <p>The lab gives hello-ai a database called <strong>Postgres</strong>, which runs in a second container. A database is a program whose job is to store data. <a href="#postgres">Section 4</a> explains what Postgres is and why it gets a container of its own.</p>
       <p>This lesson uses both kinds:</p>
       <ul>
         <li>Postgres keeps its files in a named volume, which is the first kind. Sections 2 and 3 cover volumes and bind mounts.</li>
@@ -621,7 +622,24 @@ INFO:     Application startup complete.</code></pre></div>
     <section id="network">
       <h2><span class="n">04</span>Networks: containers finding each other</h2>
       <p><strong>Why you need this.</strong> In the lab, hello-ai saves every prediction in a Postgres database. That makes two containers: one runs your code and one runs Postgres. Your code has to be told where the database is. This section shows what to write there, and how to read the two errors you get when it is wrong.</p>
-      <p style="margin-bottom:6px">Two words come first:</p>
+
+      <h3 id="postgres" style="scroll-margin-top:16px">What Postgres is, and why it has its own container</h3>
+      <p><strong>Postgres</strong> (full name PostgreSQL) is a database: a program whose whole job is to store data and to answer questions about it. It is free and very widely used. It keeps data in tables. hello-ai's table is called <code>predictions</code>, and every prediction is one row in it, with the text, the label, the score and the time. You ask for rows in a language called SQL, for example "the ten newest rows". Step 4 runs three SQL statements.</p>
+      <p>hello-ai could write its predictions to a file in a volume instead. A database is used because it also handles what a file handles badly: several programs writing at the same moment, finding a few rows among millions, and a crash in the middle of a write.</p>
+      <p style="margin-bottom:0">Postgres is not a Python package that your code imports. It is a separate program that runs all the time and waits for connections. Each of the two images starts one program:</p>
+      <div class="cmd"><pre><code>podman image inspect docker.io/library/postgres:17 --format '{{.Config.Cmd}}'
+podman image inspect hello-ai:1.0 --format '{{.Config.Cmd}}'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>[postgres]
+[uvicorn main:app --host 0.0.0.0 --port 8000]</code></pre></div>
+      <p style="margin-bottom:6px">Nothing forces the two programs into separate containers. You could install Postgres into your own image. Almost nobody does, for these reasons:</p>
+      <ul>
+        <li><strong>A container is built around one main process</strong> (Lesson 1). Podman starts it, and the container stops when it stops. A second program inside would not be watched: if it crashed, the container would still look fine.</li>
+        <li><strong>The two are replaced at different times.</strong> Every update of your code replaces the hello-ai container. The database keeps running through that, with its data.</li>
+        <li><strong>Only the database needs a volume.</strong> Postgres keeps its files in a named volume (section 2). hello-ai needs none, because it sends its data to Postgres.</li>
+        <li><strong>You don't have to build it.</strong> The <code>postgres:17</code> image is ready-made. In production the database is often not a container at all but a service such as Amazon RDS, and then only the address in hello-ai's settings changes.</li>
+      </ul>
+
+      <h3>Two words first: address and port</h3>
       <ul>
         <li>An <strong>IP address</strong> is the number of one machine on a network, for example <code>10.88.0.51</code>.</li>
         <li>A <strong>port</strong> is the number of one program on that machine. Postgres waits for connections on port <code>5432</code>, and hello-ai on port <code>8000</code>.</li>
