@@ -557,13 +557,52 @@ ls -l shared/</code></pre></div>
       <div class="out"><p class="olabel">Output</p><pre><code>touch: cannot touch '/shared/nope': Read-only file system</code></pre></div>
 
       <h3>Step 3: live code reload during development</h3>
-      <p style="margin-bottom:0">The most useful bind mount: mount your code over <code>/app</code> and tell uvicorn to watch for changes. You edit on your Mac and the app inside restarts, with no rebuild:</p>
+      <p><strong>The problem.</strong> An image holds a copy of your code, made by <code>COPY . .</code> at build time. When you edit <code>main.py</code> on your Mac, a running container still has the old copy. To see each small change you would have to build the image, remove the container and start a new one.</p>
+      <p><strong>The idea.</strong> Don't use the copy in the image. Share your project folder at <code>/app</code>, so the container reads the files that are on your Mac, and tell the server to restart when a file changes. An edit then shows up in a few seconds, with no build.</p>
+
+      <p style="margin-bottom:0"><strong>1. Go to the project folder.</strong> The folder matters, because <code>./</code> in the next command means "the folder I am in now":</p>
+      <div class="cmd"><pre><code>cd ~/practice/hello-ai</code></pre></div>
+      <p style="margin-bottom:0"><strong>2. Start the container with your folder shared.</strong></p>
       <div class="cmd"><pre><code>podman run -d --name dev -p 8000:8000 -v ./:/app:ro hello-ai:1.0 \
   uvicorn main:app --host 0.0.0.0 --port 8000 --reload</code></pre></div>
-      <p style="margin-bottom:0">After changing the model name in <code>main.py</code> and saving, the logs showed:</p>
-      <div class="out"><p class="olabel">podman logs dev</p><pre><code>INFO:     Started reloader process [1] using StatReload
-WARNING:  StatReload detected changes in 'main.py'. Reloading...</code></pre></div>
-      <p>and <code>/health</code> reported the new name a few seconds later. This is for development only. In production you run the built image, so what runs is exactly what you tested.</p>
+      <div class="anno">
+        <div class="head"><span>what is new in this command</span><span>2 pieces</span></div>
+        <div class="row"><code>-v ./:/app:ro</code><p>Share the current folder at <code>/app</code>, read-only. The shared folder covers what the image had at <code>/app</code>, so the container now sees the files on your Mac and not the image's copy.</p></div>
+        <div class="row"><code>uvicorn main:app … --reload</code><p>A command after the image name runs in place of the image's default command. This one is the default command plus <code>--reload</code>, which makes uvicorn watch the files in <code>/app</code> and restart the app when one changes.</p></div>
+      </div>
+
+      <p style="margin-bottom:0"><strong>3. Ask the app for its model name.</strong></p>
+      <div class="cmd"><pre><code>curl localhost:8000/health</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>{"status":"ok","model":"keyword-sentiment-v1","api_key_configured":false}</code></pre></div>
+
+      <p><strong>4. Edit the code on your Mac.</strong> Open <code>main.py</code> in your editor, change <code>keyword-sentiment-v1</code> to <code>keyword-sentiment-v2</code>, and save. Don't build anything.</p>
+
+      <p style="margin-bottom:0"><strong>5. Ask again.</strong></p>
+      <div class="cmd"><pre><code>curl localhost:8000/health</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>{"status":"ok","model":"keyword-sentiment-v2","api_key_configured":false}</code></pre></div>
+      <p style="margin-bottom:0">The answer changed a few seconds after the save. The logs show why:</p>
+      <div class="cmd"><pre><code>podman logs dev</code></pre></div>
+      <div class="out"><p class="olabel">Output, the last lines</p><pre><code>WARNING:  StatReload detected changes in 'main.py'. Reloading...
+…
+INFO:     Started server process [6]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.</code></pre></div>
+      <p>uvicorn saw that <code>main.py</code> had changed and started the app again with the new code.</p>
+
+      <p style="margin-bottom:0"><strong>6. Check that the image did not change.</strong> Its own copy of the file still has the old line:</p>
+      <div class="cmd"><pre><code>podman run --rm hello-ai:1.0 grep keyword-sentiment main.py</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>MODEL_NAME = os.getenv("MODEL_NAME", "keyword-sentiment-v1")</code></pre></div>
+      <p>So the <code>dev</code> container was reading the file on your Mac the whole time. A container started without <code>-v</code> runs the image's copy, and its <code>/health</code> still answers <code>keyword-sentiment-v1</code>.</p>
+
+      <p><strong>Two things that go wrong.</strong></p>
+      <ul>
+        <li><strong>The logs say <code>Could not import module "main"</code>.</strong> The command was run in another folder, so that folder was shared at <code>/app</code>, and it has no <code>main.py</code>. The image's own <code>main.py</code> does not help, because the shared folder covers it. Remove the container with <code>podman rm -f dev</code> and start it again from the project folder.</li>
+        <li><strong>A new package is not found.</strong> Only your code is shared. Packages were put into the image by <code>pip install</code> at build time. After <code>import yaml</code> was added to <code>main.py</code>, the reload failed with <code>ModuleNotFoundError: No module named 'yaml'</code>. A change to <code>requirements.txt</code> still needs a build.</li>
+      </ul>
+
+      <p style="margin-bottom:0"><strong>7. Clean up.</strong> Change <code>main.py</code> back to <code>keyword-sentiment-v1</code>, so that your outputs match the rest of this lesson, and remove the container:</p>
+      <div class="cmd"><pre><code>podman rm -f dev</code></pre></div>
+      <p>Live reload is for development only. In production you run the built image, so what runs is exactly what you tested.</p>
 
       <div class="table">
         <table>
