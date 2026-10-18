@@ -243,7 +243,7 @@ footer{max-width:760px;margin:56px auto 0;padding-top:18px;border-top:1px solid 
       <h1>Docker Fundamentals</h1>
       <p class="lede">A hands-on course in containers for developers who build AI web apps. You take one small Python service, put it in a container, make it safe to ship, give it a database and a real model, and follow it to AWS, Cloudflare and Kubernetes.</p>
       <p>The lessons use <strong>Podman</strong>, a free tool that works like Docker. The ideas are the same, and most commands work with <code>docker</code> in place of <code>podman</code>.</p>
-      <div class="meta"><span><b>Time</b> about 8 hours with the labs</span><span><b>Cost</b> free; the optional cloud steps in Lesson 6 are not</span><span><b>Source</b> <a href="https://github.com/Espad0/docker-fundamentals">GitHub</a></span></div>
+      <div class="meta"><span><b>Time</b> about 9 hours with the labs</span><span><b>Cost</b> free; the optional cloud steps in Lesson 6 are not</span><span><b>Source</b> <a href="https://github.com/Espad0/docker-fundamentals">GitHub</a></span></div>
       <a class="start" href="lesson-01/">Start with Lesson 1</a>
     </header>
 
@@ -260,7 +260,7 @@ footer{max-width:760px;margin:56px auto 0;padding-top:18px;border-top:1px solid 
             <tr><td>4</td><td><a href="lesson-04/">Volumes, Networks and Compose</a><p>Data and several containers: volumes, shared folders, networks, and a Postgres database with Compose.</p></td><td class="num">30 min</td><td class="num">40 min</td></tr>
             <tr><td>5</td><td><a href="lesson-05/">Serving a Real Model</a><p>A real model in a container: PyTorch without GPU libraries, readiness, memory and CPU limits, streaming, and what GPUs need.</p></td><td class="num">40 min</td><td class="num">45 min</td></tr>
             <tr><td>6</td><td><a href="lesson-06/">Shipping to AWS and Cloudflare</a><p>Shipping: registries, building for servers from a Mac, a GitLab CI pipeline, AWS ECS Express Mode and Cloudflare Containers.</p></td><td class="num">45 min</td><td class="num">30 min</td></tr>
-            <tr><td>7</td><td><a href="lesson-07/">Kubernetes, the Big Picture</a><p>Kubernetes in outline: what the main objects are, how to read a manifest, and running one locally with Podman.</p></td><td class="num">35 min</td><td class="num">25 min</td></tr>
+            <tr><td>7</td><td><a href="lesson-07/">Your App on Kubernetes</a><p>An app ready for a Kubernetes cluster: a strict image, measured memory and CPU, the objects a devops team writes, a real cluster on your Mac with kind, failures on purpose, and a handoff sheet.</p></td><td class="num">60 min</td><td class="num">60 min</td></tr>
           </tbody>
         </table>
       </div>
@@ -273,7 +273,7 @@ footer{max-width:760px;margin:56px auto 0;padding-top:18px;border-top:1px solid 
         <li>You have not used Docker or Podman, or you have copied commands without knowing what they do.</li>
         <li>You have a Mac with Apple silicon. Every output in the lessons comes from one.</li>
       </ul>
-      <p>If you use Docker and not Podman: the outputs shown are Podman's, and a few steps are Podman-only, such as <code>--format docker</code> in Lesson 3 and <code>podman kube play</code> in Lesson 7.</p>
+      <p>If you use Docker and not Podman: the outputs shown are Podman's, and a few steps are Podman-only, such as <code>--format docker</code> in Lesson 3 and the way Lesson 7 loads images into kind.</p>
     </section>
 
     <section id="setup">
@@ -314,13 +314,15 @@ cp -R docker-fundamentals/starter/hello-ai docker-fundamentals/starter/hello-mod
             <tr><td>Podman</td><td>6.0.2</td></tr>
             <tr><td>Podman's Linux VM</td><td>5 CPUs, 3.8 GB of memory, in rootful mode. The default is rootless; Lessons 3 and 4 say where that changes an output.</td></tr>
             <tr><td>Compose</td><td>Docker Compose 5.5.1, used through <code>podman compose</code></td></tr>
+            <tr><td>Kubernetes</td><td>kind 0.33.0 with Kubernetes 1.37.0 (Lesson 7), kubectl 1.37.0</td></tr>
           </tbody>
         </table>
       </div>
       <h3>What was not run</h3>
       <ul>
         <li><strong>The AWS and Cloudflare account steps in Lesson 6.</strong> They are written from the providers' documentation, checked on 28 September 2026. Everything local in that lesson was run, including the build job and a Cloudflare dry run.</li>
-        <li><strong>The <code>kubectl</code> commands in Lesson 7.</strong> There was no cluster. The Kubernetes file itself was run locally with <code>podman kube play</code>.</li>
+        <li><strong>The AWS parts of Lesson 7.</strong> The production files (an ECR image, an Ingress for an AWS load balancer, a secret from AWS Secrets Manager, the IAM policy) need an EKS cluster. They were only checked against the local cluster without being applied. Everything else in that lesson ran on a local kind cluster.</li>
+        <li><strong>Network rules in Lesson 7.</strong> The local cluster did not enforce them in a quick test, so the lesson only describes them.</li>
         <li><strong>One Docker-only rule about volumes in Lesson 4.</strong> The test Mac has Podman only.</li>
         <li><strong>Outputs of a rootless Podman machine.</strong> The test Mac's is rootful.</li>
       </ul>

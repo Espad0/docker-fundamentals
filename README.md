@@ -21,9 +21,9 @@ work with `docker` in place of `podman`.
 | 4 | [Volumes, Networks and Compose](https://espad0.github.io/docker-fundamentals/lesson-04/) | Volumes, shared folders, networks, and a Postgres database with Compose |
 | 5 | [Serving a Real Model](https://espad0.github.io/docker-fundamentals/lesson-05/) | PyTorch without GPU libraries, readiness, memory and CPU limits, streaming, and what GPUs need |
 | 6 | [Shipping to AWS and Cloudflare](https://espad0.github.io/docker-fundamentals/lesson-06/) | Registries, building for servers from a Mac, GitLab CI, AWS ECS Express Mode, Cloudflare Containers |
-| 7 | [Kubernetes, the Big Picture](https://espad0.github.io/docker-fundamentals/lesson-07/) | The main objects, how to read a manifest, and running one locally with Podman |
+| 7 | [Your App on Kubernetes](https://espad0.github.io/docker-fundamentals/lesson-07/) | A strict image, measured memory and CPU, the objects a devops team writes, a local cluster with kind, failures on purpose, a handoff sheet |
 
-About 8 hours in total, including the labs.
+About 9 hours in total, including the labs.
 
 ## Before you start
 
@@ -50,7 +50,7 @@ cp -R docker-fundamentals/starter/hello-ai docker-fundamentals/starter/hello-mod
 |---|---|
 | `docs/` | The course website: a home page and one page per lesson. Plain HTML, no build step. |
 | `starter/` | The two practice apps as they are at the start of the labs |
-| `solutions/` | The finished files of each lab |
+| `solutions/` | The finished files of each lab, and the sheet-tool app of Lesson 7 |
 
 ## How it was made and tested
 
@@ -59,14 +59,16 @@ October 2026. Every command that runs locally was run on one Mac before it
 went into a lesson.
 
 That Mac is "the test Mac" in the lessons: a Mac with an Apple M5 processor,
-Podman 6.0.2 with its Linux VM in rootful mode, and Docker Compose 5.5.1.
+Podman 6.0.2 with its Linux VM in rootful mode, Docker Compose 5.5.1, and
+for Lesson 7 kind 0.33.0 with Kubernetes 1.37.0.
 Outputs, sizes and timings come from it, so yours will differ a little.
 
 Some things were **not** run:
 
 - The AWS and Cloudflare account steps in Lesson 6. They are written from the
   providers' documentation, checked on 28 September 2026.
-- The `kubectl` commands in Lesson 7. There was no cluster.
+- The AWS parts of Lesson 7: the production files need an EKS cluster. They
+  were only checked against the local kind cluster without being applied.
 - One Docker-only rule about volumes in Lesson 4. The test Mac has Podman only.
 - Outputs of a rootless Podman machine, which is Podman's default.
 - The install commands above. The test Mac already had the tools.

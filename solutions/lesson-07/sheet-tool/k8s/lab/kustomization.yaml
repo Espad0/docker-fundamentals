@@ -1,0 +1,14 @@
+# The lab environment on your Mac (kind). Same base, local values.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: sheet-tool
+resources:
+  - namespace.yaml
+  - secret.yaml
+  - ../base
+images:
+  - name: sheet-tool
+    newName: localhost/sheet-tool
+    newTag: "1.0"
+patches:
+  - path: config.yaml

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sheet-tool-config
+data:
+  S3_BUCKET: sheet-tool-settings
+  S3_KEY: settings.yaml
+  AWS_REGION: eu-west-1
+  OPENROUTER_BASE_URL: https://openrouter.ai/api/v1
+  MAX_UPLOAD_MB: "10"

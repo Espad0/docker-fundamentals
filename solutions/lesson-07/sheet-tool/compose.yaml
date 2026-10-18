@@ -1,0 +1,70 @@
+# Local development: the app, plus stand-ins for what the cluster and the internet provide.
+# Kubernetes never reads this file. It's for your Mac, and for tests in CI.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: localhost/sheet-tool:1.0
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      S3_BUCKET: sheet-tool-settings
+      AWS_ENDPOINT_URL_S3: http://s3:9000          # local only: on AWS the SDK finds S3 itself
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}        # local only: on AWS the pod's IAM role is used
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      OPENROUTER_BASE_URL: http://fake-openrouter:8080/api/v1
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      MAX_UPLOAD_MB: "10"
+    # The same restrictions a strict cluster applies, so problems show up on your Mac first.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      bucket:
+        condition: service_completed_successfully
+      fake-openrouter:
+        condition: service_started
+
+  s3:
+    image: docker.io/pgsty/minio@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - s3data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  bucket:  # runs once: creates the bucket, then exits. In AWS your team creates it.
+    image: docker.io/pgsty/minio@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
+    entrypoint: ["sh", "-c", "mc alias set local http://s3:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\" && mc mb --ignore-existing local/sheet-tool-settings"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    depends_on:
+      s3:
+        condition: service_healthy
+
+  fake-openrouter:
+    image: docker.io/library/python:3.12-slim@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f
+    command: ["python", "/fake/fake_openrouter.py"]
+    volumes:
+      - ./dev:/fake:ro
+
+volumes:
+  s3data:

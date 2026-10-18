@@ -1,0 +1,139 @@
+# Lab only: stand-ins for what your team and the internet provide (S3 storage and OpenRouter).
+# They live in their own namespace, so it's clear they're not part of the app.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stand-ins
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-root
+  namespace: stand-ins
+type: Opaque
+stringData:
+  MINIO_ROOT_USER: local-admin
+  MINIO_ROOT_PASSWORD: fake-local-password
+---
+# Storage that outlives pods: MinIO keeps its data here.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: stand-ins
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: stand-ins
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate        # one disk, one pod: stop the old pod before starting the new one
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+          args: ["server", "/data"]
+          envFrom:
+            - secretRef:
+                name: minio-root
+          ports:
+            - containerPort: 9000
+          readinessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: stand-ins
+spec:
+  selector:
+    app: minio
+  ports:
+    - port: 9000
+---
+# A Job runs once to completion: here, create the bucket.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-bucket
+  namespace: stand-ins
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+          command: ["sh", "-c", "mc alias set local http://minio:9000 \"$MINIO_ROOT_USER\" \"$MINIO_ROOT_PASSWORD\" && mc mb --ignore-existing local/sheet-tool-settings"]
+          envFrom:
+            - secretRef:
+                name: minio-root
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fake-openrouter
+  namespace: stand-ins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fake-openrouter
+  template:
+    metadata:
+      labels:
+        app: fake-openrouter
+    spec:
+      containers:
+        - name: fake
+          image: docker.io/library/python:3.12-slim
+          command: ["python", "/fake/fake_openrouter.py"]
+          env:
+            - name: FAKE_DELAY
+              value: "0.05"
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: script
+              mountPath: /fake
+      volumes:
+        - name: script
+          configMap:
+            name: fake-openrouter   # created from dev/fake_openrouter.py (see the lab)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fake-openrouter
+  namespace: stand-ins
+spec:
+  selector:
+    app: fake-openrouter
+  ports:
+    - port: 8080

@@ -1,0 +1,9 @@
+# Lab only: point the app at the stand-ins instead of AWS S3 and openrouter.ai.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sheet-tool-config
+data:
+  AWS_REGION: us-east-1
+  AWS_ENDPOINT_URL_S3: http://minio.stand-ins:9000
+  OPENROUTER_BASE_URL: http://fake-openrouter.stand-ins:8080/api/v1

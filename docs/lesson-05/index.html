@@ -243,7 +243,7 @@ details.sol .inner{padding:12px 14px 4px}
   <a class="lesson" href="../lesson-04/" title="Lesson 4: Volumes, Networks and Compose"><b>4</b>Volumes and Compose</a>
   <span class="here" aria-current="page" title="Serving a Real Model"><b>5</b>A real model</span>
   <a class="lesson" href="../lesson-06/" title="Lesson 6: Shipping to AWS and Cloudflare"><b>6</b>AWS and Cloudflare</a>
-  <a class="lesson" href="../lesson-07/" title="Lesson 7: Kubernetes, the Big Picture"><b>7</b>Kubernetes</a>
+  <a class="lesson" href="../lesson-07/" title="Lesson 7: Your App on Kubernetes"><b>7</b>Kubernetes</a>
 </nav>
 
 <div class="shell">
@@ -669,7 +669,7 @@ for i in $(seq 1 30); do curl -s localhost:8000/health/ready; echo; sleep 0.5; d
           <h3>Clean up</h3>
           <div class="cmd"><pre><code>podman rm -f api
 podman volume rm models</code></pre></div>
-          <p>Keep <code>hello-model:1.0</code> if you have the disk space: Lesson 7 uses its health endpoints.</p>
+          <p>Later lessons don't need <code>hello-model:1.0</code>. If you need the disk space, <code>podman rmi hello-model:1.0</code> removes it.</p>
         </div>
       </div>
     </section>

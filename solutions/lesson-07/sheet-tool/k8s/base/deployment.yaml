@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sheet-tool
+  labels:
+    app: sheet-tool
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sheet-tool
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0    # never go below 2 ready pods during an update
+      maxSurge: 1          # start one new pod at a time
+  template:
+    metadata:
+      labels:
+        app: sheet-tool
+    spec:
+      serviceAccountName: sheet-tool
+      automountServiceAccountToken: false   # the app never calls the Kubernetes API
+      terminationGracePeriodSeconds: 90     # time to finish a long upload before being killed
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: sheet-tool                 # each environment sets the real image and tag
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: sheet-tool-config
+            - secretRef:
+                name: sheet-tool-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:            # reserved: used to choose a node
+              cpu: 250m
+              memory: 512Mi
+            limits:              # the ceiling: above 1Gi the container is killed (OOMKilled)
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:        # failing: no traffic, no restart
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:         # failing: restart the container
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5       # let the Service stop sending traffic before SIGTERM arrives
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp              # the only writable folder: uploads over 1 MB are buffered here
+          emptyDir:
+            sizeLimit: 100Mi

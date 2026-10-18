@@ -1,0 +1,10 @@
+# When the cluster drains a node for maintenance, keep at least one pod running.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sheet-tool
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: sheet-tool

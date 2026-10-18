@@ -1,0 +1,16 @@
+# Production on EKS: the same base, real values. Not run in the lab (it needs AWS);
+# render it with: kubectl kustomize k8s/production
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: sheet-tool
+resources:
+  - ../base
+  - externalsecret.yaml
+  - ingress.yaml
+images:
+  - name: sheet-tool
+    newName: 123456789012.dkr.ecr.eu-west-1.amazonaws.com/sheet-tool
+    newTag: a1b2c3d4          # CI writes the commit tag here (Lesson 6)
+patches:
+  - path: config.yaml
+  - path: serviceaccount.yaml

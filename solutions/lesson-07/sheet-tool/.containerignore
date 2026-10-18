@@ -1,0 +1,6 @@
+# Keep secrets, Git history and test files out of the build context.
+.env
+.git
+*.xlsx
+k8s/
+compose.yaml

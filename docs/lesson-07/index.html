@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Lesson 7: Kubernetes, the Big Picture · Docker Fundamentals</title>
-<meta name="description" content="Lesson 7 of Docker Fundamentals, a free hands-on course: Kubernetes, the Big Picture.">
+<title>Lesson 7: Your App on Kubernetes · Docker Fundamentals</title>
+<meta name="description" content="Lesson 7 of Docker Fundamentals, a free hands-on course: Your App on Kubernetes.">
 <style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -243,491 +243,2046 @@ details.sol .inner{padding:12px 14px 4px}
   <a class="lesson" href="../lesson-04/" title="Lesson 4: Volumes, Networks and Compose"><b>4</b>Volumes and Compose</a>
   <a class="lesson" href="../lesson-05/" title="Lesson 5: Serving a Real Model"><b>5</b>A real model</a>
   <a class="lesson" href="../lesson-06/" title="Lesson 6: Shipping to AWS and Cloudflare"><b>6</b>AWS and Cloudflare</a>
-  <span class="here" aria-current="page" title="Kubernetes, the Big Picture"><b>7</b>Kubernetes</span>
+  <span class="here" aria-current="page" title="Your App on Kubernetes"><b>7</b>Kubernetes</span>
 </nav>
 
 <div class="shell">
   <aside class="toc" aria-label="Lesson sections">
     <nav>
       <div class="label">Lesson 7</div>
-      <a href="#why"><span>1</span>Why Kubernetes exists</a>
-      <a href="#words"><span>2</span>The vocabulary</a>
-      <a href="#yaml"><span>3</span>Reading a Deployment</a>
-      <a href="#local"><span>4</span>Try it with Podman</a>
-      <a href="#kubectl"><span>5</span>On a real cluster</a>
-      <a href="#eks"><span>6</span>Kubernetes on AWS</a>
-      <a href="#read"><span>7</span>Reading your team's files</a>
-      <a href="#lab"><span>8</span>Lab</a>
-      <a href="#check"><span>9</span>Check yourself</a>
-      <a href="#done"><span>10</span>Course complete</a>
+      <a href="#who"><span>1</span>Who does what</a>
+      <a href="#app"><span>2</span>The practice app</a>
+      <a href="#image"><span>3</span>A deployment-ready image</a>
+      <a href="#measure"><span>4</span>Measure, don&#x27;t guess</a>
+      <a href="#k8s"><span>5</span>Kubernetes in one page</a>
+      <a href="#files"><span>6</span>The files your team writes</a>
+      <a href="#kind"><span>7</span>Run it on a real cluster</a>
+      <a href="#break"><span>8</span>Break it on purpose</a>
+      <a href="#deploy"><span>9</span>How your team deploys it</a>
+      <a href="#handoff"><span>10</span>The handoff sheet</a>
+      <a href="#lab"><span>11</span>Lab: your own app</a>
+      <a href="#check"><span>12</span>Check yourself</a>
+      <a href="#done"><span>13</span>Course complete</a>
     </nav>
   </aside>
 
   <main>
     <header>
-      <p class="eyebrow">Docker Fundamentals · Lesson 7 (optional) · Kubernetes, the big picture</p>
-      <h1>Kubernetes, the big picture</h1>
-      <p class="lede">You may never set up a Kubernetes cluster, but you'll likely read Kubernetes files: in your team's repositories, in open-source projects, in deployment reviews. Almost every idea in them is something you've already learned under another name. This lesson maps them, and lets you run a real Kubernetes file on your Mac with Podman.</p>
-      <div class="meta"><span><b>Reading</b> about 35 min</span><span><b>Lab</b> about 25 min</span><span><b>Uses</b> <code>hello-ai:2.0</code> from Lesson 4</span><span><b>Outputs</b> from <a href="../#tested">the test Mac</a>, autumn 2026</span></div>
+      <p class="eyebrow">Docker Fundamentals · Lesson 7 · Your app on Kubernetes</p>
+      <h1>Your app on Kubernetes</h1>
+      <p class="lede">In many companies, a devops or platform team runs the apps that developers build on a Kubernetes cluster. This lesson prepares you for that from both sides. First you make the image ready for deployment: a checklist, with a test on your Mac for each item. Then you run the app on a real Kubernetes cluster on your Mac and see everything your team will build around it, so you can answer their questions and know which ones to ask.</p>
+      <div class="meta"><span><b>Reading</b> about 60 min</span><span><b>Lab</b> about 60 min</span><span><b>Downloads</b> kind and its node image (about 365 MB), a MinIO image (49 MB), Python packages (21 MB)</span><span><b>Outputs</b> from <a href="../#tested">the test Mac</a>, autumn 2026</span></div>
       <section style="padding-top:26px" aria-label="Goals">
         <h3 style="margin-top:0">By the end you should be able to</h3>
         <ul class="goals" style="margin-bottom:0">
-          <li><span>explain what Kubernetes does that a single <code>podman run</code> doesn't</span></li>
-          <li><span>map Pods, Deployments, Services, ConfigMaps, Secrets and probes to what you know from Lessons 1–5</span></li>
-          <li><span>read a Deployment file and say what it will do</span></li>
-          <li><span>run Kubernetes YAML locally with <code>podman kube play</code>, and know where Podman differs</span></li>
-          <li><span>recognise the everyday <code>kubectl</code> commands and what EKS adds on AWS</span></li>
+          <li><span>build an image that a strict cluster accepts, and that survives restarts, new versions and large uploads</span></li>
+          <li><span>measure the numbers your team will ask for (memory, CPU, request time) instead of guessing</span></li>
+          <li><span>read every Kubernetes object your team will create for the app</span></li>
+          <li><span>run the app on a real cluster with <code>kind</code> and <code>kubectl</code>, break it on purpose, and recognise each failure</span></li>
+          <li><span>give your team a one-page description of the app, and ask them the right questions</span></li>
         </ul>
       </section>
     </header>
 
-    <section id="why">
-      <h2><span class="n">01</span>Why Kubernetes exists</h2>
-      <p>Everything so far ran on one machine. Production usually means many machines and many containers, and someone has to answer questions like these, all day, automatically:</p>
+    <section id="who">
+      <h2><span class="n">01</span>Who does what</h2>
+      <p>This section shows where your work ends and your team's begins. That's also where most of their questions will come from.</p>
+      <p>Your devops team runs the <strong>cluster</strong>: the machines, the network, how users reach apps, where secrets are kept, and what each app may do in AWS. You're responsible for the <strong>image</strong>, and for the facts about your app that they can't see from outside it:</p>
+      <div class="table">
+        <table class="who">
+          <thead><tr><th>You</th><th>Your devops team</th></tr></thead>
+          <tbody>
+            <tr><td>The app, its Containerfile, and the image CI builds from them (Lesson 6)</td><td>The cluster, its machines, and a namespace for your app</td></tr>
+            <tr><td>Health endpoints, a clean shutdown, limits on what users can send</td><td>The Kubernetes files that run the image (often packaged as a Helm chart)</td></tr>
+            <tr><td>Measured memory, CPU and request time</td><td>The hostname, the HTTPS certificate and the load balancer</td></tr>
+            <tr><td>The list of settings and secrets the app reads</td><td>Storing the secrets (for example AWS Secrets Manager) and passing them to the app</td></tr>
+            <tr><td>What the app talks to: S3 and <code>openrouter.ai</code></td><td>The AWS permission to use S3, and the rules for outbound traffic</td></tr>
+            <tr><td>A <code>compose.yaml</code> for working on your Mac</td><td>The deploy pipeline, log collection and monitoring</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>You hand over two things: <strong>an image in a registry</strong>, and <strong>a short list of facts</strong> about the app. Section 10 is that list, filled in for this lesson's app. Everything before it is how you find the facts and make sure they're true.</p>
+    </section>
+
+    <section id="app">
+      <h2><span class="n">02</span>The practice app</h2>
+      <p>This lesson uses <strong>sheet-tool</strong>, a small app of a kind many teams build:</p>
       <ul>
-        <li>Which machine should this container run on, given the CPU and memory it needs?</li>
-        <li>A container crashed, or a whole machine died. What replaces it, and where?</li>
-        <li>We have a new image. How do we replace 10 running copies without downtime, and undo it if it's broken?</li>
-        <li>How do the other services find this one, when its copies keep moving between machines?</li>
+        <li>a web page where a user uploads an <code>.xlsx</code> file;</li>
+        <li>the app reads it with <code>openpyxl</code> and sends column A, row by row, to a model on <strong>OpenRouter</strong>;</li>
+        <li>it writes the answers into a new column and sends the file back as a download, <strong>in the same request</strong>;</li>
+        <li>it keeps <strong>one YAML file</strong> (its settings: model, prompt, row limit) in an S3 bucket.</li>
       </ul>
-      <p><strong>Kubernetes</strong> answers them. The key idea is <strong>desired state</strong>. You don't say "start 3 containers"; you write "there should always be 3 copies of this, using this image". Kubernetes' controllers keep comparing that with reality and fix any difference. If a copy dies, reality is 2, desired is 3, so a controller starts one. You change the image in the file, and a controller rolls it out.</p>
-      <p>ECS Express Mode and Cloudflare Containers (Lesson 6) do the same work for you, with fewer choices. Kubernetes gives you every choice, and every responsibility that comes with it.</p>
-
-      <figure>
-        <div class="diagram">
-          <svg viewBox="0 0 720 250" role="img" aria-labelledby="f1t">
-            <title id="f1t">Traffic enters through an Ingress, goes to a Service, which balances across three Pods managed by a Deployment and spread over two nodes; the control plane watches desired and actual state</title>
-            <defs>
-              <marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker>
-            </defs>
-            <text class="d-m" x="10" y="118">users</text>
-            <path class="d-line" d="M46,114 L70,114" marker-end="url(#ah1)"/>
-            <rect class="d-kernel" x="74" y="92" width="96" height="44" rx="3"/>
-            <text class="d-tb" x="86" y="112">Ingress</text>
-            <text class="d-m" x="86" y="128">HTTP entry</text>
-            <path class="d-line" d="M170,114 L192,114" marker-end="url(#ah1)"/>
-            <rect class="d-app" x="196" y="92" width="104" height="44" rx="3"/>
-            <text class="d-tb" x="208" y="112">Service</text>
-            <text class="d-m" x="208" y="128">hello-ai</text>
-
-            <path class="d-line" d="M300,106 L352,64" marker-end="url(#ah1)"/>
-            <path class="d-line" d="M300,114 L352,114" marker-end="url(#ah1)"/>
-            <path class="d-line" d="M300,122 L352,186" marker-end="url(#ah1)"/>
-
-            <text class="d-h" x="340" y="16">DEPLOYMENT hello-ai · REPLICAS: 3</text>
-            <rect class="d-frame" x="340" y="26" width="200" height="112" rx="4"/>
-            <text class="d-h" x="352" y="42">NODE 1</text>
-            <rect class="d-box" x="356" y="50" width="170" height="30" rx="2"/><text class="d-t" x="368" y="70">Pod · api container</text>
-            <rect class="d-box" x="356" y="98" width="170" height="30" rx="2"/><text class="d-t" x="368" y="118">Pod · api container</text>
-            <rect class="d-frame" x="340" y="148" width="200" height="72" rx="4"/>
-            <text class="d-h" x="352" y="164">NODE 2</text>
-            <rect class="d-box" x="356" y="172" width="170" height="30" rx="2"/><text class="d-t" x="368" y="192">Pod · api container</text>
-
-            <rect class="d-hw" x="566" y="26" width="144" height="194" rx="3"/>
-            <text class="d-tb" x="578" y="50">Control plane</text>
-            <text class="d-m" x="578" y="76">API server</text>
-            <text class="d-m" x="578" y="96">scheduler</text>
-            <text class="d-m" x="578" y="116">controllers</text>
-            <text class="d-m" x="578" y="150">desired: 3</text>
-            <text class="d-m" x="578" y="170">actual: 3</text>
-            <text class="d-ok" x="578" y="196">nothing to fix</text>
-            <text class="d-m" x="340" y="242">Pods can land on any node; the Service always finds them by label.</text>
-          </svg>
-        </div>
-      </figure>
-    </section>
-
-    <section id="words">
-      <h2><span class="n">02</span>The vocabulary, mapped to what you know</h2>
-      <div class="table">
-        <table class="map">
-          <thead><tr><th>Kubernetes</th><th>What it is</th><th>You already know it as</th></tr></thead>
-          <tbody>
-            <tr><td>Node</td><td>A machine that runs containers</td><td>Your Podman VM</td></tr>
-            <tr><td>Pod</td><td>One or more containers that share a network namespace; the smallest thing Kubernetes runs</td><td>A Podman pod (Lesson 1's Podman table). Usually one app container per Pod.</td></tr>
-            <tr><td>Deployment</td><td>"Keep N copies of this Pod running, and roll out changes gradually"</td><td>The desired state behind ECS Express's tasks</td></tr>
-            <tr><td>Service</td><td>A stable name and address that spreads traffic over matching Pods</td><td>A Compose service name like <code>db</code> (Lesson 4)</td></tr>
-            <tr><td>Ingress (or Gateway)</td><td>Routes outside HTTP traffic to Services</td><td><code>-p</code> plus the load balancer from Lesson 6</td></tr>
-            <tr><td>ConfigMap</td><td>Non-secret settings</td><td><code>-e</code> and <code>--env-file</code> (Lesson 3)</td></tr>
-            <tr><td>Secret</td><td>Secret settings, stored separately</td><td><code>podman secret</code> (Lesson 3)</td></tr>
-            <tr><td>PersistentVolumeClaim</td><td>A request for storage that outlives Pods</td><td>A named volume (Lesson 4)</td></tr>
-            <tr><td>requests / limits</td><td>CPU and memory to reserve, and the maximum allowed</td><td><code>--cpus</code> and <code>--memory</code> (Lesson 5)</td></tr>
-            <tr><td>liveness / readiness probe</td><td>"Restart it if this fails" / "send no traffic if this fails"</td><td><code>/health/live</code> and <code>/health/ready</code> (Lesson 5)</td></tr>
-            <tr><td>Namespace</td><td>A folder that groups resources in a cluster, like "staging" and "production"</td><td>Nothing: this is <em>not</em> Lesson 1's Linux namespaces, despite the name</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section id="yaml">
-      <h2><span class="n">03</span>Reading a Deployment</h2>
-      <p>Kubernetes objects are written in YAML. Several can share a file, separated by <code>---</code>. Each starts with the same three keys: <code>apiVersion</code> and <code>kind</code> (what sort of object) and <code>metadata</code> (its name and labels). Here's hello-ai as a real cluster would run it:</p>
-      <div class="anno">
-        <div class="head"><span>hello-ai-k8s.yaml</span><span>4 objects</span></div>
-        <div class="row"><code>apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: hello-ai-config
-data:
-  MODEL_NAME: keyword-sentiment-v1</code><p>Settings, stored in the cluster under the name <code>hello-ai-config</code>.</p></div>
-        <div class="row"><code>apiVersion: v1
-kind: Secret
-metadata:
-  name: hello-ai-secrets
-type: Opaque
-stringData:
-  API_KEY: not-a-real-key</code><p>A secret. Written into the file here to keep the example complete; in real repositories the value comes from a secret manager and never sits in Git.</p></div>
-        <div class="row"><code>apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: hello-ai
-spec:
-  replicas: 2</code><p>"Keep 2 copies running."</p></div>
-        <div class="row"><code>  selector:
-    matchLabels:
-      app: hello-ai
-  template:
-    metadata:
-      labels:
-        app: hello-ai</code><p><strong>Labels are how Kubernetes connects things.</strong> Every Pod made from the template gets the label <code>app: hello-ai</code>; the Deployment counts Pods with that label, and the Service below sends traffic to them.</p></div>
-        <div class="row"><code>    spec:
-      containers:
-        - name: api
-          image: 123456789012.dkr.ecr.eu-west-1.amazonaws.com/hello-ai:a1b2c3d4
-          ports:
-            - containerPort: 8000</code><p>The Pod's container: the commit-tagged image from Lesson 6, listening on 8000.</p></div>
-        <div class="row"><code>          envFrom:
-            - configMapRef:
-                name: hello-ai-config
-          env:
-            - name: API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: hello-ai-secrets
-                  key: API_KEY</code><p>All ConfigMap entries become environment variables, and one secret is added as <code>API_KEY</code>. Your app just reads <code>os.getenv</code>, as in Lesson 3.</p></div>
-        <div class="row"><code>          resources:
-            requests:
-              cpu: 250m
-              memory: 256Mi
-            limits:
-              cpu: "1"
-              memory: 512Mi</code><p><strong>Requests</strong> are for placement: the scheduler only uses a node with 0.25 CPU (<code>250m</code>) and 256&nbsp;MiB free. <strong>Limits</strong> are enforced like <code>--cpus</code> and <code>--memory</code>: over 512&nbsp;MiB means OOMKilled (Lesson 5). A CPU limit means the <code>OMP_NUM_THREADS</code> advice applies.</p></div>
-        <div class="row"><code>          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            periodSeconds: 5</code><p>Liveness failing means restart the container. Readiness failing means stop sending it traffic. For hello-model you'd use <code>/health/live</code> and <code>/health/ready</code> (Lesson 5); a <code>startupProbe</code> gives slow-loading models extra time.</p></div>
-        <div class="row"><code>apiVersion: v1
-kind: Service
-metadata:
-  name: hello-ai
-spec:
-  selector:
-    app: hello-ai
-  ports:
-    - port: 80
-      targetPort: 8000</code><p>Inside the cluster, <code>http://hello-ai</code> (port 80) reaches any ready Pod labelled <code>app: hello-ai</code> on port 8000. The same idea as <code>db</code> in Compose.</p></div>
-      </div>
-    </section>
-
-    <section id="local">
-      <h2><span class="n">04</span>Try it with Podman</h2>
-      <p><code>podman kube play</code> reads Kubernetes YAML and creates the matching Podman pods, containers, secrets and volumes. It's not a cluster, but it's a quick way to test a file. The local version of the file differs in three lines: the local image, a <code>hostPort</code> so your Mac can reach it, and the liveness probe (explained in step 3).</p>
-
-      <h3>Step 1: play it</h3>
-      <div class="cmd"><pre><code>podman kube play hello-ai-podman.yaml
-podman pod ps
-podman ps --format '{{.Names}}\t{{.Status}}\t{{.Ports}}'
-curl localhost:8080/health</code></pre></div>
-      <div class="out"><p class="olabel">Output</p><pre><code>hello-ai-pod   Running   containers=2
-9f5017880561-infra   Up 7 seconds   0.0.0.0:8080-&gt;8000/tcp   <span class="c">← holds the pod's shared network namespace</span>
-hello-ai-pod-api     Up 7 seconds   0.0.0.0:8080-&gt;8000/tcp   <span class="c">← your container</span>
-{"status":"ok","model":"keyword-sentiment-v1",…}</code></pre></div>
-      <p>Two containers, as Lesson 1 described pods: a tiny "infra" container owns the network namespace, and your container joins it. That's why both show the same port.</p>
-
-      <h3>Step 2: settings and limits arrived</h3>
-      <div class="cmd"><pre><code>podman exec hello-ai-pod-api sh -c 'echo MODEL_NAME=$MODEL_NAME; [ -n "$API_KEY" ] &amp;&amp; echo API_KEY is set'
-podman inspect hello-ai-pod-api --format 'memory={{.HostConfig.Memory}} cpu={{.HostConfig.CpuQuota}}/{{.HostConfig.CpuPeriod}}'</code></pre></div>
-      <div class="out"><p class="olabel">Output</p><pre><code>MODEL_NAME=keyword-sentiment-v1          <span class="c">← from the ConfigMap</span>
-API_KEY is set                           <span class="c">← from the Secret, stored as a podman secret</span>
-memory=536870912 cpu=100000/100000       <span class="c">← 512 MiB and 1 CPU, from limits</span></code></pre></div>
-
-      <h3>Step 3: the probe surprise</h3>
-      <p style="margin-bottom:0">With the real-cluster file's <code>httpGet</code> liveness probe, this happened after about half a minute:</p>
-      <div class="out"><p class="olabel">Output</p><pre><code>hello-ai-pod-api   Stopping (unhealthy)
-health=unhealthy streak=3 restarts=2
-/bin/sh: 1: curl: not found</code></pre></div>
-      <ol>
-        <li>Podman turns an <code>httpGet</code> probe into a health check that runs <code>curl</code> <em>inside</em> the container.</li>
-        <li>Your slim image has no <code>curl</code>, so every check failed.</li>
-        <li>A failing liveness probe means "restart it", so Podman restarted the container, twice by then.</li>
-      </ol>
-      <p style="margin-bottom:0">A real cluster makes <code>httpGet</code> requests from outside the container, so it doesn't need <code>curl</code> and this file works there unchanged. For local testing, the Podman file uses an <code>exec</code> probe that runs Python, like your Lesson 3 <code>HEALTHCHECK</code>:</p>
-      <div class="cmd"><pre><code>          livenessProbe:
-            exec:
-              command: ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
-            periodSeconds: 10</code></pre></div>
-      <p>Result: <code>Up 11 seconds (healthy)</code>, 0 restarts.</p>
-
-      <h3>Step 4: what Podman ignores</h3>
-      <div class="table">
-        <table>
-          <thead><tr><th>In the YAML</th><th>Kubernetes</th><th><code>podman kube play</code> on your Mac</th></tr></thead>
-          <tbody>
-            <tr><td><code>replicas: 2</code></td><td>2 Pods</td><td>1 pod, without a warning</td></tr>
-            <tr><td><code>kind: Service</code></td><td>Stable name and load balancing</td><td>Ignored; use <code>hostPort</code> to reach the pod</td></tr>
-            <tr><td><code>readinessProbe</code></td><td>Controls traffic</td><td>Not used</td></tr>
-            <tr><td><code>livenessProbe: httpGet</code></td><td>Request from outside</td><td><code>curl</code> inside the container</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3>Step 5: clean up, and generate YAML from containers</h3>
-      <div class="cmd"><pre><code>podman kube down hello-ai-podman.yaml</code></pre></div>
-      <p>This removes the pod, its containers and the secret it created. Podman can also go the other way: <code>podman kube generate POD</code> writes Kubernetes YAML from running containers, a useful starting point. But look at what it produced for this pod:</p>
-      <div class="out"><p class="olabel">podman kube generate hello-ai-pod (excerpt)</p><pre><code>  containers:
-  - env:
-    - name: API_KEY
-      value: not-a-real-key          <span class="c">← the secret, written out as plain text</span>
-    - name: MODEL_NAME
-      value: keyword-sentiment-v1</code></pre></div>
-      <p>Generated files contain secret values as plain text. Never commit them without replacing those lines.</p>
-    </section>
-
-    <section id="kubectl">
-      <h2><span class="n">05</span>How it looks on a real cluster</h2>
-      <p>On a real cluster you use <code>kubectl</code>. These were not run for the course, which had no cluster, so this is for recognising them, not a transcript:</p>
       <div class="table">
         <table class="cmds">
+          <thead><tr><th>Address</th><th>What it does</th></tr></thead>
           <tbody>
-            <tr><td>kubectl apply -f hello-ai-k8s.yaml</td><td>Send the desired state to the cluster. Run it again after edits; it applies the differences.</td></tr>
-            <tr><td>kubectl get pods</td><td>List Pods with status and restart counts. The first thing to run when something's wrong.</td></tr>
-            <tr><td>kubectl describe pod NAME</td><td>Details plus <strong>events</strong>: failed probes, <code>OOMKilled</code>, image pull errors</td></tr>
-            <tr><td>kubectl logs NAME (-f)</td><td>Like <code>podman logs</code></td></tr>
-            <tr><td>kubectl exec -it NAME -- sh</td><td>Like <code>podman exec</code></td></tr>
-            <tr><td>kubectl port-forward svc/hello-ai 8080:80</td><td>Reach a Service from your laptop, like a temporary <code>-p</code></td></tr>
-            <tr><td>kubectl rollout status deployment/hello-ai</td><td>Watch a rollout progress</td></tr>
-            <tr><td>kubectl rollout undo deployment/hello-ai</td><td>Go back to the previous version</td></tr>
+            <tr><td>GET /</td><td>The upload page</td></tr>
+            <tr><td>POST /process</td><td><code>.xlsx</code> in, processed <code>.xlsx</code> out as a download</td></tr>
+            <tr><td>GET /settings, PUT /settings</td><td>Read or change <code>settings.yaml</code> in S3</td></tr>
+            <tr><td>GET /health/live</td><td>"The process is running" (section 3)</td></tr>
+            <tr><td>GET /health/ready</td><td>"I can do my job right now": S3 answers (section 3)</td></tr>
           </tbody>
         </table>
       </div>
-      <h3>What happens when you change the image tag</h3>
-      <ol>
-        <li>You edit <code>image:</code> to the new commit tag and run <code>kubectl apply</code>.</li>
-        <li>The Deployment starts a new Pod with the new image, next to the old ones.</li>
-        <li>It waits until the new Pod's <strong>readiness</strong> probe passes, and only then sends it traffic and removes an old Pod.</li>
-        <li>It repeats until every Pod is new.</li>
-      </ol>
-      <p>If the new version never becomes ready, the rollout stops at step 3 and the old Pods keep serving. That's why a good readiness endpoint (Lesson 5) protects you from bad deploys.</p>
-    </section>
+      <p>Two <strong>stand-ins</strong> replace what the cloud and the internet provide, so nothing costs money and no real key is needed: a <strong>MinIO</strong> server pretends to be S3, and a fake OpenRouter (a 40-line Python file) answers with the same URL path and JSON shape as the real one.</p>
 
-    <section id="eks">
-      <h2><span class="n">06</span>Kubernetes on AWS: EKS</h2>
-      <p><strong>Amazon EKS</strong> runs the control plane for you, charged per cluster per hour. You still decide where Pods run and how traffic, permissions and secrets are connected:</p>
-      <div class="table">
-        <table>
-          <thead><tr><th>Need</th><th>Common EKS answer</th></tr></thead>
-          <tbody>
-            <tr><td>Machines for Pods</td><td>EC2 managed node groups, or Fargate for Pods (no GPUs on Fargate)</td></tr>
-            <tr><td>GPU models (Lesson 5)</td><td>A node group of GPU instances, such as g5 or g6</td></tr>
-            <tr><td>Traffic from the internet</td><td>The AWS Load Balancer Controller turns an Ingress into an Application Load Balancer</td></tr>
-            <tr><td>AWS permissions for Pods</td><td>EKS Pod Identity: roles for Pods, no keys, the same idea as GitLab's OIDC login in Lesson 6</td></tr>
-            <tr><td>Secrets from Secrets Manager</td><td>An add-on (External Secrets Operator or the Secrets Store CSI driver) that syncs them into the cluster</td></tr>
-            <tr><td>Images</td><td>ECR, exactly as in Lesson 6</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p><strong>ECS Express Mode or EKS?</strong> For one or a few services, Express Mode is far less to run. EKS makes sense when the company already runs Kubernetes, when you have many services and teams, or when you need its ecosystem: Helm charts, operators and GPU scheduling. Cloudflare has no Kubernetes offering; its Containers product is its managed answer.</p>
-      <p>Teams rarely write raw YAML for every environment. Look for <strong>Helm</strong> (templated YAML packages, with a <code>values.yaml</code> of settings) or <strong>Kustomize</strong> (a base plus per-environment patches). Underneath, it's the same objects you just read.</p>
-    </section>
+      <h3>Create the project</h3>
+      <p>One paste creates every file in <code>~/practice/sheet-tool</code>. If that folder already exists, files with the same names are replaced. The same files are in the course repository, in <code>solutions/lesson-07/sheet-tool</code>.</p>
+      <details class="sol"><summary>Show the command that creates the project (25 files)</summary><div class="inner">
+        <div class="cmd"><pre><code>mkdir -p ~/practice/sheet-tool &amp;&amp; cd ~/practice/sheet-tool
+mkdir -p app dev k8s/base k8s/lab k8s/production k8s/stand-ins
+cat &gt; .containerignore &lt;&lt;'END_OF_FILE'
+# Keep secrets, Git history and test files out of the build context.
+.env
+.git
+*.xlsx
+k8s/
+compose.yaml
+END_OF_FILE
+cat &gt; .env &lt;&lt;'END_OF_FILE'
+# Local development only. Fake values; never commit real keys.
+OPENROUTER_API_KEY=fake-openrouter-key
+MINIO_ROOT_USER=local-admin
+MINIO_ROOT_PASSWORD=fake-local-password
+END_OF_FILE
+cat &gt; Containerfile &lt;&lt;'END_OF_FILE'
+# Pinned by digest (Lesson 3), so a rebuild uses exactly this Python. Update it on purpose.
+FROM docker.io/library/python:3.12-slim@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f
 
-    <section id="read">
-      <h2><span class="n">07</span>Reading your team's files: a checklist</h2>
-      <p>When you open a Deployment, Helm chart or Kustomize folder at work, find these, in this order:</p>
-      <ol>
-        <li><strong>Image:</strong> which registry and tag? A commit tag, or a moving tag like <code>latest</code>?</li>
-        <li><strong>Resources:</strong> requests and limits. Do they match what the app really uses? Is <code>OMP_NUM_THREADS</code> set for model services?</li>
-        <li><strong>Probes:</strong> separate liveness and readiness? Does liveness avoid depending on the model or database?</li>
-        <li><strong>Settings and secrets:</strong> where do the values come from? Nothing secret should be written in the repository.</li>
-        <li><strong>Replicas and scaling:</strong> a fixed number, or a HorizontalPodAutoscaler?</li>
-        <li><strong>Traffic:</strong> which Service and Ingress point at it, and on what hostname?</li>
-        <li><strong>Security:</strong> <code>runAsNonRoot</code>, the user ID, a read-only root filesystem (Lesson 3).</li>
-      </ol>
-    </section>
+# Logs go straight to stdout; no .pyc files written at run time (the filesystem will be read-only).
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
-    <section id="lab">
-      <h2><span class="n">08</span>Lab</h2>
-      <p>Uses <code>hello-ai:2.0</code> from Lesson 4. Work in a new folder, <code>~/practice/k8s</code>.</p>
+# A user with a number. Kubernetes can only prove "not root" when the image's user is a number.
+RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app
 
-      <div class="step">
-        <span class="sn">1</span>
-        <div>
-          <h3>Create both files</h3>
-          <p style="margin-bottom:0">Save the local version as <code>hello-ai-podman.yaml</code>:</p>
-          <details class="sol"><summary>Show hello-ai-podman.yaml</summary><div class="inner">
-            <div class="cmd"><pre><code>apiVersion: v1
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir --root-user-action=ignore -r requirements.txt
+COPY app/ app/
+
+USER 10001
+EXPOSE 8000
+
+# Exec form, so uvicorn is PID 1 and receives SIGTERM. On SIGTERM it stops taking new requests,
+# finishes the ones in progress (up to 60 s), then exits.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "60"]
+END_OF_FILE
+cat &gt; app/main.py &lt;&lt;'END_OF_FILE'
+"""sheet-tool: upload an .xlsx file, get it back with one column written by an AI model.
+
+Settings live in one YAML file in S3. Everything else comes from environment variables.
+"""
+import io
+import logging
+import os
+import re
+import time
+
+import boto3
+import httpx
+import yaml
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError
+from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, Response
+from openpyxl import load_workbook
+from pydantic import BaseModel, Field
+
+# Configuration: only from environment variables, never from files baked into the image.
+S3_BUCKET = os.environ["S3_BUCKET"]
+S3_KEY = os.getenv("S3_KEY", "settings.yaml")
+OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+OPENROUTER_API_KEY = os.environ["OPENROUTER_API_KEY"]
+MAX_UPLOAD_MB = float(os.getenv("MAX_UPLOAD_MB", "10"))
+MAX_UPLOAD_BYTES = int(MAX_UPLOAD_MB * 1024 * 1024)
+
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(levelname)s %(name)s %(message)s")
+log = logging.getLogger("sheet-tool")
+
+
+class SkipHealthChecks(logging.Filter):
+    """Kubernetes calls the health endpoints every few seconds; don't log each call."""
+
+    def filter(self, record):
+        return "/health/" not in record.getMessage()
+
+
+logging.getLogger("uvicorn.access").addFilter(SkipHealthChecks())
+logging.getLogger("httpx").setLevel(logging.WARNING)  # one line per AI call is too much
+
+# boto3 finds the endpoint, region and credentials itself (AWS_* variables, or the pod's IAM role).
+# Short timeouts: a hung S3 call should fail fast, not hold a request for minutes.
+s3 = boto3.client("s3", config=Config(connect_timeout=2, read_timeout=5, retries={"max_attempts": 3}))
+s3_check = boto3.client("s3", config=Config(connect_timeout=1, read_timeout=2, retries={"max_attempts": 1}))
+
+# httpx also reads HTTPS_PROXY and NO_PROXY, in case the cluster's outbound traffic goes through a proxy.
+ai = httpx.Client(
+    base_url=OPENROUTER_BASE_URL,
+    headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"},
+    timeout=httpx.Timeout(60, connect=5),
+)
+
+
+class Settings(BaseModel):
+    model: str = "openai/gpt-4o-mini"
+    prompt: str = "Summarise in five words: {text}"
+    max_rows: int = Field(500, ge=1, le=5000)
+
+
+def load_settings(client=s3) -&gt; Settings:
+    try:
+        body = client.get_object(Bucket=S3_BUCKET, Key=S3_KEY)["Body"].read()
+    except ClientError as error:
+        if error.response["Error"]["Code"] == "NoSuchKey":
+            return Settings()  # nothing saved yet
+        raise
+    return Settings(**(yaml.safe_load(body) or {}))
+
+
+def settings_or_503() -&gt; Settings:
+    try:
+        return load_settings()
+    except (BotoCoreError, ClientError) as error:
+        log.error("settings storage failed: %r", error)
+        raise HTTPException(503, "Settings storage is unreachable")
+
+
+def save_settings(settings: Settings):
+    body = yaml.safe_dump(settings.model_dump(), sort_keys=False).encode()
+    s3.put_object(Bucket=S3_BUCKET, Key=S3_KEY, Body=body, ContentType="application/yaml")
+
+
+def ask_ai(model: str, prompt: str) -&gt; str:
+    response = ai.post("/chat/completions", json={"model": model, "messages": [{"role": "user", "content": prompt}]})
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"].strip()
+
+
+app = FastAPI(title="sheet-tool")
+
+
+@app.middleware("http")
+async def limit_upload_size(request: Request, call_next):
+    # Refuse a too-large upload before reading it. The ingress should have its own limit too.
+    length = request.headers.get("content-length")
+    if length and int(length) &gt; MAX_UPLOAD_BYTES:
+        return JSONResponse({"detail": f"File is larger than {MAX_UPLOAD_MB:g} MB"}, status_code=413)
+    return await call_next(request)
+
+
+PAGE = """&lt;!doctype html&gt;
+&lt;title&gt;sheet-tool&lt;/title&gt;
+&lt;h1&gt;sheet-tool&lt;/h1&gt;
+&lt;p&gt;Upload an .xlsx file (up to {limit} MB). Column A is sent to the AI model; the answers come back in a new column.&lt;/p&gt;
+&lt;form action="process" method="post" enctype="multipart/form-data"&gt;
+  &lt;input type="file" name="file" accept=".xlsx" required&gt;
+  &lt;button&gt;Process and download&lt;/button&gt;
+&lt;/form&gt;
+"""
+
+
+@app.get("/", response_class=HTMLResponse)
+def page():
+    return PAGE.format(limit=f"{MAX_UPLOAD_MB:g}")
+
+
+@app.post("/process")
+def process(file: UploadFile):
+    if not (file.filename or "").lower().endswith(".xlsx"):
+        raise HTTPException(415, "Upload an .xlsx file")
+    data = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) &gt; MAX_UPLOAD_BYTES:
+        raise HTTPException(413, f"File is larger than {MAX_UPLOAD_MB:g} MB")
+
+    settings = settings_or_503()
+    try:
+        workbook = load_workbook(io.BytesIO(data))
+    except Exception:
+        raise HTTPException(400, "Not a valid .xlsx file")
+    sheet = workbook.active
+    rows = sheet.max_row - 1
+    if rows &gt; settings.max_rows:
+        raise HTTPException(413, f"{rows} rows; the limit is {settings.max_rows}")
+
+    started = time.monotonic()
+    answer_column = sheet.max_column + 1
+    sheet.cell(row=1, column=answer_column, value="AI answer")
+    try:
+        for row in range(2, sheet.max_row + 1):
+            text = sheet.cell(row=row, column=1).value
+            if text is not None:
+                prompt = settings.prompt.replace("{text}", str(text))
+                sheet.cell(row=row, column=answer_column, value=ask_ai(settings.model, prompt))
+    except httpx.HTTPError as error:
+        log.error("AI call failed: %r", error)
+        raise HTTPException(502, "The AI service failed; try again later")
+
+    output = io.BytesIO()
+    workbook.save(output)
+    # Log sizes and timings, never file contents or keys.
+    log.info("processed rows=%d bytes_in=%d seconds=%.1f", rows, len(data), time.monotonic() - started)
+
+    # The file name comes from the user: keep only safe characters before putting it in a header.
+    safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", file.filename)
+    return Response(
+        output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="processed-{safe_name}"'},
+    )
+
+
+@app.get("/settings")
+def get_settings() -&gt; Settings:
+    return settings_or_503()
+
+
+@app.put("/settings")
+def put_settings(settings: Settings) -&gt; Settings:
+    try:
+        save_settings(settings)
+    except (BotoCoreError, ClientError) as error:
+        log.error("settings storage failed: %r", error)
+        raise HTTPException(503, "Settings storage is unreachable")
+    log.info("settings saved model=%s max_rows=%d", settings.model, settings.max_rows)
+    return settings
+
+
+@app.get("/health/live")
+def live():
+    # "The process is running and answering." Checks nothing else, so a broken S3 never causes restarts.
+    return {"status": "ok"}
+
+
+@app.get("/health/ready")
+def ready():
+    # "I can do my job right now." The app can't work without its settings, so check that S3 answers.
+    try:
+        load_settings(client=s3_check)
+    except Exception as error:
+        log.warning("not ready: %r", error)
+        raise HTTPException(503, "Settings storage is unreachable")
+    return {"status": "ready"}
+END_OF_FILE
+cat &gt; compose.yaml &lt;&lt;'END_OF_FILE'
+# Local development: the app, plus stand-ins for what the cluster and the internet provide.
+# Kubernetes never reads this file. It's for your Mac, and for tests in CI.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: localhost/sheet-tool:1.0
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      S3_BUCKET: sheet-tool-settings
+      AWS_ENDPOINT_URL_S3: http://s3:9000          # local only: on AWS the SDK finds S3 itself
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}        # local only: on AWS the pod's IAM role is used
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      OPENROUTER_BASE_URL: http://fake-openrouter:8080/api/v1
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      MAX_UPLOAD_MB: "10"
+    # The same restrictions a strict cluster applies, so problems show up on your Mac first.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      bucket:
+        condition: service_completed_successfully
+      fake-openrouter:
+        condition: service_started
+
+  s3:
+    image: docker.io/pgsty/minio@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - s3data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  bucket:  # runs once: creates the bucket, then exits. In AWS your team creates it.
+    image: docker.io/pgsty/minio@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
+    entrypoint: ["sh", "-c", "mc alias set local http://s3:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\" &amp;&amp; mc mb --ignore-existing local/sheet-tool-settings"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    depends_on:
+      s3:
+        condition: service_healthy
+
+  fake-openrouter:
+    image: docker.io/library/python:3.12-slim@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f
+    command: ["python", "/fake/fake_openrouter.py"]
+    volumes:
+      - ./dev:/fake:ro
+
+volumes:
+  s3data:
+END_OF_FILE
+cat &gt; dev/count_requests.py &lt;&lt;'END_OF_FILE'
+"""Count answers from the Service for N seconds: python count_requests.py 40
+
+Run it inside the cluster (see the lesson), so requests go through the Service like real traffic.
+"""
+import collections
+import sys
+import time
+
+import httpx
+
+end = time.time() + float(sys.argv[1])
+counts = collections.Counter()
+with httpx.Client(timeout=5) as client:
+    while time.time() &lt; end:
+        try:
+            counts[client.get("http://sheet-tool.sheet-tool/", headers={"Connection": "close"}).status_code] += 1
+        except httpx.HTTPError as error:
+            counts[type(error).__name__] += 1
+        time.sleep(0.05)
+print(dict(counts))
+END_OF_FILE
+cat &gt; dev/fake_openrouter.py &lt;&lt;'END_OF_FILE'
+"""A fake OpenRouter for local testing: same URL path and JSON shape, no real model, no cost.
+
+Only the Python standard library, so it runs in the plain python image.
+"""
+import json
+import os
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+DELAY = float(os.getenv("FAKE_DELAY", "0.05"))  # seconds per answer, to imitate a real model
+
+
+class Handler(BaseHTTPRequestHandler):
+    def reply(self, status, body):
+        data = json.dumps(body).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_GET(self):
+        self.reply(200, {"status": "ok"})
+
+    def do_POST(self):
+        if self.path != "/api/v1/chat/completions":
+            return self.reply(404, {"error": "not found"})
+        if not self.headers.get("Authorization", "").startswith("Bearer "):
+            return self.reply(401, {"error": "missing API key"})
+        request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        prompt = request["messages"][-1]["content"]
+        time.sleep(DELAY)
+        answer = f"fake answer ({len(prompt.split())} words in)"
+        self.reply(200, {"model": request["model"], "choices": [{"message": {"role": "assistant", "content": answer}}]})
+
+
+ThreadingHTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
+END_OF_FILE
+cat &gt; dev/make_sample.py &lt;&lt;'END_OF_FILE'
+"""Write a test spreadsheet to stdout.
+
+    python make_sample.py 20 &gt; comments.xlsx              20 rows of comments
+    python make_sample.py 232000 --random &gt; big.xlsx      random text that barely compresses: about 9.9 MB
+"""
+import io
+import os
+import sys
+
+from openpyxl import Workbook
+
+rows = int(sys.argv[1])
+book = Workbook()
+sheet = book.active
+if "--random" in sys.argv:
+    for i in range(rows):
+        sheet.append([os.urandom(12).hex(), os.urandom(8).hex(), i])
+else:
+    sheet.append(["Customer comment", "Region"])
+    for i in range(rows):
+        sheet.append([f"Comment number {i}: the delivery was late but the product works well", "EU"])
+buffer = io.BytesIO()
+book.save(buffer)
+sys.stdout.buffer.write(buffer.getvalue())
+size = buffer.tell()
+print(f"wrote {rows} rows, " + (f"{size / 1e6:.1f} MB" if size &gt; 1e6 else f"{size / 1e3:.0f} kB"), file=sys.stderr)
+END_OF_FILE
+cat &gt; k8s/base/configmap.yaml &lt;&lt;'END_OF_FILE'
+apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: hello-ai-config
+  name: sheet-tool-config
 data:
-  MODEL_NAME: keyword-sentiment-v1
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: hello-ai-secrets
-type: Opaque
-stringData:
-  API_KEY: not-a-real-key
----
+  S3_BUCKET: sheet-tool-settings
+  S3_KEY: settings.yaml
+  AWS_REGION: eu-west-1
+  OPENROUTER_BASE_URL: https://openrouter.ai/api/v1
+  MAX_UPLOAD_MB: "10"
+END_OF_FILE
+cat &gt; k8s/base/deployment.yaml &lt;&lt;'END_OF_FILE'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hello-ai
+  name: sheet-tool
   labels:
-    app: hello-ai
+    app: sheet-tool
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: hello-ai
+      app: sheet-tool
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0    # never go below 2 ready pods during an update
+      maxSurge: 1          # start one new pod at a time
   template:
     metadata:
       labels:
-        app: hello-ai
+        app: sheet-tool
     spec:
+      serviceAccountName: sheet-tool
+      automountServiceAccountToken: false   # the app never calls the Kubernetes API
+      terminationGracePeriodSeconds: 90     # time to finish a long upload before being killed
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
-        - name: api
-          image: localhost/hello-ai:2.0
+        - name: app
+          image: sheet-tool                 # each environment sets the real image and tag
           ports:
-            - containerPort: 8000
-              hostPort: 8080
+            - name: http
+              containerPort: 8000
           envFrom:
             - configMapRef:
-                name: hello-ai-config
-          env:
-            - name: API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: hello-ai-secrets
-                  key: API_KEY
+                name: sheet-tool-config
+            - secretRef:
+                name: sheet-tool-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           resources:
-            requests:
+            requests:            # reserved: used to choose a node
               cpu: 250m
-              memory: 256Mi
-            limits:
-              cpu: &quot;1&quot;
               memory: 512Mi
-          livenessProbe:
-            exec:
-              command: [&quot;python&quot;, &quot;-c&quot;, &quot;import urllib.request; urllib.request.urlopen(&#x27;http://127.0.0.1:8000/health&#x27;, timeout=2)&quot;]
+            limits:              # the ceiling: above 1Gi the container is killed (OOMKilled)
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:        # failing: no traffic, no restart
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:         # failing: restart the container
+            httpGet:
+              path: /health/live
+              port: http
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5       # let the Service stop sending traffic before SIGTERM arrives
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp              # the only writable folder: uploads over 1 MB are buffered here
+          emptyDir:
+            sizeLimit: 100Mi
+END_OF_FILE
+cat &gt; k8s/base/kustomization.yaml &lt;&lt;'END_OF_FILE'
+# The parts that are the same in every environment.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - serviceaccount.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - pdb.yaml
+END_OF_FILE
+cat &gt; k8s/base/pdb.yaml &lt;&lt;'END_OF_FILE'
+# When the cluster drains a node for maintenance, keep at least one pod running.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sheet-tool
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: sheet-tool
+END_OF_FILE
+cat &gt; k8s/base/service.yaml &lt;&lt;'END_OF_FILE'
+# A stable name inside the cluster: http://sheet-tool reaches any ready pod.
+apiVersion: v1
+kind: Service
+metadata:
+  name: sheet-tool
+spec:
+  selector:
+    app: sheet-tool
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+END_OF_FILE
+cat &gt; k8s/base/serviceaccount.yaml &lt;&lt;'END_OF_FILE'
+# The pod's identity inside the cluster. On EKS, the IAM role that may read and write
+# the S3 bucket is attached to this ServiceAccount (Pod Identity or IRSA), so the app needs no AWS keys.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sheet-tool
+END_OF_FILE
+cat &gt; k8s/lab/config.yaml &lt;&lt;'END_OF_FILE'
+# Lab only: point the app at the stand-ins instead of AWS S3 and openrouter.ai.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sheet-tool-config
+data:
+  AWS_REGION: us-east-1
+  AWS_ENDPOINT_URL_S3: http://minio.stand-ins:9000
+  OPENROUTER_BASE_URL: http://fake-openrouter.stand-ins:8080/api/v1
+END_OF_FILE
+cat &gt; k8s/lab/kustomization.yaml &lt;&lt;'END_OF_FILE'
+# The lab environment on your Mac (kind). Same base, local values.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: sheet-tool
+resources:
+  - namespace.yaml
+  - secret.yaml
+  - ../base
+images:
+  - name: sheet-tool
+    newName: localhost/sheet-tool
+    newTag: "1.0"
+patches:
+  - path: config.yaml
+END_OF_FILE
+cat &gt; k8s/lab/namespace.yaml &lt;&lt;'END_OF_FILE'
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sheet-tool
+  labels:
+    # Refuse any pod that runs as root, can gain privileges, or keeps Linux capabilities.
+    pod-security.kubernetes.io/enforce: restricted
+END_OF_FILE
+cat &gt; k8s/lab/secret.yaml &lt;&lt;'END_OF_FILE'
+# Lab only, fake values. In a real environment this Secret is created from a secret
+# manager (see ../production) and its values never sit in Git.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sheet-tool-secrets
+type: Opaque
+stringData:
+  OPENROUTER_API_KEY: fake-openrouter-key
+  AWS_ACCESS_KEY_ID: local-admin
+  AWS_SECRET_ACCESS_KEY: fake-local-password
+END_OF_FILE
+cat &gt; k8s/production/config.yaml &lt;&lt;'END_OF_FILE'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sheet-tool-config
+data:
+  S3_BUCKET: example-sheet-tool-production   # bucket names are global on AWS; your team picks it
+END_OF_FILE
+cat &gt; k8s/production/externalsecret.yaml &lt;&lt;'END_OF_FILE'
+# The External Secrets Operator copies the key from AWS Secrets Manager into the
+# Secret "sheet-tool-secrets", which the Deployment reads. Nothing secret is in Git.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: sheet-tool-secrets
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: aws-secrets-manager      # set up once by your team
+  target:
+    name: sheet-tool-secrets
+  data:
+    - secretKey: OPENROUTER_API_KEY
+      remoteRef:
+        key: sheet-tool/openrouter-api-key
+END_OF_FILE
+cat &gt; k8s/production/ingress.yaml &lt;&lt;'END_OF_FILE'
+# Traffic from the company network to the Service, through an AWS Application Load Balancer
+# (AWS Load Balancer Controller). Your team may use a Gateway API HTTPRoute instead; same questions.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sheet-tool
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal              # not reachable from the internet
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /health/ready
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=120   # longest upload
+spec:
+  ingressClassName: alb
+  rules:
+    - host: sheet-tool.internal.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sheet-tool
+                port:
+                  name: http
+END_OF_FILE
+cat &gt; k8s/production/kustomization.yaml &lt;&lt;'END_OF_FILE'
+# Production on EKS: the same base, real values. Not run in the lab (it needs AWS);
+# render it with: kubectl kustomize k8s/production
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: sheet-tool
+resources:
+  - ../base
+  - externalsecret.yaml
+  - ingress.yaml
+images:
+  - name: sheet-tool
+    newName: 123456789012.dkr.ecr.eu-west-1.amazonaws.com/sheet-tool
+    newTag: a1b2c3d4          # CI writes the commit tag here (Lesson 6)
+patches:
+  - path: config.yaml
+  - path: serviceaccount.yaml
+END_OF_FILE
+cat &gt; k8s/production/serviceaccount.yaml &lt;&lt;'END_OF_FILE'
+# Lets the pods use an IAM role that may read and write the settings file (IRSA).
+# With EKS Pod Identity there's no annotation: your team links the role to this ServiceAccount in AWS.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sheet-tool
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/sheet-tool-production
+END_OF_FILE
+cat &gt; k8s/stand-ins/stand-ins.yaml &lt;&lt;'END_OF_FILE'
+# Lab only: stand-ins for what your team and the internet provide (S3 storage and OpenRouter).
+# They live in their own namespace, so it's clear they're not part of the app.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stand-ins
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-root
+  namespace: stand-ins
+type: Opaque
+stringData:
+  MINIO_ROOT_USER: local-admin
+  MINIO_ROOT_PASSWORD: fake-local-password
+---
+# Storage that outlives pods: MinIO keeps its data here.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: stand-ins
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: stand-ins
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate        # one disk, one pod: stop the old pod before starting the new one
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+          args: ["server", "/data"]
+          envFrom:
+            - secretRef:
+                name: minio-root
+          ports:
+            - containerPort: 9000
           readinessProbe:
             httpGet:
-              path: /health
-              port: 8000
-            periodSeconds: 5
+              path: /minio/health/live
+              port: 9000
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-data
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: hello-ai
+  name: minio
+  namespace: stand-ins
 spec:
   selector:
-    app: hello-ai
+    app: minio
   ports:
-    - port: 80
-      targetPort: 8000</code></pre></div>
-          </div></details>
-          <p>Then save a copy as <code>hello-ai-httpget.yaml</code> and change its liveness probe to the <code>httpGet</code> form from section 3.</p>
+    - port: 9000
+---
+# A Job runs once to completion: here, create the bucket.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-bucket
+  namespace: stand-ins
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+          command: ["sh", "-c", "mc alias set local http://minio:9000 \"$MINIO_ROOT_USER\" \"$MINIO_ROOT_PASSWORD\" &amp;&amp; mc mb --ignore-existing local/sheet-tool-settings"]
+          envFrom:
+            - secretRef:
+                name: minio-root
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fake-openrouter
+  namespace: stand-ins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fake-openrouter
+  template:
+    metadata:
+      labels:
+        app: fake-openrouter
+    spec:
+      containers:
+        - name: fake
+          image: docker.io/library/python:3.12-slim
+          command: ["python", "/fake/fake_openrouter.py"]
+          env:
+            - name: FAKE_DELAY
+              value: "0.05"
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: script
+              mountPath: /fake
+      volumes:
+        - name: script
+          configMap:
+            name: fake-openrouter   # created from dev/fake_openrouter.py (see the lab)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fake-openrouter
+  namespace: stand-ins
+spec:
+  selector:
+    app: fake-openrouter
+  ports:
+    - port: 8080
+END_OF_FILE
+cat &gt; requirements.txt &lt;&lt;'END_OF_FILE'
+fastapi==0.142.2
+uvicorn==0.54.0
+python-multipart==0.0.32
+openpyxl==3.1.5
+defusedxml==0.7.1
+boto3==1.43.108
+PyYAML==6.0.3
+httpx==0.28.1
+END_OF_FILE
+echo "created $(find . -type f | wc -l | tr -d ' ') files in $(pwd)"</code></pre></div>
+      </div></details>
+      <div class="out"><p class="olabel">Output</p><pre><code>created 25 files in /Users/you/practice/sheet-tool</code></pre></div>
+      <pre><code>sheet-tool/
+├── app/main.py          <span class="c">the app</span>
+├── requirements.txt     <span class="c">pinned Python packages</span>
+├── Containerfile
+├── .containerignore
+├── .env                 <span class="c">fake values for your Mac</span>
+├── compose.yaml         <span class="c">the app plus its stand-ins, for your Mac</span>
+├── dev/                 <span class="c">the fake OpenRouter, a sample-file maker, a request counter</span>
+└── k8s/                 <span class="c">Kubernetes files (sections 6–9)</span></code></pre>
+      <details class="sol"><summary>Show app/main.py</summary><div class="inner">
+        <pre><code>"""sheet-tool: upload an .xlsx file, get it back with one column written by an AI model.
+
+Settings live in one YAML file in S3. Everything else comes from environment variables.
+"""
+import io
+import logging
+import os
+import re
+import time
+
+import boto3
+import httpx
+import yaml
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError
+from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, Response
+from openpyxl import load_workbook
+from pydantic import BaseModel, Field
+
+# Configuration: only from environment variables, never from files baked into the image.
+S3_BUCKET = os.environ["S3_BUCKET"]
+S3_KEY = os.getenv("S3_KEY", "settings.yaml")
+OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+OPENROUTER_API_KEY = os.environ["OPENROUTER_API_KEY"]
+MAX_UPLOAD_MB = float(os.getenv("MAX_UPLOAD_MB", "10"))
+MAX_UPLOAD_BYTES = int(MAX_UPLOAD_MB * 1024 * 1024)
+
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(levelname)s %(name)s %(message)s")
+log = logging.getLogger("sheet-tool")
+
+
+class SkipHealthChecks(logging.Filter):
+    """Kubernetes calls the health endpoints every few seconds; don't log each call."""
+
+    def filter(self, record):
+        return "/health/" not in record.getMessage()
+
+
+logging.getLogger("uvicorn.access").addFilter(SkipHealthChecks())
+logging.getLogger("httpx").setLevel(logging.WARNING)  # one line per AI call is too much
+
+# boto3 finds the endpoint, region and credentials itself (AWS_* variables, or the pod's IAM role).
+# Short timeouts: a hung S3 call should fail fast, not hold a request for minutes.
+s3 = boto3.client("s3", config=Config(connect_timeout=2, read_timeout=5, retries={"max_attempts": 3}))
+s3_check = boto3.client("s3", config=Config(connect_timeout=1, read_timeout=2, retries={"max_attempts": 1}))
+
+# httpx also reads HTTPS_PROXY and NO_PROXY, in case the cluster's outbound traffic goes through a proxy.
+ai = httpx.Client(
+    base_url=OPENROUTER_BASE_URL,
+    headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"},
+    timeout=httpx.Timeout(60, connect=5),
+)
+
+
+class Settings(BaseModel):
+    model: str = "openai/gpt-4o-mini"
+    prompt: str = "Summarise in five words: {text}"
+    max_rows: int = Field(500, ge=1, le=5000)
+
+
+def load_settings(client=s3) -&gt; Settings:
+    try:
+        body = client.get_object(Bucket=S3_BUCKET, Key=S3_KEY)["Body"].read()
+    except ClientError as error:
+        if error.response["Error"]["Code"] == "NoSuchKey":
+            return Settings()  # nothing saved yet
+        raise
+    return Settings(**(yaml.safe_load(body) or {}))
+
+
+def settings_or_503() -&gt; Settings:
+    try:
+        return load_settings()
+    except (BotoCoreError, ClientError) as error:
+        log.error("settings storage failed: %r", error)
+        raise HTTPException(503, "Settings storage is unreachable")
+
+
+def save_settings(settings: Settings):
+    body = yaml.safe_dump(settings.model_dump(), sort_keys=False).encode()
+    s3.put_object(Bucket=S3_BUCKET, Key=S3_KEY, Body=body, ContentType="application/yaml")
+
+
+def ask_ai(model: str, prompt: str) -&gt; str:
+    response = ai.post("/chat/completions", json={"model": model, "messages": [{"role": "user", "content": prompt}]})
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"].strip()
+
+
+app = FastAPI(title="sheet-tool")
+
+
+@app.middleware("http")
+async def limit_upload_size(request: Request, call_next):
+    # Refuse a too-large upload before reading it. The ingress should have its own limit too.
+    length = request.headers.get("content-length")
+    if length and int(length) &gt; MAX_UPLOAD_BYTES:
+        return JSONResponse({"detail": f"File is larger than {MAX_UPLOAD_MB:g} MB"}, status_code=413)
+    return await call_next(request)
+
+
+PAGE = """&lt;!doctype html&gt;
+&lt;title&gt;sheet-tool&lt;/title&gt;
+&lt;h1&gt;sheet-tool&lt;/h1&gt;
+&lt;p&gt;Upload an .xlsx file (up to {limit} MB). Column A is sent to the AI model; the answers come back in a new column.&lt;/p&gt;
+&lt;form action="process" method="post" enctype="multipart/form-data"&gt;
+  &lt;input type="file" name="file" accept=".xlsx" required&gt;
+  &lt;button&gt;Process and download&lt;/button&gt;
+&lt;/form&gt;
+"""
+
+
+@app.get("/", response_class=HTMLResponse)
+def page():
+    return PAGE.format(limit=f"{MAX_UPLOAD_MB:g}")
+
+
+@app.post("/process")
+def process(file: UploadFile):
+    if not (file.filename or "").lower().endswith(".xlsx"):
+        raise HTTPException(415, "Upload an .xlsx file")
+    data = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) &gt; MAX_UPLOAD_BYTES:
+        raise HTTPException(413, f"File is larger than {MAX_UPLOAD_MB:g} MB")
+
+    settings = settings_or_503()
+    try:
+        workbook = load_workbook(io.BytesIO(data))
+    except Exception:
+        raise HTTPException(400, "Not a valid .xlsx file")
+    sheet = workbook.active
+    rows = sheet.max_row - 1
+    if rows &gt; settings.max_rows:
+        raise HTTPException(413, f"{rows} rows; the limit is {settings.max_rows}")
+
+    started = time.monotonic()
+    answer_column = sheet.max_column + 1
+    sheet.cell(row=1, column=answer_column, value="AI answer")
+    try:
+        for row in range(2, sheet.max_row + 1):
+            text = sheet.cell(row=row, column=1).value
+            if text is not None:
+                prompt = settings.prompt.replace("{text}", str(text))
+                sheet.cell(row=row, column=answer_column, value=ask_ai(settings.model, prompt))
+    except httpx.HTTPError as error:
+        log.error("AI call failed: %r", error)
+        raise HTTPException(502, "The AI service failed; try again later")
+
+    output = io.BytesIO()
+    workbook.save(output)
+    # Log sizes and timings, never file contents or keys.
+    log.info("processed rows=%d bytes_in=%d seconds=%.1f", rows, len(data), time.monotonic() - started)
+
+    # The file name comes from the user: keep only safe characters before putting it in a header.
+    safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", file.filename)
+    return Response(
+        output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="processed-{safe_name}"'},
+    )
+
+
+@app.get("/settings")
+def get_settings() -&gt; Settings:
+    return settings_or_503()
+
+
+@app.put("/settings")
+def put_settings(settings: Settings) -&gt; Settings:
+    try:
+        save_settings(settings)
+    except (BotoCoreError, ClientError) as error:
+        log.error("settings storage failed: %r", error)
+        raise HTTPException(503, "Settings storage is unreachable")
+    log.info("settings saved model=%s max_rows=%d", settings.model, settings.max_rows)
+    return settings
+
+
+@app.get("/health/live")
+def live():
+    # "The process is running and answering." Checks nothing else, so a broken S3 never causes restarts.
+    return {"status": "ok"}
+
+
+@app.get("/health/ready")
+def ready():
+    # "I can do my job right now." The app can't work without its settings, so check that S3 answers.
+    try:
+        load_settings(client=s3_check)
+    except Exception as error:
+        log.warning("not ready: %r", error)
+        raise HTTPException(503, "Settings storage is unreachable")
+    return {"status": "ready"}</code></pre>
+      </div></details>
+
+      <h3>Run it</h3>
+      <div class="cmd"><pre><code>cd ~/practice/sheet-tool
+podman compose up -d --build</code></pre></div>
+      <div class="out"><p class="olabel">Output (last lines)</p><pre><code> Container sheet-tool-bucket-1 Exited
+ Container sheet-tool-app-1 Starting
+ Container sheet-tool-app-1 Started</code></pre></div>
+      <p>Make a 20-row spreadsheet and send it through the app. <code>make_sample.py</code> runs inside your image, because that's where <code>openpyxl</code> is installed:</p>
+      <div class="cmd"><pre><code>podman run --rm -v ./dev:/work:ro localhost/sheet-tool:1.0 python /work/make_sample.py 20 &gt; comments.xlsx
+curl -s -F file=@comments.xlsx localhost:8000/process -o processed.xlsx -w '%{http_code}\n'
+open processed.xlsx</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>wrote 20 rows, 5 kB
+200</code></pre></div>
+      <p>The file opens in Numbers or Excel with a new third column, <em>AI answer</em>, holding <code>fake answer (16 words in)</code> on each row. You can also open <a href="http://localhost:8000">localhost:8000</a> and upload through the page.</p>
+
+      <h3>Do you need a compose.yaml?</h3>
+      <p>Yes, for yourself: one command starts the app together with everything it talks to, on your Mac and in CI tests. Your devops team won't use it, because Kubernetes doesn't read Compose files. Here's what it starts:</p>
+      <div class="anno">
+        <div class="head"><span>compose.yaml</span><span>4 services</span></div>
+        <div class="row"><code>  app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: localhost/sheet-tool:1.0
+    ports:
+      - "127.0.0.1:8000:8000"</code><p>Your app, built from the Containerfile. The port is only reachable from your Mac (Lesson 4).</p></div>
+        <div class="row"><code>    environment:
+      S3_BUCKET: sheet-tool-settings
+      AWS_ENDPOINT_URL_S3: http://s3:9000
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      OPENROUTER_BASE_URL: http://fake-openrouter:8080/api/v1
+      …</code><p>All settings come from environment variables. The <code>AWS_*</code> lines point the AWS SDK at MinIO; on AWS they're not needed (section 9). <code>${…}</code> values come from <code>.env</code>.</p></div>
+        <div class="row"><code>    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true</code><p>The restrictions a strict cluster applies (section 3), so problems show up on your Mac first rather than in the cluster.</p></div>
+        <div class="row"><code>  s3:        <span class="c">MinIO, the S3 stand-in</span>
+  bucket:    <span class="c">runs once: creates the bucket</span>
+  fake-openrouter:</code><p>The stand-ins. In AWS your team creates the bucket, and the app talks to the real <code>openrouter.ai</code>.</p></div>
+      </div>
+    </section>
+
+    <section id="image">
+      <h2><span class="n">03</span>A deployment-ready image</h2>
+      <p>A cluster is stricter than your Mac. It may refuse to start your container, kill it, or restart it in a loop, and you'll see the reason in a system you can't easily look into. Each item below prevents one of those failures, and each has a test you can run now.</p>
+      <div class="table">
+        <table class="decide">
+          <thead><tr><th>Item</th><th>Why the cluster cares</th><th>Check on your Mac</th></tr></thead>
+          <tbody>
+            <tr><td>Runs as a user with a number, not root</td><td>Strict clusters refuse root, and can only check a number</td><td>3.1</td></tr>
+            <tr><td>Writes only to <code>/tmp</code></td><td>The rest of the filesystem is often read-only</td><td>3.2</td></tr>
+            <tr><td>Two health endpoints</td><td>One decides restarts, the other decides traffic</td><td>3.3</td></tr>
+            <tr><td>Stops cleanly on SIGTERM</td><td>Every new version and every node repair stops pods</td><td>3.4</td></tr>
+            <tr><td>Limits on what users send</td><td>An upload becomes memory, and too much memory gets the pod killed</td><td>3.5</td></tr>
+            <tr><td>Timeouts on every outside call; logs to stdout</td><td>A stuck call holds a request forever; the cluster only collects stdout</td><td>3.6</td></tr>
+            <tr><td>Settings from environment variables, secrets only at run time</td><td>One image for every environment, nothing secret inside it</td><td>Lesson 3</td></tr>
+            <tr><td>Listens on <code>0.0.0.0</code>, on a port above 1024</td><td>Reachable from the Service, no root needed to open the port</td><td>Lesson 2</td></tr>
+            <tr><td>Pinned base image and packages, built for the cluster's processor</td><td>The same build every time; most clusters run amd64</td><td>Lessons 3 and 6, 3.7</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>3.1 A user with a number</h3>
+      <p>Lesson 3 made the image run as a normal user. For Kubernetes, that user also needs a <strong>number</strong> in the <code>USER</code> line:</p>
+      <pre><code>RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app
+…
+USER 10001</code></pre>
+      <div class="cmd"><pre><code>podman run --rm localhost/sheet-tool:1.0 id</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>uid=10001(app) gid=10001(app) groups=10001(app)</code></pre></div>
+      <p>Why a number: a cluster that forbids root checks the image's <code>USER</code> before starting it. It can't look a name up, so with <code>USER app</code> it refuses with <code>image has non-numeric user (app), cannot verify user is non-root</code> (you'll see it happen in section 8). Why 10001: it's far above the IDs of real accounts, so it can't be mistaken for one, and policy checkers often flag IDs below 10000.</p>
+
+      <h3>3.2 Write only to /tmp</h3>
+      <p>Many clusters make the container's filesystem <strong>read-only</strong> (<code>readOnlyRootFilesystem: true</code>), so an attacker who gets in can't change the app or add tools. The app may then write only to folders mounted for it. sheet-tool writes in two places you won't find in its code: the upload parser buffers uploads bigger than 1&nbsp;MB to a temporary file, and <code>openpyxl</code> writes a temporary file every time it saves a workbook. Both go to <code>/tmp</code>, so <code>/tmp</code> is the one folder the cluster will mount (section 6).</p>
+      <p>Testing this on your Mac has a trap. <code>podman run --read-only</code> quietly mounts a writable <code>/tmp</code> for you; Kubernetes doesn't:</p>
+      <div class="cmd"><pre><code>podman run --rm --read-only localhost/sheet-tool:1.0 touch /tmp/x &amp;&amp; echo writable
+podman run --rm --read-only --read-only-tmpfs=false localhost/sheet-tool:1.0 touch /tmp/x</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>writable
+touch: cannot touch '/tmp/x': Read-only file system</code></pre></div>
+      <p>So test with <code>--read-only-tmpfs=false</code> plus <code>--tmpfs /tmp</code>, which is what the cluster will give you. Section 8 shows what happens in the cluster without a <code>/tmp</code>: even a 5&nbsp;KB file fails.</p>
+
+      <h3>3.3 Two health endpoints</h3>
+      <p>Kubernetes calls two addresses in your app every few seconds (Lesson 5 introduced them):</p>
+      <ul>
+        <li><strong>Liveness</strong> (<code>/health/live</code>): "is the process stuck?" If it fails, Kubernetes <strong>restarts</strong> the container.</li>
+        <li><strong>Readiness</strong> (<code>/health/ready</code>): "can it do its job right now?" If it fails, Kubernetes <strong>sends it no traffic</strong>, but leaves it running.</li>
+      </ul>
+      <pre><code>@app.get("/health/live")
+def live():
+    return {"status": "ok"}                <span class="c"># checks nothing else</span>
+
+@app.get("/health/ready")
+def ready():
+    try:
+        load_settings(client=s3_check)     <span class="c"># can it read settings.yaml from S3?</span>
+    except Exception as error:
+        raise HTTPException(503, "Settings storage is unreachable")
+    return {"status": "ready"}</code></pre>
+      <p>Stop the S3 stand-in and ask both:</p>
+      <div class="cmd"><pre><code>podman compose stop s3
+curl -s -w ' %{http_code}\n' localhost:8000/health/live
+curl -s -w ' %{http_code}\n' localhost:8000/health/ready
+podman compose start s3</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>{"status":"ok"} 200
+{"detail":"Settings storage is unreachable"} 503</code></pre></div>
+      <p>The process is fine, so liveness says 200 and nothing is restarted. Restarting wouldn't fix S3 anyway; if liveness checked S3, an S3 outage would restart every pod again and again. The app can't work without its settings, so readiness says 503 until S3 is back.</p>
+      <p><strong>Never call OpenRouter in a probe.</strong> Probes run every 5–10 seconds on every pod: each call would cost money and count against rate limits, and an OpenRouter outage would take down your upload page too.</p>
+      <details class="sol"><summary>Reference: should readiness check S3 at all? And where's the HEALTHCHECK?</summary><div class="inner">
+        <p><strong>S3 in readiness.</strong> When S3 is down, every pod becomes unready at the same moment, so the Service has no pods and users get errors even on the upload page (section 8 shows it). For sheet-tool that's honest: nothing works without the settings. An app that can still do useful work without a dependency should keep reporting ready, and return an error only from the parts that need it.</p>
+        <p><strong>No HEALTHCHECK line.</strong> Kubernetes ignores the image's <code>HEALTHCHECK</code> and uses its own probes (section 6). For your Mac, <code>compose.yaml</code> has a <code>healthcheck:</code> that calls <code>/health/ready</code>. Without the line, you also don't need <code>--format docker</code> when building (Lesson 3).</p>
+      </div></details>
+
+      <h3>3.4 Stop cleanly</h3>
+      <p>Kubernetes stops pods all the time: for every new version, and whenever a machine is repaired or replaced. It sends <strong>SIGTERM</strong>, waits (30 seconds unless your team sets otherwise), then sends <strong>SIGKILL</strong>, which can't be caught. Two things decide whether that goes well.</p>
+      <p><strong>First, the app must receive SIGTERM.</strong> That needs the exec form of <code>CMD</code> (Lesson 2), so that uvicorn itself is process 1:</p>
+      <pre><code>CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "60"]</code></pre>
+      <div class="cmd"><pre><code>podman run -d --name stop-test -e S3_BUCKET=x -e OPENROUTER_API_KEY=x localhost/sheet-tool:1.0
+sleep 5
+time podman stop stop-test
+podman inspect stop-test --format 'exit code {{.State.ExitCode}}'
+podman rm stop-test</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>2a11b334bb2f7f20496d523f094d58cd496b6b153b01db69fe7e16b1c9b70e49
+stop-test
+podman stop stop-test  0.03s user 0.03s system 4% cpu 1.284 total
+exit code 0
+stop-test</code></pre></div>
+      <p>With the shell form (<code>CMD uvicorn app.main:app …</code>), process 1 is <code>/bin/sh</code>, which doesn't pass SIGTERM on. The same test takes <strong>about 10 seconds</strong> (Podman waits 10 seconds, then kills it) and ends with <strong>exit code 137</strong>: killed. In the cluster that would mean every pod waits the whole grace period and is then killed, on every deploy.</p>
+      <details class="sol"><summary>Try the shell form yourself</summary><div class="inner">
+        <div class="cmd"><pre><code>sed 's|^CMD \[.*|CMD uvicorn app.main:app --host 0.0.0.0 --port 8000|' Containerfile &gt; /tmp/Containerfile.shell
+podman build -t localhost/sheet-tool:shell-form -f /tmp/Containerfile.shell .
+podman run -d --name stop-test -e S3_BUCKET=x -e OPENROUTER_API_KEY=x localhost/sheet-tool:shell-form
+sleep 5
+time podman stop stop-test
+podman inspect stop-test --format 'exit code {{.State.ExitCode}}'
+podman rm stop-test
+podman rmi localhost/sheet-tool:shell-form</code></pre></div>
+      </div></details>
+      <p><strong>Second, uploads in progress must finish.</strong> On SIGTERM, uvicorn stops taking new requests and waits up to 60 seconds (<code>--timeout-graceful-shutdown</code>) for the running ones. The cluster's waiting time must be longer than your longest request. Section 8 deletes a pod in the middle of a 20-second upload: with a 90-second grace period the upload finishes, and with 10 seconds it's cut off.</p>
+
+      <h3>3.5 Limit what users can send</h3>
+      <p>An uploaded file is untrusted, and it turns into memory (section 4). sheet-tool checks, in this order:</p>
+      <ul>
+        <li><strong>Size</strong>, before reading the body: over <code>MAX_UPLOAD_MB</code> (10) gives 413.</li>
+        <li><strong>Type</strong>: not <code>.xlsx</code> gives 415; not a valid workbook gives 400.</li>
+        <li><strong>Rows</strong>: over <code>max_rows</code> from the settings gives 413, before any AI call is made.</li>
+        <li><strong>XML tricks</strong>: <code>defusedxml</code> is installed, and <code>openpyxl</code> uses it on its own to refuse files built to explode in memory.</li>
+        <li><strong>The file name</strong> is reduced to safe characters before it goes into the <code>Content-Disposition</code> header of the download.</li>
+      </ul>
+      <div class="cmd"><pre><code>head -c 11000000 /dev/urandom &gt; too-big.xlsx
+curl -s -w ' %{http_code}\n' -F file=@too-big.xlsx localhost:8000/process</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>{"detail":"File is larger than 10 MB"} 413</code></pre></div>
+      <div class="aside"><span class="chip">Ask your team</span><p>Whatever sits in front of your app has its own size limit, and it may be smaller than yours. The once-common ingress-nginx defaults to <strong>1&nbsp;MB</strong>, so a 2&nbsp;MB upload gets a 413 from it and never reaches your app. Put your limit in the handoff (section 10).</p></div>
+
+      <h3>3.6 Timeouts and logs</h3>
+      <ul>
+        <li><strong>Every outside call has a timeout.</strong> S3: 2 seconds to connect and 5 to read. OpenRouter: 5 to connect and 60 to answer. Without one, a hung connection holds a request (and its memory) until the user gives up.</li>
+        <li><strong>Outbound proxy.</strong> <code>httpx</code> reads <code>HTTPS_PROXY</code> and <code>NO_PROXY</code> by itself, so if your company sends outbound traffic through a proxy, it's one environment variable, not a code change.</li>
+        <li><strong>Logs go to stdout</strong>, one line per event, never with file contents or keys. Health checks aren't logged, because the cluster calls them every few seconds per pod.</li>
+      </ul>
+      <div class="cmd"><pre><code>podman compose logs app | grep processed</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>app-1  | INFO sheet-tool processed rows=20 bytes_in=5156 seconds=1.3</code></pre></div>
+
+      <h3>3.7 The finished Containerfile</h3>
+      <div class="anno">
+        <div class="head"><span>Containerfile</span><span>single stage, 201 MB</span></div>
+        <div class="row"><code>FROM docker.io/library/python:3.12-slim@sha256:05cda977…</code><p>Pinned by the list's digest (Lesson 3), so a rebuild uses exactly this Python. Update it on purpose.</p></div>
+        <div class="row"><code>ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1</code><p>Logs leave immediately (Lesson 3). No <code>.pyc</code> files written at run time: the filesystem will be read-only.</p></div>
+        <div class="row"><code>RUN useradd --uid 10001 --no-create-home \
+    --shell /usr/sbin/nologin app</code><p>The numbered user from 3.1. No home folder, no login shell: it only runs the app.</p></div>
+        <div class="row"><code>WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir \
+    --root-user-action=ignore -r requirements.txt
+COPY app/ app/</code><p>Packages first, code last, for the layer cache (Lesson 2). Every package in <code>requirements.txt</code> has an exact version. Files stay owned by root, so the app can't change its own code.</p></div>
+        <div class="row"><code>USER 10001
+EXPOSE 8000</code><p>From here on, nothing runs as root. Port 8000 is above 1024, so no special permission is needed to open it.</p></div>
+        <div class="row"><code>CMD ["uvicorn", "app.main:app",
+     "--host", "0.0.0.0", "--port", "8000",
+     "--timeout-graceful-shutdown", "60"]</code><p>Exec form (3.4), listening on all interfaces so the Service can reach it (Lesson 2).</p></div>
+      </div>
+      <p><code>.containerignore</code> keeps <code>.env</code>, Git history and test spreadsheets out of the build. One more check: <code>podman image inspect localhost/sheet-tool:1.0 --format '{{.Architecture}}'</code> says <code>arm64</code> on your Mac. Ask your team what the cluster's machines use (usually amd64, sometimes arm64 Graviton machines on AWS); CI builds that one (Lesson 6).</p>
+    </section>
+
+    <section id="measure">
+      <h2><span class="n">04</span>Measure what your team will ask</h2>
+      <p>"How much memory and CPU does it need?" is usually the first question. The answer becomes the Deployment's <code>requests</code> and <code>limits</code> (section 6). Too low, and the pod is killed in production; too high, and you pay for idle machines, or the pod doesn't fit anywhere. So measure.</p>
+
+      <h3>Memory: the biggest file decides</h3>
+      <p>Make a file just under the 10&nbsp;MB limit, with random text that barely compresses, the worst case for memory. Then restart the app so its memory count starts fresh, upload, and read the peak:</p>
+      <div class="cmd"><pre><code>podman run --rm -v ./dev:/work:ro localhost/sheet-tool:1.0 python /work/make_sample.py 232000 --random &gt; big.xlsx
+podman compose up -d --force-recreate app
+sleep 5
+curl -s -w ' %{http_code}\n' -F file=@big.xlsx localhost:8000/process
+podman exec sheet-tool-app-1 cat /sys/fs/cgroup/memory.peak | awk '{printf "%d MiB\n", $1/1048576}'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>wrote 232000 rows, 9.9 MB
+{"detail":"231999 rows; the limit is 500"} 413
+394 MiB</code></pre></div>
+      <p>The upload was refused for its row count (the app assumes a header row, which this random file doesn't have), but only after <code>openpyxl</code> had loaded it, and loading is the expensive part. <code>memory.peak</code> is a file the kernel keeps for every container (cgroup v2): the most memory it has used since it started. The same measurement for other cases:</p>
+      <div class="table">
+        <table>
+          <thead><tr><th>What the app was doing</th><th>Peak memory</th></tr></thead>
+          <tbody>
+            <tr><td>Idle, just started</td><td class="num">66 MiB</td></tr>
+            <tr><td>One 6.4 MB upload</td><td class="num">288 MiB</td></tr>
+            <tr><td>One 9.9 MB upload (the limit)</td><td class="num">394 MiB</td></tr>
+            <tr><td>Two 9.9 MB uploads at the same time</td><td class="num">714 MiB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>So sheet-tool asks for <strong>512&nbsp;MiB</strong> (one large upload plus some room) and is allowed up to <strong>1&nbsp;GiB</strong> (two at once). <code>Mi</code> and <code>Gi</code> are the binary units Kubernetes uses: 1&nbsp;MiB = 1,048,576 bytes. Section 8 shows what happens with a 256&nbsp;MiB limit: <code>OOMKilled</code>.</p>
+
+      <h3>CPU: one core at most</h3>
+      <p>One limit-size upload took 4.1 seconds; two at once took 8 seconds each. Python runs one thread of Python code at a time, so the app never uses more than one core. A CPU limit of <code>1</code> costs it nothing, and it asks for <code>250m</code> (a quarter of a core), because most of its time is spent waiting for the model.</p>
+
+      <h3>Time per request: the number that may change your design</h3>
+      <p>With the fake model (0.05 seconds per answer), 20 rows took 1.1 to 1.4 seconds. sheet-tool asks the model one row at a time, so the real time is roughly <strong>rows × seconds per model answer</strong>. Measure it with your own app, a realistic file and a few rows against the real API (each call costs money).</p>
+      <p>Every layer between the user and your pod has a timeout: the browser, the load balancer (an AWS Application Load Balancer gives up after <strong>60 seconds</strong> of silence unless your team changes it) and the ingress. If a realistic file takes more than a minute or two, a single request isn't the right design. Tell your team early, because the alternative changes the app: start a job, let the browser check on it, and download the result later. The result then has to live in shared storage such as S3, because with two pods the download may reach the other one.</p>
+    </section>
+
+    <div class="part">
+      <p class="eyebrow">Part 2</p>
+      <p>How your team will run it. You'll read their files, run them on a real cluster on your Mac, and break things on purpose.</p>
+    </div>
+
+    <section id="k8s">
+      <h2><span class="n">05</span>Kubernetes in one page</h2>
+      <p>Your team will talk in these words. Each one is an object in a YAML file, and you'll create all of them in section 7.</p>
+      <p>The key idea is <strong>desired state</strong>. You don't tell Kubernetes "start 2 containers". You write "there should always be 2 copies of this, using this image" and send it to the cluster. Programs in the cluster called <strong>controllers</strong> keep comparing that with what's running and fix any difference: a pod dies, so they start a new one; you change the image, so they replace the pods one by one.</p>
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 720 270" role="img" aria-labelledby="f1t">
+            <title id="f1t">Users reach two pods through an Ingress and a Service. The pods read settings from a ConfigMap and a Secret, use a ServiceAccount's IAM role to reach S3, and call OpenRouter on the internet.</title>
+            <defs>
+              <marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="d-head" d="M0,0 L10,5 L0,10 z"/></marker>
+            </defs>
+            <rect class="d-frame" x="70" y="6" width="510" height="256" rx="4"/>
+            <text class="d-h" x="358" y="252">CLUSTER · NAMESPACE sheet-tool</text>
+
+            <text class="d-m" x="6" y="70">users</text>
+            <path class="d-line" d="M44,66 L80,66" marker-end="url(#ah1)"/>
+            <rect class="d-kernel" x="84" y="44" width="116" height="44" rx="3"/>
+            <text class="d-tb" x="96" y="63">Ingress</text>
+            <text class="d-m" x="96" y="79">hostname, HTTPS</text>
+            <path class="d-line" d="M200,66 L222,66" marker-end="url(#ah1)"/>
+            <rect class="d-app" x="226" y="44" width="116" height="44" rx="3"/>
+            <text class="d-tb" x="238" y="63">Service</text>
+            <text class="d-m" x="238" y="79">sheet-tool:80</text>
+            <path class="d-line" d="M342,60 L378,52" marker-end="url(#ah1)"/>
+            <path class="d-line" d="M342,72 L378,100" marker-end="url(#ah1)"/>
+
+            <text class="d-h" x="370" y="24">DEPLOYMENT · 2 PODS</text>
+            <rect class="d-frame" x="370" y="30" width="196" height="104" rx="4"/>
+            <rect class="d-box" x="382" y="38" width="172" height="32" rx="2"/>
+            <text class="d-t" x="394" y="59">Pod · app, user 10001</text>
+            <rect class="d-box" x="382" y="88" width="172" height="32" rx="2"/>
+            <text class="d-t" x="394" y="109">Pod · app, user 10001</text>
+
+            <rect class="d-box" x="226" y="148" width="116" height="44" rx="2"/>
+            <text class="d-tb" x="238" y="167">ConfigMap</text>
+            <text class="d-m" x="238" y="183">settings</text>
+            <rect class="d-box" x="226" y="202" width="116" height="44" rx="2"/>
+            <text class="d-tb" x="238" y="221">Secret</text>
+            <text class="d-m" x="238" y="237">OpenRouter key</text>
+            <path class="d-line" d="M342,170 L396,136" marker-end="url(#ah1)"/>
+            <path class="d-line" d="M342,224 L420,136" marker-end="url(#ah1)"/>
+
+            <rect class="d-box" x="440" y="168" width="126" height="44" rx="2"/>
+            <text class="d-tb" x="452" y="187">ServiceAccount</text>
+            <text class="d-m" x="452" y="203">has an IAM role</text>
+            <path class="d-line" d="M500,134 L500,166" marker-end="url(#ah1)"/>
+
+            <rect class="d-hw" x="600" y="44" width="114" height="44" rx="3"/>
+            <text class="d-tb" x="612" y="63">OpenRouter</text>
+            <text class="d-m" x="612" y="79">outbound HTTPS</text>
+            <path class="d-line" d="M566,66 L596,66" marker-end="url(#ah1)"/>
+            <rect class="d-okbox" x="600" y="168" width="114" height="44" rx="3"/>
+            <text class="d-tb" x="612" y="187">S3 bucket</text>
+            <text class="d-m" x="612" y="203">settings.yaml</text>
+            <path class="d-line" d="M566,190 L596,190" marker-end="url(#ah1)"/>
+          </svg>
+        </div>
+        <figcaption>What your team will create for sheet-tool. Everything inside the frame is a Kubernetes object; OpenRouter and the S3 bucket are outside the cluster.</figcaption>
+      </figure>
+      <div class="table">
+        <table class="map">
+          <thead><tr><th>Word</th><th>What it is</th><th>You know it as</th></tr></thead>
+          <tbody>
+            <tr><td>Cluster, node</td><td>A group of machines run as one; each machine is a node</td><td>Your Podman VM is one node</td></tr>
+            <tr><td>Pod</td><td>One or more containers started together; the smallest thing Kubernetes runs. Here: one container</td><td>A Podman pod (Lesson 1)</td></tr>
+            <tr><td>Deployment</td><td>"Keep 2 copies of this pod running, and replace them gradually when I change it." It does this through a <strong>ReplicaSet</strong>, one per version</td><td>The desired state behind ECS's tasks (Lesson 6)</td></tr>
+            <tr><td>Service</td><td>A fixed name and address that spreads requests over the ready pods</td><td>The name <code>db</code> in Compose (Lesson 4)</td></tr>
+            <tr><td>Ingress or Gateway</td><td>Takes requests from outside the cluster (hostname, HTTPS) to a Service</td><td><code>-p</code> plus Lesson 6's load balancer</td></tr>
+            <tr><td>ConfigMap, Secret</td><td>Settings, and secret settings, that become environment variables</td><td><code>--env-file</code> and <code>podman secret</code> (Lesson 3)</td></tr>
+            <tr><td>ServiceAccount</td><td>The identity the pods run as; on EKS, it carries the AWS permissions</td><td>The task role in ECS (Lesson 6)</td></tr>
+            <tr><td>Namespace</td><td>A folder of objects in the cluster, often one per app or team</td><td>Nothing. Not Lesson 1's Linux namespaces, despite the name</td></tr>
+            <tr><td>PersistentVolumeClaim</td><td>A request for a disk that outlives pods. sheet-tool needs none; its MinIO stand-in uses one</td><td>A named volume (Lesson 4)</td></tr>
+            <tr><td>Job</td><td>A pod that runs once to completion, retried if it fails</td><td>The <code>bucket</code> service in compose.yaml</td></tr>
+            <tr><td><code>kubectl</code></td><td>The command that talks to a cluster</td><td>The <code>podman</code> of Kubernetes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="files">
+      <h2><span class="n">06</span>The files your team writes</h2>
+      <p>These are the files your team will write for your app, often as a Helm chart (section 9), with the same content. Reading them lets you check that they match your app, and answer questions about each line. The project has them in <code>k8s/</code>:</p>
+      <pre><code>k8s/
+├── base/          <span class="c">the same in every environment: Deployment, Service, ConfigMap, ServiceAccount, PodDisruptionBudget</span>
+├── lab/           <span class="c">your Mac: the local image, the stand-ins, a fake Secret</span>
+├── production/    <span class="c">EKS: the ECR image, real S3, the Secret from Secrets Manager, an Ingress (not run)</span>
+└── stand-ins/     <span class="c">lab only: MinIO and the fake OpenRouter</span></code></pre>
+      <p>Every object starts with <code>apiVersion</code> and <code>kind</code> (what sort of object) and <code>metadata</code> (its name and labels). Here's the Deployment, the biggest one:</p>
+      <div class="anno">
+        <div class="head"><span>k8s/base/deployment.yaml</span><span>Deployment</span></div>
+        <div class="row"><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sheet-tool
+spec:
+  replicas: 2</code><p>"Keep 2 copies running." One can be replaced while the other serves. Two copies work because the app keeps nothing between requests: upload and download happen in one request, so any pod can answer anyone.</p></div>
+        <div class="row"><code>  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1</code><p>For a new version: start one new pod, wait until it's ready, then remove an old one. Never fewer than 2 ready pods.</p></div>
+        <div class="row"><code>  selector:
+    matchLabels:
+      app: sheet-tool
+  template:
+    metadata:
+      labels:
+        app: sheet-tool</code><p><strong>Labels connect things.</strong> Every pod made from this template gets <code>app: sheet-tool</code>; the Deployment counts pods with that label, and the Service sends requests to them.</p></div>
+        <div class="row"><code>    spec:
+      serviceAccountName: sheet-tool
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 90</code><p>Run as the ServiceAccount that has the S3 permission. Don't give the pod a key to the Kubernetes API, which it never uses. On stop, wait up to 90 seconds before killing it (3.4).</p></div>
+        <div class="row"><code>      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault</code><p>Refuse to start as root, and run as user 10001. <strong>seccomp</strong> is a list of allowed system calls; <code>RuntimeDefault</code> blocks the rarely needed, risky ones.</p></div>
+        <div class="row"><code>      containers:
+        - name: app
+          image: sheet-tool
+          ports:
+            - name: http
+              containerPort: 8000</code><p>The image name is a placeholder that each environment replaces (section 9). The port gets a name, <code>http</code>, so the probes and the Service can refer to it.</p></div>
+        <div class="row"><code>          envFrom:
+            - configMapRef:
+                name: sheet-tool-config
+            - secretRef:
+                name: sheet-tool-secrets</code><p>Every entry of the ConfigMap and of the Secret becomes an environment variable. The app just reads <code>os.environ</code>.</p></div>
+        <div class="row"><code>          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]</code><p>No way to gain more rights than it starts with, a read-only filesystem (3.2), and no Linux <strong>capabilities</strong> (the pieces of root's power, such as changing file owners). Together with <code>runAsNonRoot</code> and seccomp, this is what a cluster set to <em>restricted</em> demands (section 8).</p></div>
+        <div class="row"><code>          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi</code><p>The numbers from section 4. <strong>Requests</strong> are reserved, and decide which node has room for the pod. <strong>Limits</strong> are the ceiling: above 1&nbsp;GiB the container is killed (<code>OOMKilled</code>); at 1 CPU it's slowed down.</p></div>
+        <div class="row"><code>          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3</code><p>The endpoints from 3.3. Readiness is asked every 5 seconds, liveness every 10, and three failures in a row count. sheet-tool starts in about a second; an app that loads a model for minutes would add a <code>startupProbe</code> (Lesson 5).</p></div>
+        <div class="row"><code>          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5</code><p>When a pod is told to stop, two things happen at once: it's removed from the Service, and it receives SIGTERM. For a moment, new requests can still arrive at a pod that no longer accepts them. Pausing 5 seconds before SIGTERM lets the removal finish first. Measured on the test Mac during rollouts: <strong>5 to 9 failed requests per rollout without the pause, none with it</strong> (three runs each, section 8).</p></div>
+        <div class="row"><code>          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi</code><p>The one writable folder (3.2). An <strong>emptyDir</strong> is an empty folder created with the pod and deleted with it: scratch space, not storage.</p></div>
+      </div>
+      <p>The other objects are short:</p>
+      <div class="anno">
+        <div class="head"><span>k8s/base/ and k8s/lab/</span><span>4 objects</span></div>
+        <div class="row"><code>kind: Service
+metadata:
+  name: sheet-tool
+spec:
+  selector:
+    app: sheet-tool
+  ports:
+    - name: http
+      port: 80
+      targetPort: http</code><p>Inside the cluster, <code>http://sheet-tool</code> reaches a ready pod labelled <code>app: sheet-tool</code>, on its <code>http</code> port. From another namespace the name is <code>sheet-tool.sheet-tool</code> (name, then namespace).</p></div>
+        <div class="row"><code>kind: ConfigMap
+metadata:
+  name: sheet-tool-config
+data:
+  S3_BUCKET: sheet-tool-settings
+  S3_KEY: settings.yaml
+  AWS_REGION: eu-west-1
+  OPENROUTER_BASE_URL: https://openrouter.ai/api/v1
+  MAX_UPLOAD_MB: "10"</code><p>Settings that aren't secret. Values are always text, hence the quotes around <code>"10"</code>.</p></div>
+        <div class="row"><code>kind: Secret
+metadata:
+  name: sheet-tool-secrets
+stringData:
+  OPENROUTER_API_KEY: fake-openrouter-key
+  AWS_ACCESS_KEY_ID: local-admin
+  AWS_SECRET_ACCESS_KEY: fake-local-password</code><p>Lab only, with fake values. In production this Secret is filled from AWS Secrets Manager and has no AWS keys at all (section 9).</p></div>
+        <div class="row"><code>kind: PodDisruptionBudget
+spec:
+  minAvailable: 1</code><p>When your team drains a node for maintenance, Kubernetes keeps at least one pod running.</p></div>
+      </div>
+    </section>
+
+    <section id="kind">
+      <h2><span class="n">07</span>Run it on a real cluster</h2>
+      <p>Reading YAML is half the picture. <strong>kind</strong> ("Kubernetes in Docker") runs a real Kubernetes, the same software EKS runs, inside one Podman container on your Mac. Everything in this section works the same way on a real cluster; only the stand-ins are different.</p>
+
+      <h3>Step 1: create a cluster</h3>
+      <div class="cmd"><pre><code>brew install kind
+export KIND_EXPERIMENTAL_PROVIDER=podman   <span class="c"># for this terminal only: use Podman, not Docker</span>
+kind create cluster --name lab
+kubectl get nodes</code></pre></div>
+      <div class="out"><p class="olabel">Output (shortened)</p><pre><code>using podman due to KIND_EXPERIMENTAL_PROVIDER
+Creating cluster "lab" ...
+ ✓ Ensuring node image (kindest/node:v1.37.0) 🖼️
+ ✓ Preparing nodes 📦
+ ✓ Writing configuration 📜
+ ✓ Starting control-plane 🕹️
+ ✓ Installing CNI 🔌
+ ✓ Installing StorageClass 💾
+Set kubectl context to "kind-lab"
+…
+NAME                STATUS     ROLES           AGE   VERSION
+lab-control-plane   NotReady   control-plane   17s   v1.37.0</code></pre></div>
+      <p>The node becomes <code>Ready</code> a few seconds later. The first time, kind downloads its node image (355&nbsp;MB). After that, creating a cluster takes under a minute.</p>
+      <div class="aside key"><span class="chip">Which cluster?</span><p><code>kind</code> wrote <code>~/.kube/config</code> and made <code>kind-lab</code> the <strong>current context</strong>: every <code>kubectl</code> command now goes to it. When you get access to a real cluster, it's added to the same file. Run <code>kubectl config current-context</code> before any command that changes something.</p></div>
+
+      <h3>Step 2: give the cluster your images</h3>
+      <p>The cluster has its own image storage, separate from Podman's. Copy the three images into it:</p>
+      <div class="cmd"><pre><code>podman pull -q docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+for image in localhost/sheet-tool:1.0 docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z docker.io/library/python:3.12-slim; do
+  podman save -o /tmp/image.tar $image &amp;&amp; kind load image-archive /tmp/image.tar --name lab
+done</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>919a89f4c86f1674c129eeb380226b3d05409cfd9f0ac09ecbe007e5313cc973
+using podman due to KIND_EXPERIMENTAL_PROVIDER
+enabling experimental podman provider
+…                         <span class="c">(the same two lines for each image)</span></code></pre></div>
+      <p>The <code>pull</code> downloads nothing: it only adds a name to the MinIO image that Compose already fetched. On a real cluster this step doesn't exist; the nodes pull from a registry such as ECR (Lesson 6).</p>
+
+      <h3>Step 3: start the stand-ins</h3>
+      <div class="cmd"><pre><code>kubectl apply -f k8s/stand-ins/stand-ins.yaml
+kubectl create configmap fake-openrouter -n stand-ins --from-file=dev/fake_openrouter.py
+kubectl wait -n stand-ins --for=condition=complete job/create-bucket --timeout=120s
+kubectl get pods -n stand-ins</code></pre></div>
+      <div class="out"><p class="olabel">Output (last lines)</p><pre><code>job.batch/create-bucket condition met
+NAME                               READY   STATUS      RESTARTS      AGE
+create-bucket-n7t2k                0/1     Completed   3 (26s ago)   41s
+fake-openrouter-6d4b7675f9-t6sv6   1/1     Running     0             41s
+minio-5f5b4484f9-wj7mk             1/1     Running     0             42s</code></pre></div>
+      <p>The Job failed a few times because MinIO wasn't ready yet; Kubernetes retried it until it worked. That's normal.</p>
+
+      <h3>Step 4: deploy the app</h3>
+      <div class="cmd"><pre><code>kubectl apply -k k8s/lab
+kubectl rollout status deployment/sheet-tool -n sheet-tool
+kubectl get pods -n sheet-tool</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>namespace/sheet-tool created
+serviceaccount/sheet-tool created
+configmap/sheet-tool-config created
+secret/sheet-tool-secrets created
+service/sheet-tool created
+deployment.apps/sheet-tool created
+poddisruptionbudget.policy/sheet-tool created
+Waiting for deployment "sheet-tool" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "sheet-tool" rollout to finish: 1 of 2 updated replicas are available...
+deployment "sheet-tool" successfully rolled out
+NAME                          READY   STATUS    RESTARTS   AGE
+sheet-tool-58f88959bf-2xlh9   1/1     Running   0          9s
+sheet-tool-58f88959bf-nb42l   1/1     Running   0          9s</code></pre></div>
+      <p><code>-k</code> means: combine <code>k8s/base</code> with the lab's changes (section 9), then apply the result.</p>
+
+      <h3>Step 5: use it</h3>
+      <p>Open a <strong>second terminal tab</strong> and leave this running; it forwards your Mac's port 8080 into the cluster:</p>
+      <div class="cmd"><pre><code>cd ~/practice/sheet-tool
+kubectl port-forward -n sheet-tool svc/sheet-tool 8080:80</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>Forwarding from 127.0.0.1:8080 -&gt; 8000
+Forwarding from [::1]:8080 -&gt; 8000</code></pre></div>
+      <p>Back in the first tab:</p>
+      <div class="cmd"><pre><code>curl -s -F file=@comments.xlsx localhost:8080/process -o processed-k8s.xlsx -w '%{http_code}\n'
+kubectl logs -n sheet-tool -l app=sheet-tool --prefix --tail=2</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>200
+[pod/sheet-tool-58f88959bf-nb42l/app] INFO:     Application startup complete.
+[pod/sheet-tool-58f88959bf-nb42l/app] INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[pod/sheet-tool-58f88959bf-2xlh9/app] INFO sheet-tool processed rows=20 bytes_in=5156 seconds=1.4
+[pod/sheet-tool-58f88959bf-2xlh9/app] INFO:     127.0.0.1:57442 - "POST /process HTTP/1.1" 200 OK</code></pre></div>
+      <p><code>port-forward</code> picks one pod when it starts and sends everything there, skipping the Service's spreading and its readiness check. It's a tool for you; real users come in through the Ingress and the Service.</p>
+      <details class="sol"><summary>Reference: what <code>kubectl apply</code> set in motion, and the commands you'll use most</summary><div class="inner">
+        <ol>
+          <li>The cluster stored your objects: the desired state.</li>
+          <li>The Deployment controller created a ReplicaSet for this version, which created 2 pods.</li>
+          <li>The <strong>scheduler</strong> picked a node with room for each pod's requests (here, the only node).</li>
+          <li>The node's agent, the <strong>kubelet</strong>, started the containers and began calling the probes. Once readiness passed, the Service started sending requests to the pod.</li>
+        </ol>
+        <p><code>kubectl describe pod NAME -n sheet-tool</code> shows that sequence as events:</p>
+        <div class="out"><pre><code>Normal   Scheduled  6m4s  default-scheduler  Successfully assigned sheet-tool/sheet-tool-5fdb6fc68b-6zt9k to lab-control-plane
+Normal   Pulled     6m4s  kubelet            spec.containers{app}: Container image "localhost/sheet-tool:1.0" already present on machine …
+Normal   Created    6m3s  kubelet            spec.containers{app}: Container created
+Normal   Started    6m3s  kubelet            spec.containers{app}: Container started
+Warning  Unhealthy  6m2s (x2 over 6m3s)  kubelet  spec.containers{app}: Readiness probe failed: … connect: connection refused</code></pre></div>
+        <p>One or two readiness failures in the first second are normal: the app wasn't listening yet.</p>
+        <div class="table"><table class="cmds"><tbody>
+          <tr><td>kubectl get pods -n NS</td><td>Pods with status and restart counts. The first thing to run when something's wrong</td></tr>
+          <tr><td>kubectl describe pod NAME -n NS</td><td>Details and events: failed probes, OOMKilled, image pull errors</td></tr>
+          <tr><td>kubectl logs NAME -n NS (-f, --previous)</td><td>Like <code>podman logs</code>; <code>--previous</code> shows the container before its last restart</td></tr>
+          <tr><td>kubectl exec -it NAME -n NS -- sh</td><td>Like <code>podman exec</code></td></tr>
+          <tr><td>kubectl rollout status / undo deployment/NAME</td><td>Watch a new version arrive, or go back to the previous one</td></tr>
+          <tr><td>kubectl get events -n NS</td><td>Everything that happened recently in the namespace</td></tr>
+        </tbody></table></div>
+        <p><strong>Before Lesson 7 was rewritten</strong>, it used <code>podman kube play</code>, which runs Kubernetes YAML without a cluster. It's quick, but it ignores <code>replicas</code> and Services, and runs <code>httpGet</code> probes with <code>curl</code> inside the container (slim images have no <code>curl</code>). kind behaves like a real cluster.</p>
+      </div></details>
+    </section>
+
+    <section id="break">
+      <h2><span class="n">08</span>Break it on purpose</h2>
+      <p>These are the failures your team is most likely to report to you. Seeing each one once, here, means you'll recognise it on a real cluster. After each experiment, <code>kubectl apply -k k8s/lab</code> puts everything back.</p>
+      <div class="aside"><span class="chip">Port-forward</span><p>Experiments that change the Deployment replace the pods, and that ends a running <code>port-forward</code> (<code>lost connection to pod</code>). When that happens, start it again in its tab.</p></div>
+
+      <h3>8.1 A pod without security settings</h3>
+      <div class="cmd"><pre><code>kubectl run quick-test -n sheet-tool --image=localhost/sheet-tool:1.0 --restart=Never</code></pre></div>
+      <div class="out"><p class="olabel">Output (one line, split here for reading)</p><pre><code><span class="bad">Error from server (Forbidden): pods "quick-test" is forbidden: violates PodSecurity "restricted:latest":</span>
+  allowPrivilegeEscalation != false (container "quick-test" must set securityContext.allowPrivilegeEscalation=false),
+  unrestricted capabilities (container "quick-test" must set securityContext.capabilities.drop=["ALL"]),
+  runAsNonRoot != true (pod or container "quick-test" must set securityContext.runAsNonRoot=true),
+  seccompProfile (pod or container "quick-test" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")</code></pre></div>
+      <p>The lab's namespace has the label <code>pod-security.kubernetes.io/enforce: restricted</code>, and Kubernetes refuses any pod that misses one of those settings. Many company clusters set this. Your Deployment's two <code>securityContext</code> blocks are what let it in.</p>
+
+      <h3>8.2 A user without a number</h3>
+      <p>Build an image with <code>USER app</code> instead of <code>USER 10001</code>, and deploy it with a Deployment that doesn't set <code>runAsUser</code>, as many charts don't:</p>
+      <div class="cmd"><pre><code>sed 's/^USER 10001$/USER app/' Containerfile &gt; /tmp/Containerfile.named
+podman build -q -t localhost/sheet-tool:named-user -f /tmp/Containerfile.named .
+podman save -o /tmp/image.tar localhost/sheet-tool:named-user &amp;&amp; kind load image-archive /tmp/image.tar --name lab
+kubectl patch deployment sheet-tool -n sheet-tool --type=json -p '[{"op":"remove","path":"/spec/template/spec/securityContext/runAsUser"},{"op":"remove","path":"/spec/template/spec/securityContext/runAsGroup"},{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"localhost/sheet-tool:named-user"}]'
+sleep 15
+kubectl get pods -n sheet-tool
+kubectl describe pods -n sheet-tool | grep non-numeric</code></pre></div>
+      <div class="out"><p class="olabel">Output (last lines)</p><pre><code>NAME                          READY   STATUS                       RESTARTS   AGE
+sheet-tool-58f88959bf-2xlh9   1/1     Running                      0          92s
+sheet-tool-58f88959bf-nb42l   1/1     Running                      0          92s
+sheet-tool-7dfc88978f-hdt7d   0/1     <span class="bad">CreateContainerConfigError</span>   0          10s
+  Warning  Failed     9s (x2 over 10s)  kubelet  spec.containers{app}: Error: container has runAsNonRoot and image has non-numeric user (app), cannot verify user is non-root (pod: …</code></pre></div>
+      <p>Notice the two old pods still running: with <code>maxUnavailable: 0</code>, a new version that can't start never replaces the old one. Put it back with <code>kubectl apply -k k8s/lab</code>.</p>
+
+      <h3>8.3 No writable /tmp</h3>
+      <div class="cmd"><pre><code>kubectl patch deployment sheet-tool -n sheet-tool --type=json -p '[{"op":"remove","path":"/spec/template/spec/volumes"},{"op":"remove","path":"/spec/template/spec/containers/0/volumeMounts"}]'
+kubectl rollout status deployment/sheet-tool -n sheet-tool</code></pre></div>
+      <p>Restart the port-forward, then send the small 20-row file:</p>
+      <div class="cmd"><pre><code>curl -s -o /dev/null -w '%{http_code}\n' -F file=@comments.xlsx localhost:8080/process
+kubectl logs -n sheet-tool -l app=sheet-tool --tail=1</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code><span class="bad">500</span>
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+FileNotFoundError: [Errno 2] No usable temporary directory found in ['/tmp', '/var/tmp', '/usr/tmp', '/app']</code></pre></div>
+      <p>One line per pod: the pod that got the request ends with the error.</p>
+      <p>Even a 5&nbsp;KB file fails: <code>openpyxl</code> needs a temporary file to save any workbook. A file over 1&nbsp;MB fails earlier, with <code>400 There was an error parsing the body</code>, because the upload itself can't be buffered. On your Mac, <code>podman run --read-only</code> would have hidden this (3.2). Put it back: <code>kubectl apply -k k8s/lab</code>.</p>
+
+      <h3>8.4 A memory limit that's too small</h3>
+      <div class="cmd"><pre><code>kubectl patch deployment sheet-tool -n sheet-tool --type=json -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources","value":{"requests":{"cpu":"250m","memory":"256Mi"},"limits":{"cpu":"1","memory":"256Mi"}}}]'
+kubectl rollout status deployment/sheet-tool -n sheet-tool</code></pre></div>
+      <p>Restart the port-forward, then send the 9.9&nbsp;MB file from section 4:</p>
+      <div class="cmd"><pre><code>curl -sS -o /dev/null -F file=@big.xlsx localhost:8080/process
+sleep 3
+kubectl get pods -n sheet-tool
+kubectl describe pods -n sheet-tool | grep -A3 'Last State'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>curl: (52) Empty reply from server
+NAME                          READY   STATUS    RESTARTS     AGE
+sheet-tool-7fddb7b646-g8724   0/1     Running   1 (4s ago)   40s
+sheet-tool-7fddb7b646-xddxk   1/1     Running   0            32s
+    Last State:     Terminated
+      Reason:       <span class="bad">OOMKilled</span>
+      Exit Code:    137</code></pre></div>
+      <p>The upload needed about 394&nbsp;MiB and the limit was 256&nbsp;MiB, so the kernel killed the container mid-request, and Kubernetes restarted it. The user saw an empty reply; through a load balancer it would be a 502. If your team reports <code>OOMKilled</code>, the answer is in section 4. Put it back: <code>kubectl apply -k k8s/lab</code>.</p>
+
+      <h3>8.5 S3 goes away</h3>
+      <div class="cmd"><pre><code>kubectl scale deployment/minio -n stand-ins --replicas=0
+sleep 25
+kubectl get pods -n sheet-tool
+kubectl scale deployment/minio -n stand-ins --replicas=1</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>NAME                          READY   STATUS    RESTARTS   AGE
+sheet-tool-58f88959bf-6w5hz   <span class="bad">0/1</span>     Running   <span class="good">0</span>          47s
+sheet-tool-58f88959bf-px2v8   <span class="bad">0/1</span>     Running   <span class="good">0</span>          40s</code></pre></div>
+      <p>Both pods are not ready, so the Service sends them nothing (a request from inside the cluster got <code>Connection refused</code>), but they're not restarted either: liveness still passes. When MinIO is back, both return to <code>1/1</code> within half a minute, without anyone doing anything. That's the split from 3.3, working.</p>
+
+      <h3>8.6 A broken release, and going back</h3>
+      <p>A new version whose image doesn't exist, which happens with a typo in a tag:</p>
+      <div class="cmd"><pre><code>kubectl set image deployment/sheet-tool -n sheet-tool app=localhost/sheet-tool:1.2
+kubectl rollout status deployment/sheet-tool -n sheet-tool --timeout=30s
+kubectl get pods -n sheet-tool</code></pre></div>
+      <div class="out"><p class="olabel">Output (last lines)</p><pre><code>Waiting for deployment "sheet-tool" rollout to finish: 1 out of 2 new replicas have been updated...
+error: timed out waiting for the condition
+NAME                          READY   STATUS             RESTARTS   AGE
+sheet-tool-58f88959bf-6w5hz   1/1     Running            0          111s
+sheet-tool-58f88959bf-px2v8   1/1     Running            0          104s
+sheet-tool-59c9b444bc-fpmz5   0/1     <span class="bad">ImagePullBackOff</span>   0          31s</code></pre></div>
+      <p>The status switches between <code>ErrImagePull</code> and <code>ImagePullBackOff</code> while Kubernetes keeps retrying. The rollout stops at the first new pod, and the two old ones keep serving. A loop sending requests through the Service the whole time got <strong>668 answers, all 200</strong>. Going back:</p>
+      <div class="cmd"><pre><code>kubectl rollout undo deployment/sheet-tool -n sheet-tool</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>Warning: resource deployments/sheet-tool was previously managed with 'kubectl apply'. Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected behavior on future 'kubectl apply' operations. …
+deployment.apps/sheet-tool rolled back</code></pre></div>
+      <p>The warning matters at work: <code>rollout undo</code> changes the cluster but not the files, so the next deploy from the files brings the broken version back. It's the emergency button. The real fix is deploying the previous tag from Git (section 9).</p>
+
+      <h3>8.7 A pod stopped in the middle of an upload</h3>
+      <p>Make the fake model slow (1 second per row, so 20 rows take 20 seconds), connect straight to one pod, and delete that pod 5 seconds into an upload:</p>
+      <div class="cmd"><pre><code>kubectl set env deployment/fake-openrouter -n stand-ins FAKE_DELAY=1
+kubectl rollout status deployment/fake-openrouter -n stand-ins
+POD=$(kubectl get pods -n sheet-tool -o name | head -1)
+kubectl port-forward -n sheet-tool $POD 8081:8000 &gt;/dev/null &amp; PF=$!
+sleep 2
+curl -s -o /dev/null -w 'upload: %{http_code} after %{time_total}s\n' -F file=@comments.xlsx localhost:8081/process &amp; UPLOAD=$!
+sleep 5; kubectl delete -n sheet-tool $POD
+wait $UPLOAD; kill $PF</code></pre></div>
+      <div class="out"><p class="olabel">Output (zsh also prints a line when each background command starts and ends)</p><pre><code>pod "sheet-tool-58f88959bf-9jsxb" deleted from sheet-tool namespace
+upload: <span class="good">200</span> after 20.741657s</code></pre></div>
+      <p>The pod was deleted 5 seconds in, and the upload still finished: the pod paused 5 seconds (<code>preStop</code>), got SIGTERM, uvicorn stopped taking new requests, finished this one, and exited. Meanwhile the Deployment had already started a replacement. With <code>terminationGracePeriodSeconds: 10</code> instead of 90, the same test ends with <code>upload: <span class="bad">000</span> after 16.514129s</code>: killed mid-request.</p>
+      <details class="sol"><summary>Try the 10-second version, and put things back</summary><div class="inner">
+        <div class="cmd"><pre><code>kubectl patch deployment sheet-tool -n sheet-tool -p '{"spec":{"template":{"spec":{"terminationGracePeriodSeconds":10}}}}'
+kubectl rollout status deployment/sheet-tool -n sheet-tool
+sleep 30   <span class="c"># let the old pods finish stopping</span>
+POD=$(kubectl get pods -n sheet-tool -o name | head -1)
+kubectl port-forward -n sheet-tool $POD 8081:8000 &gt;/dev/null &amp; PF=$!
+sleep 2
+curl -s -o /dev/null -w 'upload: %{http_code} after %{time_total}s\n' -F file=@comments.xlsx localhost:8081/process &amp; UPLOAD=$!
+sleep 5; kubectl delete -n sheet-tool $POD
+wait $UPLOAD; kill $PF
+kubectl apply -k k8s/lab
+kubectl set env deployment/fake-openrouter -n stand-ins FAKE_DELAY=0.05</code></pre></div>
+      </div></details>
+      <details class="sol"><summary>Reference: how the preStop numbers in section 6 were measured</summary><div class="inner">
+        <p>A pod inside the cluster sends a request through the Service every 0.05 seconds while the Deployment replaces both pods. Run it once as is, then again after removing <code>preStop</code>:</p>
+        <div class="cmd"><pre><code>kubectl run client -n stand-ins --image=localhost/sheet-tool:1.0 --env=S3_BUCKET=x --env=OPENROUTER_API_KEY=x --command -- sleep 3600
+kubectl wait -n stand-ins --for=condition=Ready pod/client
+kubectl cp dev/count_requests.py stand-ins/client:/tmp/count_requests.py
+kubectl exec -n stand-ins client -- python /tmp/count_requests.py 40 &amp;
+sleep 3; kubectl rollout restart deployment/sheet-tool -n sheet-tool; wait</code></pre></div>
+        <div class="out"><pre><code>{200: 592}                                          <span class="c">with preStop (605 and 603 in two more runs, all 200)</span>
+{200: 637, 'ConnectError': 4, 'ConnectTimeout': 1}  <span class="c">without it (7 and 9 errors in two more runs)</span></code></pre></div>
+        <p>To remove the pause before the second run:</p>
+        <div class="cmd"><pre><code>kubectl patch deployment sheet-tool -n sheet-tool --type=json -p '[{"op":"remove","path":"/spec/template/spec/containers/0/lifecycle"}]'
+kubectl rollout status deployment/sheet-tool -n sheet-tool</code></pre></div>
+        <p>Afterwards: <code>kubectl apply -k k8s/lab</code> and <code>kubectl delete pod client -n stand-ins</code>.</p>
+      </div></details>
+    </section>
+
+    <section id="deploy">
+      <h2><span class="n">09</span>How your team deploys it</h2>
+      <p>This section covers the parts of the conversation about environments, pipelines and rollbacks, and the pieces your team runs outside your app's files.</p>
+
+      <h3>The same files, different values</h3>
+      <p>Staging and production run the same image with different settings (the same idea as one <code>compose.yaml</code> with an env file per environment). In Kubernetes, two tools do this:</p>
+      <ul>
+        <li><strong>Kustomize</strong>, built into <code>kubectl</code> (the <code>-k</code> you used): a <code>base</code> folder plus one folder per environment that lists only what's different.</li>
+        <li><strong>Helm</strong>: the files become templates with blanks, plus a <code>values.yaml</code> per environment that fills them in. A packaged set is called a <strong>chart</strong>. Not used in this lesson, but it produces the same objects.</li>
+      </ul>
+      <p>Compare what the lab and production versions send to the cluster. <code>kubectl kustomize</code> only prints the combined files; it doesn't contact any cluster:</p>
+      <div class="cmd"><pre><code>diff &lt;(kubectl kustomize k8s/lab) &lt;(kubectl kustomize k8s/production) | grep '^[&lt;&gt;]' | grep -E 'image:|S3_|ENDPOINT|OPENROUTER_BASE|role-arn|kind:'</code></pre></div>
+      <div class="out"><p class="olabel">Output</p><pre><code>&lt; kind: Namespace
+&gt;     eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/sheet-tool-production
+&lt;   AWS_ENDPOINT_URL_S3: http://minio.stand-ins:9000
+&lt;   OPENROUTER_BASE_URL: http://fake-openrouter.stand-ins:8080/api/v1
+&lt;   S3_BUCKET: sheet-tool-settings
+&gt;   OPENROUTER_BASE_URL: https://openrouter.ai/api/v1
+&gt;   S3_BUCKET: example-sheet-tool-production
+&lt; kind: Secret
+&lt;         image: localhost/sheet-tool:1.0
+&gt;         image: 123456789012.dkr.ecr.eu-west-1.amazonaws.com/sheet-tool:a1b2c3d4
+&gt; kind: ExternalSecret
+&gt;     kind: ClusterSecretStore
+&gt; kind: Ingress</code></pre></div>
+      <p>Lines with <code>&lt;</code> are only in the lab, and lines with <code>&gt;</code> only in production. Production has no S3 address (the AWS SDK finds S3 itself), no AWS keys (the ServiceAccount's role replaces them), the ECR image with its commit tag, and two objects the lab doesn't have. The production files were checked against the kind cluster without being applied (<code>kubectl apply --dry-run=server</code>): every object was accepted except the ExternalSecret, whose type only exists where its operator is installed.</p>
+
+      <h3>From a push to running pods</h3>
+      <ol>
+        <li>You push to GitLab. CI builds the image and pushes it to ECR, tagged with the commit (Lesson 6).</li>
+        <li>A deploy step puts that tag into the production files. Two common setups:
+          <ul>
+            <li><strong>CI deploys</strong>: a job runs <code>kubectl apply -k</code> or <code>helm upgrade</code> against the cluster.</li>
+            <li><strong>GitOps</strong>: CI only changes the tag in a Git repository of deployment files. <strong>Argo CD</strong> or <strong>Flux</strong>, running inside the cluster, notices and applies it.</li>
+          </ul></li>
+        <li>Staging first; production after a check, often a manual button in the pipeline.</li>
+        <li>The Deployment rolls out the new pods as in section 8.6, and stops if they never become ready.</li>
+      </ol>
+      <p><strong>Rolling back</strong> means deploying the previous tag the same way, for example by reverting the commit that changed it. <code>kubectl rollout undo</code> is for emergencies, and the next deploy from Git overwrites it (8.6).</p>
+
+      <h3>What your team runs around your app</h3>
+      <div class="table">
+        <table class="decide">
+          <thead><tr><th>Piece</th><th>What it does for sheet-tool</th><th>Ask</th></tr></thead>
+          <tbody>
+            <tr><td>Ingress controller or Gateway</td><td>The hostname, the HTTPS certificate, internal-only access, timeouts and the upload size limit</td><td>Which one? What are its body size limit and timeout? (ingress-nginx, once the most common, was retired in March 2026; on EKS, the AWS Load Balancer Controller and Gateway API are common)</td></tr>
+            <tr><td>External Secrets Operator</td><td>Copies the OpenRouter key from AWS Secrets Manager into the Secret</td><td>Who creates the secret, and who rotates it?</td></tr>
+            <tr><td>EKS Pod Identity or IRSA</td><td>Gives the pods an IAM role for S3, so the app needs no AWS keys</td><td>Which bucket and role? (policy below)</td></tr>
+            <tr><td>Outbound rules</td><td>Lets the pods reach <code>openrouter.ai</code> on port 443</td><td>Is outbound internet allowed? Through a proxy (<code>HTTPS_PROXY</code>)?</td></tr>
+            <tr><td>Log collection, monitoring</td><td>Ships stdout to CloudWatch or similar; collects metrics and traces</td><td>Where do I read my logs?</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="anno">
+        <div class="head"><span>k8s/production/ingress.yaml</span><span>not run: needs AWS</span></div>
+        <div class="row"><code>metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /health/ready
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=120</code><p>An AWS load balancer that's reachable only inside the company network, sends traffic straight to pod addresses, checks <code>/health/ready</code>, and waits 120 seconds instead of 60 for slow uploads (section 4).</p></div>
+        <div class="row"><code>spec:
+  ingressClassName: alb
+  rules:
+    - host: sheet-tool.internal.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sheet-tool
+                port:
+                  name: http</code><p>Requests for this hostname go to the Service. Your team may write a Gateway API <code>HTTPRoute</code> instead; the questions are the same.</p></div>
+      </div>
+      <div class="anno">
+        <div class="head"><span>k8s/production/externalsecret.yaml</span><span>not run</span></div>
+        <div class="row"><code>kind: ExternalSecret
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: aws-secrets-manager
+  target:
+    name: sheet-tool-secrets
+  data:
+    - secretKey: OPENROUTER_API_KEY
+      remoteRef:
+        key: sheet-tool/openrouter-api-key</code><p>"Read <code>sheet-tool/openrouter-api-key</code> from Secrets Manager and keep a Secret called <code>sheet-tool-secrets</code> up to date with it." The Deployment reads that Secret as before. Nothing secret is in Git.</p></div>
+      </div>
+      <p>The IAM permissions the role needs, smallest version (not run, since that needs AWS):</p>
+      <pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    { "Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject"],
+      "Resource": "arn:aws:s3:::example-sheet-tool-production/settings.yaml" },
+    { "Effect": "Allow", "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::example-sheet-tool-production" }
+  ]
+}</code></pre>
+      <p><code>ListBucket</code> looks unnecessary but isn't: without it, S3 answers "access denied" instead of "no such file" when <code>settings.yaml</code> doesn't exist yet, and the app's "nothing saved yet, use defaults" path never runs.</p>
+
+      <div class="aside"><span class="chip">MinIO</span>
+        <p>If someone suggests MinIO, check this first. MinIO's free edition stopped shipping ready-made images in October 2025, its GitHub repository was archived in April 2026 with the note <em>this repository is no longer maintained</em>, and the <code>minio/minio</code> image is no longer on Docker Hub (checked on 18 October 2026: it answers 404). What's left is a free-licensed product of the MinIO company (AIStor Free), or community forks such as the <code>pgsty/minio</code> image this lesson uses as a stand-in.</p>
+        <p>Since you're on AWS, the plain choice is an <strong>S3 bucket</strong>: no server to run, IAM roles instead of keys, and versioning if you ever want the file's history. The app doesn't care either way: only <code>AWS_ENDPOINT_URL_S3</code> and the credentials change, which is exactly how the lab points it at MinIO.</p>
+      </div>
+      <details class="sol"><summary>Sources for the MinIO and ingress-nginx facts</summary><div class="inner">
+        <ul>
+          <li><a href="https://github.com/minio/minio">github.com/minio/minio</a>: archived, README begins "THIS REPOSITORY IS NO LONGER MAINTAINED" (checked 2026-10-18)</li>
+          <li><a href="https://www.stablebuild.com/blog/minio-images-disappeared-from-docker-hub">StableBuild: MinIO images disappeared from Docker Hub</a></li>
+          <li><a href="https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/">Kubernetes blog: Ingress NGINX retirement</a> (maintenance ended March 2026; the repository is archived)</li>
+        </ul>
+      </div></details>
+    </section>
+
+    <section id="handoff">
+      <h2><span class="n">10</span>The handoff sheet</h2>
+      <p>Your team needs a short list of facts to write section 6's files. Send it before they ask; it turns a long meeting into a short one. Here it is for sheet-tool, with where each answer came from:</p>
+      <div class="table">
+        <table class="handoff">
+          <thead><tr><th>Fact</th><th>sheet-tool</th><th>From</th></tr></thead>
+          <tbody>
+            <tr><td>Image</td><td>ECR <code>sheet-tool:&lt;commit&gt;</code>, linux/amd64, 201 MB</td><td>Lesson 6</td></tr>
+            <tr><td>Port</td><td>8000, HTTP</td><td>Containerfile</td></tr>
+            <tr><td>Health</td><td>Liveness <code>/health/live</code>, readiness <code>/health/ready</code> (checks S3, not OpenRouter); ready a few seconds after start</td><td>3.3</td></tr>
+            <tr><td>Memory</td><td>66 MiB idle, 394 MiB for one 10 MB upload, 714 MiB for two. Request 512Mi, limit 1Gi</td><td>Section 4</td></tr>
+            <tr><td>CPU</td><td>At most one core. Request 250m, limit 1</td><td>Section 4</td></tr>
+            <tr><td>Longest request</td><td>Rows × time per model answer; measure with real data. Load balancer and ingress timeouts must be longer</td><td>Section 4</td></tr>
+            <tr><td>Upload limit</td><td>10 MB (<code>MAX_UPLOAD_MB</code>). The ingress must allow at least that</td><td>3.5</td></tr>
+            <tr><td>State and replicas</td><td>Keeps nothing between requests; any number of replicas, no sticky sessions</td><td>Section 6</td></tr>
+            <tr><td>Disk</td><td>No volume. Read-only root works; needs <code>/tmp</code> as an emptyDir (100 MB)</td><td>3.2</td></tr>
+            <tr><td>User</td><td>Runs as 10001, needs no capabilities; passes the <em>restricted</em> level</td><td>3.1, 8.1</td></tr>
+            <tr><td>Settings</td><td><code>S3_BUCKET</code>, <code>S3_KEY</code>, <code>AWS_REGION</code>, <code>OPENROUTER_BASE_URL</code>, <code>MAX_UPLOAD_MB</code>, <code>LOG_LEVEL</code></td><td>main.py</td></tr>
+            <tr><td>Secrets</td><td><code>OPENROUTER_API_KEY</code> only. S3 access through an IAM role, no keys</td><td>Section 9</td></tr>
+            <tr><td>Storage</td><td>One object, <code>settings.yaml</code>, in one bucket: GetObject and PutObject on it, ListBucket on the bucket</td><td>Section 9</td></tr>
+            <tr><td>Outbound</td><td><code>openrouter.ai:443</code>, S3; respects <code>HTTPS_PROXY</code></td><td>3.6</td></tr>
+            <tr><td>Shutdown</td><td>Handles SIGTERM, finishes requests for up to 60 s. Grace period 90 s, preStop 5 s</td><td>3.4, 8.7</td></tr>
+            <tr><td>Logs</td><td>stdout, plain text, no file contents or keys; health checks not logged</td><td>3.6</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Questions they may ask you</h3>
+      <div class="quiz">
+        <details class="q"><summary><span class="qn">?</span><span>"Is it stateless? Can we run 3 copies, or scale it automatically?"</span><span class="rv">Answer</span></summary>
+          <div class="ans"><p>Yes. Each upload is handled entirely within one request, and the only lasting data is <code>settings.yaml</code> in S3. Any pod can serve any user, so no sticky sessions. Automatic scaling on CPU works, since processing is CPU-bound.</p></div></details>
+        <details class="q"><summary><span class="qn">?</span><span>"Does it need a persistent volume?"</span><span class="rv">Answer</span></summary>
+          <div class="ans"><p>No. The settings are in S3, and <code>/tmp</code> only holds temporary files during a request, so an emptyDir is enough. A volume would also make several replicas harder, because a normal EBS-backed volume attaches to one node at a time.</p></div></details>
+        <details class="q"><summary><span class="qn">?</span><span>"What happens when S3 is down? And when OpenRouter is down?"</span><span class="rv">Answer</span></summary>
+          <div class="ans"><p>S3 down: readiness fails, the pods get no traffic, and they come back by themselves when S3 returns. They aren't restarted (8.5). OpenRouter down: pods stay ready, and <code>/process</code> answers 502 "The AI service failed; try again later" after its timeout. Probes never call OpenRouter.</p></div></details>
+        <details class="q"><summary><span class="qn">?</span><span>"Why 90 seconds of termination grace? The default is 30."</span><span class="rv">Answer</span></summary>
+          <div class="ans"><p>So an upload in progress can finish during a deploy: up to 60 seconds of uvicorn's graceful shutdown, plus the 5-second <code>preStop</code> pause, plus some margin. With 10 seconds, uploads were cut off (8.7). If real requests are shorter, this can come down.</p></div></details>
+        <details class="q"><summary><span class="qn">?</span><span>"Does it need root, extra capabilities, or host access?"</span><span class="rv">Answer</span></summary>
+          <div class="ans"><p>No. It runs as user 10001 with all capabilities dropped, a read-only root filesystem and the default seccomp profile, and it was tested in a namespace set to <code>restricted</code>.</p></div></details>
+        <details class="q"><summary><span class="qn">?</span><span>"How do we know a deploy worked?"</span><span class="rv">Answer</span></summary>
+          <div class="ans"><p><code>kubectl rollout status</code> finishes only when all new pods are ready, which means they can reach S3. A quick extra check after deploy: <code>GET /health/ready</code> through the real hostname, then one small upload in staging.</p></div></details>
+      </div>
+
+      <h3>Questions to ask them</h3>
+      <ul class="task">
+        <li><span>Which ingress or gateway do we use, and what hostname will the app get? Internal only?</span></li>
+        <li><span>What are the request size limit and the timeouts between the user and the pod?</span></li>
+        <li><span>An S3 bucket, or MinIO? Who creates it, and what's it called per environment?</span></li>
+        <li><span>How do secrets get into the cluster (External Secrets, something else), and who rotates the OpenRouter key?</span></li>
+        <li><span>Pod Identity or IRSA for the S3 role?</span></li>
+        <li><span>Is the namespace set to the <em>restricted</em> Pod Security level? Any other policies, such as required labels or a maximum memory per pod?</span></li>
+        <li><span>Do the nodes use amd64 or arm64?</span></li>
+        <li><span>Can pods reach the internet, or only through a proxy?</span></li>
+        <li><span>Is it Helm, Kustomize or something else, and deployed by CI or Argo CD? Is there a staging environment?</span></li>
+        <li><span>Where do I see logs, and will I get <code>kubectl</code> access to the namespace (read-only is enough)?</span></li>
+      </ul>
+    </section>
+
+    <section id="lab">
+      <h2><span class="n">11</span>Lab: your own app</h2>
+      <p>Everything above used sheet-tool. Now do the same for your app, using sheet-tool's files as a template. Keep the kind cluster from section 7 running.</p>
+
+      <div class="step">
+        <span class="sn">1</span>
+        <div>
+          <h3>Go through the checklist</h3>
+          <p>For each row of section 3's table, find the line in your Containerfile or code that takes care of it. Two quick checks on your image:</p>
+          <div class="cmd"><pre><code>podman image inspect YOUR-IMAGE --format 'user={{.Config.User}} cmd={{.Config.Cmd}}'</code></pre></div>
+          <p>The user must be a number other than 0, and <code>cmd</code> must be a list starting with your server program, not <code>/bin/sh -c</code>.</p>
         </div>
       </div>
 
       <div class="step">
         <span class="sn">2</span>
         <div>
-          <h3>Reproduce the probe surprise</h3>
-          <div class="cmd"><pre><code>podman kube play hello-ai-httpget.yaml
-curl localhost:8080/health
-podman ps --filter name=hello-ai-pod-api --format '{{.Status}}'</code></pre></div>
-          <p>Wait about 40 seconds and check the status again. Then read the reason, and tear it down:</p>
-          <div class="cmd"><pre><code>podman healthcheck run hello-ai-pod-api
-podman inspect hello-ai-pod-api --format 'restarts={{.RestartCount}}'
-podman kube down hello-ai-httpget.yaml</code></pre></div>
+          <h3>Run it as strictly as the cluster will</h3>
+          <p>Add sheet-tool's <code>read_only</code>, <code>tmpfs</code>, <code>cap_drop</code> and <code>security_opt</code> lines to your <code>compose.yaml</code>, start it, and use the app normally: upload, process, download, change the YAML file. Any error mentioning <code>Read-only file system</code> is a write you need to move to <code>/tmp</code> or to S3.</p>
         </div>
       </div>
 
       <div class="step">
         <span class="sn">3</span>
         <div>
-          <h3>Run the working version and inspect it</h3>
-          <div class="cmd"><pre><code>podman kube play hello-ai-podman.yaml
-podman pod ps
-podman exec hello-ai-pod-api sh -c 'echo $MODEL_NAME'
-podman inspect hello-ai-pod-api --format 'memory={{.HostConfig.Memory}}'
-podman secret ls</code></pre></div>
-          <p>Wait for <code>(healthy)</code> in <code>podman ps</code>. Then change <code>replicas</code> to 3, run <code>podman kube play --replace hello-ai-podman.yaml</code>, and count the pods.</p>
+          <h3>Health and shutdown</h3>
+          <p>If your app has a single <code>/health</code>, split it into live and ready (3.3). Stop your S3 stand-in and check that live says 200 and ready says 503. Then run 3.4's <code>time podman stop</code> test: about a second, exit code 0.</p>
         </div>
       </div>
 
       <div class="step">
         <span class="sn">4</span>
         <div>
-          <h3>Generate YAML from the running pod</h3>
-          <div class="cmd"><pre><code>podman kube generate hello-ai-pod | less</code></pre></div>
-          <p>Find the <code>API_KEY</code> line, and the <code>resources</code> block that came from your limits.</p>
+          <h3>Measure</h3>
+          <p>Repeat section 4 with your largest allowed file to get peak memory. Then time one realistic request against the real OpenRouter with a few rows, and work out the time for your largest allowed file.</p>
         </div>
       </div>
 
       <div class="step">
         <span class="sn">5</span>
         <div>
-          <h3>Read like a reviewer</h3>
-          <p>Go through <code>hello-ai-k8s.yaml</code> from section 3 with the checklist from section 7. Write down one thing you'd change before production. (Several are possible: the Secret in the file, readiness and liveness sharing one endpoint, a missing <code>runAsNonRoot</code>…)</p>
+          <h3>Deploy it to kind</h3>
+          <p>Copy <code>~/practice/sheet-tool/k8s</code> next to your app and change what differs: the image, the port, the environment variable names, the probe paths, the numbers from step 4. Load your image (section 7, step 2), apply with <code>kubectl apply -k</code>, and repeat experiments 8.3 to 8.7 on it.</p>
         </div>
       </div>
 
       <div class="step">
         <span class="sn">6</span>
         <div>
+          <h3>Fill in the handoff sheet</h3>
+          <p>Copy section 10's table, fill it in for your app, and send it to your devops team together with the questions. Their answers tell you what to change in your <code>k8s/production</code> sketch, or in their chart.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="sn">7</span>
+        <div>
           <h3>Clean up</h3>
-          <div class="cmd"><pre><code>podman kube down hello-ai-podman.yaml
-podman pod ps</code></pre></div>
+          <div class="cmd"><pre><code>kind delete cluster --name lab
+cd ~/practice/sheet-tool &amp;&amp; podman compose down -v
+rm -f /tmp/image.tar</code></pre></div>
+          <p><code>kind delete cluster</code> also removes <code>kind-lab</code> from <code>~/.kube/config</code>. The node image stays on your Mac for next time; <code>podman rmi kindest/node:v1.37.0</code> removes it.</p>
         </div>
       </div>
     </section>
 
     <section id="check">
-      <h2><span class="n">09</span>Check yourself</h2>
+      <h2><span class="n">12</span>Check yourself</h2>
       <p>Try answering each question out loud before opening it.</p>
       <div class="quiz">
-        <details class="q"><summary><span class="qn">Q1</span><span>What does "desired state" mean, and what happens when a Pod of a 3-replica Deployment crashes?</span><span class="rv">Show</span></summary>
-          <div class="ans"><p>You declare what should exist ("3 copies of this Pod"), not the steps to get there. Controllers keep comparing that with reality. After the crash reality is 2, so a controller creates a new Pod, possibly on another node.</p></div></details>
-        <details class="q"><summary><span class="qn">Q2</span><span>How does a Service know which Pods to send traffic to?</span><span class="rv">Show</span></summary>
-          <div class="ans"><p>By labels. Its <code>selector</code> (<code>app: hello-ai</code>) matches Pods carrying that label, and only ready ones get traffic. The Deployment's template gives every Pod the label.</p></div></details>
-        <details class="q"><summary><span class="qn">Q3</span><span>What's the difference between <code>requests</code> and <code>limits</code>?</span><span class="rv">Show</span></summary>
-          <div class="ans"><p>Requests are reserved and used to choose a node; limits are the maximum, enforced at run time. Exceeding the memory limit gets the container OOMKilled; hitting the CPU limit slows it down.</p></div></details>
-        <details class="q"><summary><span class="qn">Q4</span><span>A model service's liveness and readiness probes both call <code>/health/ready</code>, and the model takes 3 minutes to load. What goes wrong?</span><span class="rv">Show</span></summary>
-          <div class="ans"><p>Liveness fails during loading, so Kubernetes restarts the container before the model finishes: a restart loop. Liveness should call <code>/health/live</code>, and a <code>startupProbe</code> can give extra start-up time.</p></div></details>
-        <details class="q"><summary><span class="qn">Q5</span><span>Under <code>podman kube play</code>, your container keeps restarting as unhealthy, but the app works when you curl it. Why, and does the same file fail on a real cluster?</span><span class="rv">Show</span></summary>
-          <div class="ans"><p>Podman runs <code>httpGet</code> probes with <code>curl</code> inside the container, and slim images don't have it. A real cluster makes the request from outside, so the file works there. Locally, use an <code>exec</code> probe.</p></div></details>
-        <details class="q"><summary><span class="qn">Q6</span><span>A new image version never becomes ready during a rollout. What do users see?</span><span class="rv">Show</span></summary>
-          <div class="ans"><p>Nothing unusual. The rollout stalls because new Pods never pass readiness, and the old Pods keep serving traffic. <code>kubectl rollout undo</code> returns the Deployment to the previous version.</p></div></details>
-        <details class="q"><summary><span class="qn">Q7</span><span>A colleague wants to commit the output of <code>podman kube generate</code> to the repository. What do you check first?</span><span class="rv">Show</span></summary>
-          <div class="ans"><p>Secret values: generated YAML writes them out as plain <code>value:</code> entries. Replace them with references to a Secret that's managed outside Git.</p></div></details>
-        <details class="q"><summary><span class="qn">Q8</span><span>Your team runs two small services on AWS and no one knows Kubernetes. EKS or ECS Express Mode?</span><span class="rv">Show</span></summary>
-          <div class="ans"><p>ECS Express Mode. It gives you load balancing, HTTPS, scaling and rollbacks with far less to operate. EKS pays off with many services, an existing Kubernetes platform, or a need for its ecosystem.</p></div></details>
+        <details class="q"><summary><span class="qn">Q1</span><span>Your image has <code>USER app</code>. Why might a cluster refuse it, even though <code>app</code> isn't root?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>With <code>runAsNonRoot: true</code> and no <code>runAsUser</code> in the Deployment, Kubernetes must prove from the image that the user isn't root. It can't look a name up, so it refuses with "image has non-numeric user (app), cannot verify user is non-root". <code>USER 10001</code> fixes it.</p></div></details>
+        <details class="q"><summary><span class="qn">Q2</span><span>The app works with <code>podman run --read-only</code>, but in the cluster every upload fails with "No usable temporary directory found". Why?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Podman's <code>--read-only</code> mounts a writable <code>/tmp</code> by itself; Kubernetes' <code>readOnlyRootFilesystem</code> doesn't. The Deployment needs an emptyDir mounted at <code>/tmp</code>. To test this on your Mac, add <code>--read-only-tmpfs=false --tmpfs /tmp</code>.</p></div></details>
+        <details class="q"><summary><span class="qn">Q3</span><span>What should sheet-tool's liveness and readiness check, and why should neither call OpenRouter?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Liveness: only that the process answers, so an outage elsewhere never causes restarts. Readiness: that it can read its settings from S3, because it can't work without them. OpenRouter isn't checked because probes run every few seconds on every pod: that costs money, uses up rate limits, and an OpenRouter outage would take the whole app down instead of failing only the AI calls.</p></div></details>
+        <details class="q"><summary><span class="qn">Q4</span><span>Your team reports pods restarting with <code>OOMKilled</code> when users upload big files. What do you do?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Measure the peak memory with the largest file you accept (section 4), and with two at once. Then raise the memory limit to match, or lower the upload limit, or both. Requests should cover the common case, limits the worst case you allow.</p></div></details>
+        <details class="q"><summary><span class="qn">Q5</span><span>During every deploy a few requests fail with "connection refused", then everything is fine. What's missing?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>A <code>preStop</code> pause. Removing a pod from the Service and sending it SIGTERM happen at the same time, so a few new requests reach a pod that has stopped accepting them. A 5-second <code>preStop</code> sleep took the failures from 5–9 per rollout to none.</p></div></details>
+        <details class="q"><summary><span class="qn">Q6</span><span>Long uploads are cut off whenever a pod is replaced. Which settings do you check?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>That the app receives SIGTERM (exec-form <code>CMD</code>) and waits for running requests (uvicorn's <code>--timeout-graceful-shutdown</code>), and that <code>terminationGracePeriodSeconds</code> is longer than the longest request plus the <code>preStop</code> pause.</p></div></details>
+        <details class="q"><summary><span class="qn">Q7</span><span>A release goes out with a tag that doesn't exist. What do users see, and how do you get back properly?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Nothing: the new pod is stuck in <code>ErrImagePull</code>, and with <code>maxUnavailable: 0</code> the old pods keep serving. <code>kubectl rollout undo</code> fixes the cluster right away, but the proper fix is deploying the previous tag from Git, otherwise the next deploy brings the bad tag back.</p></div></details>
+        <details class="q"><summary><span class="qn">Q8</span><span>Why can sheet-tool run 2 or more copies without sticky sessions, and what would change if upload and download were separate requests?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Each upload is processed and returned within one request, so no pod holds anything a later request needs. With separate requests, the download might reach a different pod than the upload, so the result would have to be stored somewhere shared, such as S3, with a job ID to find it.</p></div></details>
+        <details class="q"><summary><span class="qn">Q9</span><span>Your team suggests keeping the YAML file in MinIO. What do you ask?</span><span class="rv">Show</span></summary>
+          <div class="ans"><p>Whether an S3 bucket would do, since you're on AWS and MinIO's free edition is no longer maintained; and if it's MinIO, which build, who runs and backs it up, and how the app gets credentials. The app itself only needs <code>AWS_ENDPOINT_URL_S3</code> and credentials to change.</p></div></details>
       </div>
     </section>
 
     <section id="done">
-      <h2><span class="n">10</span>Course complete</h2>
-      <p>That's the whole path, from a first container to reading the files your team deploys with:</p>
+      <h2><span class="n">13</span>Course complete</h2>
+      <p>That's the whole path, from your first container to an app your devops team can run:</p>
       <div class="table">
         <table>
           <tbody>
@@ -737,11 +2292,11 @@ podman pod ps</code></pre></div>
             <tr><td>Lesson 4</td><td>Volumes, networks, Compose</td></tr>
             <tr><td>Lesson 5</td><td>Real models: PyTorch size, readiness, memory, threads, streaming, GPUs</td></tr>
             <tr><td>Lesson 6</td><td>Registries, amd64 builds, GitLab CI, ECS Express Mode, Cloudflare Containers</td></tr>
-            <tr><td>Lesson 7</td><td>Kubernetes concepts, <code>podman kube play</code>, EKS</td></tr>
+            <tr><td>Lesson 7</td><td>A deployment-ready image, measured resources, the Kubernetes objects around it, kind, and the handoff to your team</td></tr>
           </tbody>
         </table>
       </div>
-      <p>Good next steps: read your team's Containerfiles and <code>.gitlab-ci.yml</code> with this course in mind; containerize a real project of yours end to end; and when you meet something new (Helm, Terraform, a service mesh), you'll already know which container idea it's built on.</p>
+      <p>Good next steps: do this lesson's lab with an app of your own; read your team's chart or Kustomize files with section 6 next to you; and add tracing and metrics to your app with OpenTelemetry.</p>
     </section>
   </main>
 </div>
