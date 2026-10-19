@@ -21,9 +21,9 @@ work with `docker` in place of `podman`.
 | 4 | [Volumes, Networks and Compose](https://espad0.github.io/docker-fundamentals/lesson-04/) | Volumes, shared folders, networks, and a Postgres database with Compose |
 | 5 | [Serving a Real Model](https://espad0.github.io/docker-fundamentals/lesson-05/) | PyTorch without GPU libraries, readiness, memory and CPU limits, streaming, and what GPUs need |
 | 6 | [Shipping to AWS and Cloudflare](https://espad0.github.io/docker-fundamentals/lesson-06/) | Registries, building for servers from a Mac, GitLab CI, AWS ECS Express Mode, Cloudflare Containers |
-| 7 | [Your App on Kubernetes](https://espad0.github.io/docker-fundamentals/lesson-07/) | A strict image, measured memory and CPU, the objects a devops team writes, a local cluster with kind, failures on purpose, a handoff sheet |
+| 7 | [Your App on Kubernetes](https://espad0.github.io/docker-fundamentals/lesson-07/) | A textbook chapter with interactive figures: desired state, Services and DNS, probes, memory and CPU, the life of a pod, rolling updates, security, delivery, and a lab on a local kind cluster |
 
-About 9 hours in total, including the labs.
+About 11 hours in total, including the labs.
 
 ## Before you start
 
